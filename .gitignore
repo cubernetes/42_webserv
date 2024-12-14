@@ -1,0 +1,14 @@
+# build artefacts
+a.out
+webserv
+
+# objects
+obj/
+
+# clangd stuff
+.cache/
+compile_commands.json
+
+# other sources
+test*.cpp
+test*.c
