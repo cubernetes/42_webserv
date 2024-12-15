@@ -1,6 +1,8 @@
 // <GENERATED>
 #pragma once /* Config.hpp */
 
+#include <deque> /* std::deque */
+#include <fstream> /* std::ifstream */
 #include <string> /* std::string */
 #include <iostream> /* std::ostream */
 #include <map> /* std::map */
@@ -14,6 +16,7 @@
 using std::map;
 using std::string;
 using std::ostream;
+using std::deque;
 
 class Config : public BaseConfig {
 public:
@@ -51,13 +54,24 @@ public:
 	// </generated>
 protected:
 	string _configPath;
-	vector<ServerConfig> _workerConfigs;
+	vector<ServerConfig> _serverConfigs;
 	unsigned int _maxWorkers;
 private:
 	unsigned int _id;
 	static unsigned int _idCntr;
 
+	deque<string> lex_config(std::ifstream&);
 	void parse();
+	bool parse_config(deque<string>&);
+	bool parse_directives(deque<string>&);
+	bool parse_http_block(deque<string>&);
+	bool parse_directive(deque<string>&);
+	bool parse_arguments(deque<string>&);
+	bool parse_server_list(deque<string>&);
+	bool parse_server(deque<string>&);
+	bool parse_server_configs(deque<string>&);
+	bool parse_route(deque<string>&);
+	bool parse_route_pattern(deque<string>&);
 };
 
 template <> inline string repr(const Config& value) { return value.repr(); }

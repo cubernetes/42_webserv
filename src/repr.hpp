@@ -60,6 +60,10 @@ template <typename T> inline string repr(const vector<T>& value) {
 	return oss.str();
 }
 
+void repr_init();
+void repr_done();
+// </GENERATED>
+
 template <typename K, typename V> inline string repr(const map<K, V>& m) {
 	std::ostringstream oss;
 	oss << ANSI_KWRD "std" ANSI_PUNCT "::" ANSI_KWRD "map" ANSI_PUNCT "({" ANSI_RST;
@@ -75,7 +79,3 @@ template <typename K, typename V> inline string repr(const map<K, V>& m) {
 	oss << ANSI_PUNCT "})" ANSI_RST;
 	return oss.str();
 }
-
-void repr_init();
-void repr_done();
-// </GENERATED>

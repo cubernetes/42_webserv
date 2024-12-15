@@ -6,5 +6,9 @@ using std::string;
 
 namespace Errors {
 	extern const string WrongArgs;
-	extern const string ErrorOpeningConfig;
+
+	namespace Config {
+		extern const string OpeningError;
+		extern const string ParseError;
+	}
 }

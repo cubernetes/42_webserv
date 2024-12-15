@@ -6,5 +6,9 @@ using std::string;
 
 namespace Errors {
 	const string WrongArgs = "Server started with invalid number of arguments";
-	const string ErrorOpeningConfig = "Configuration file could not be opened";
+
+	namespace Config {
+		const string OpeningError = "Failed to open configuration file";
+		const string ParseError = "Failed to parse configuration file";
+	}
 }
