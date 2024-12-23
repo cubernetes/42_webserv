@@ -14,9 +14,22 @@
 #include "CgiHandler.hpp"
 
 using std::map;
+using std::pair;
 using std::string;
 using std::ostream;
 using std::deque;
+
+typedef enum {
+	SEMICOLON,
+	OPENING_BRACE,
+	CLOSING_BRACE,
+	WORD,
+	EOF_TOK,
+	UNKNOWN,
+} token_type;
+
+typedef pair<token_type, string> t_token;
+typedef deque<t_token> t_tokens;
 
 class Config : public BaseConfig {
 public:
@@ -57,21 +70,25 @@ protected:
 	vector<ServerConfig> _serverConfigs;
 	unsigned int _maxWorkers;
 private:
+	t_tokens lex_config(std::ifstream&);
+	void parse();
+	bool parse_config(t_tokens&);
+	bool parse_directives(t_tokens&);
+	bool parse_http_block(t_tokens&);
+	bool parse_directive(t_tokens&);
+	bool parse_arguments(t_tokens&);
+	bool parse_server_list(t_tokens&);
+	bool parse_server(t_tokens&);
+	bool parse_server_configs(t_tokens&);
+	bool parse_route(t_tokens&);
+	bool parse_route_pattern(t_tokens&);
+	bool accept(t_tokens&, token_type);
+	bool expect(t_tokens&, token_type);
+	void unexpected(t_tokens&);
+	t_token new_token(token_type, const string&);
+
 	unsigned int _id;
 	static unsigned int _idCntr;
-
-	deque<string> lex_config(std::ifstream&);
-	void parse();
-	bool parse_config(deque<string>&);
-	bool parse_directives(deque<string>&);
-	bool parse_http_block(deque<string>&);
-	bool parse_directive(deque<string>&);
-	bool parse_arguments(deque<string>&);
-	bool parse_server_list(deque<string>&);
-	bool parse_server(deque<string>&);
-	bool parse_server_configs(deque<string>&);
-	bool parse_route(deque<string>&);
-	bool parse_route_pattern(deque<string>&);
 };
 
 template <> inline string repr(const Config& value) { return value.repr(); }

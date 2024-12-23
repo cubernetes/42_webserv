@@ -169,84 +169,133 @@ route_pattern ::= LEX_TOKEN
 
 */
 
+bool Config::accept(t_tokens& tokens, token_type tok_type) {
+	if (tokens.empty())
+		return false;
+	if (tokens.front().first != tok_type)
+		return false;
+	tokens.pop_front();
+	return true;
+}
+
+bool Config::expect(t_tokens& tokens, token_type tok_type) {
+	if (accept(tokens, tok_type))
+		return true;
+	unexpected(tokens);
+	return false;
+}
+
+void Config::unexpected(t_tokens& tokens) {
+	// TODO: use logger
+	if (tokens.empty())
+		cout << "Unexpected end of file\n";
+	else
+		cout << "Unexpected token: '" << tokens.front().second << "'\n";
+}
+
+t_token Config::new_token(token_type t, const string& s) {
+	return t_token(t, s);
+}
+
 // not sure yet, but I guess:
 // route_pattern ::= LEX_TOKEN
-bool parse_route_pattern(deque<string>& tokens) {
+bool Config::parse_route_pattern(t_tokens& tokens) {
 }
 
 // route ::= 'location' route_pattern '{' directives '}'
-bool parse_route(deque<string>& tokens) {
+bool Config::parse_route(t_tokens& tokens) {
 	parse_route_pattern(tokens);
 }
 
 // server_configs ::= [ directive | route ] server_configs?
-bool parse_server_configs(deque<string>& tokens) {
+bool Config::parse_server_configs(t_tokens& tokens) {
 	parse_directive(tokens);
 	parse_route(tokens);
 	parse_server_configs(tokens);
 }
 
 // server ::= '{' server_configs '}'
-bool parse_server(deque<string>& tokens) {
+bool Config::parse_server(t_tokens& tokens) {
 	parse_server_configs(tokens);
 }
 
 // server_list ::= server server_list?
-bool parse_server_list(deque<string>& tokens) {
+bool Config::parse_server_list(t_tokens& tokens) {
 	parse_server(tokens);
 	parse_server_list(tokens);
 }
 
 // arguments ::= argument arguments?
 // argument ::= LEX_TOKEN
-bool parse_arguments(deque<string>& tokens) {
+bool Config::parse_arguments(t_tokens& tokens) {
+	if (accept(tokens, ""))
+		return true;
+	string argument = tokens.front();
+	if (argument == ";")
+		return true;
+	else if (argument == "}")
+		return true;
+	tokens.pop_front();
+
 	parse_arguments(tokens);
 }
 
 // directive ::= directive_name arguments ';'
 // directive_name ::= LEX_TOKEN
-bool parse_directive(deque<string>& tokens) {
-	string directive_name = tokens.front();
-	tokens.pop_front();
+bool Config::parse_directive(t_tokens& tokens) {
+	if (!accept(tokens, WORD))
+		return false;
 
-	parse_arguments(tokens);
+	if (!parse_arguments(tokens))
+		return false;
 
-	string semicolon = tokens.front();
-	tokens.pop_front();
+	if (!accept(tokens, SEMICOLON))
+		return false;
+	return true;
 }
 
 // http_block ::= '{' server_list '}'
-bool parse_http_block(deque<string>& tokens) {
+bool Config::parse_http_block(t_tokens& tokens) {
 	parse_server_list(tokens);
 }
 
 // directives ::= directive directives?
-bool parse_directives(deque<string>& tokens) {
-	if (tokens.front() == "http")
+bool Config::parse_directives(t_tokens& tokens) {
+	if (tokens.front().second == "http")
 		return true;
 	return parse_directive(tokens) && parse_directives(tokens);
 }
 
 // config ::= directives? http_block
-bool Config::parse_config(deque<string>& tokens) {
+bool Config::parse_config(t_tokens& tokens) {
 	return parse_directives(tokens) && parse_http_block(tokens);
 }
 
-deque<string> Config::lex_config(std::ifstream& config) {
-	deque<string> tokens;
+t_tokens Config::lex_config(std::ifstream& config) {
+	t_tokens tokens;
 	char c;
-	bool new_token = true;
+	bool create_new_token = true;
 	
 	while (config.get(c)) {
 		if (isspace(c)) {
-			new_token = true;
+			create_new_token = true;
+			if (tokens.back().second == ";")
+				tokens.back().first = SEMICOLON;
+			else if (tokens.back().second == "{")
+				tokens.back().first = OPENING_BRACE;
+			else if (tokens.back().second == "}")
+				tokens.back().first = CLOSING_BRACE;
+			else if (tokens.back().second == "")
+				tokens.back().first = EOF_TOK;
+			else
+				tokens.back().first = WORD;
 			continue;
 		}
-		if (new_token) {
-			tokens.push_back("");
-			new_token = false;
+		if (create_new_token) {
+			tokens.push_back(new_token(UNKNOWN, ""));
+			create_new_token = false;
 		}
-		tokens.back() += c;
+		tokens.back().second += c;
 	}
 	return tokens;
 }
@@ -269,7 +318,7 @@ void Config::parse() {
 	// _serverConfigs.push_back(ServerConfig(this->_accessLog, this->_errorLog, this->_maxBodySize, this->_root, this->_errorPage, this->_enableDirListing, this->_indexFiles, this->_cgiHandlers, "Server1", "127.0.0.1", 8080));
 	// _maxWorkers = 8;
 
-	deque<string> tokens = lex_config(config);
+	t_tokens tokens = lex_config(config);
 	if (!parse_config(tokens))
 		throw runtime_error(Errors::Config::ParseError);
 }
