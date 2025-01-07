@@ -20,12 +20,12 @@ using std::ostream;
 using std::deque;
 
 typedef enum {
-	SEMICOLON,
-	OPENING_BRACE,
-	CLOSING_BRACE,
-	WORD,
-	EOF_TOK,
-	UNKNOWN
+	TOK_SEMICOLON,
+	TOK_OPENING_BRACE,
+	TOK_CLOSING_BRACE,
+	TOK_WORD,
+	TOK_EOF,
+	TOK_UNKNOWN,
 } token_type;
 
 typedef pair<token_type, string> t_token;
@@ -70,28 +70,28 @@ protected:
 	vector<ServerConfig> _serverConfigs;
 	unsigned int _maxWorkers;
 private:
-	t_tokens lex_config(std::ifstream&);
-	// void parse();
-	// bool parse_config(t_tokens&);
-	// bool parse_directives(t_tokens&);
-	// bool parse_http_block(t_tokens&);
-	// bool parse_directive(t_tokens&);
-	// bool parse_arguments(t_tokens&);
-	// bool parse_server_list(t_tokens&);
-	// bool parse_server(t_tokens&);
-	bool parse_server_configs(t_tokens&);
-	// bool parse_route(t_tokens&);
-	// bool parse_route_pattern(t_tokens&);
-	bool accept(t_tokens&, token_type);
-	bool expect(t_tokens&, token_type);
-	void unexpected(t_tokens&);
-	t_token new_token(token_type, const string&);
+	t_tokens _lex_config(std::ifstream&);
+	// void _parse();
+	// bool _parse_config(t_tokens&);
+	// bool _parse_directives(t_tokens&);
+	// bool _parse_http_block(t_tokens&);
+	// bool _parse_directive(t_tokens&);
+	// bool _parse_arguments(t_tokens&);
+	// bool _parse_server_list(t_tokens&);
+	// bool _parse_server(t_tokens&);
+	bool _parse_server_configs(t_tokens&);
+	// bool _parse_route(t_tokens&);
+	// bool _parse_route_pattern(t_tokens&);
+	bool _accept(t_tokens&, token_type);
+	bool _expect(t_tokens&, token_type);
+	void _unexpected(t_tokens&);
+	t_token _new_token(token_type, const string&);
 
 	unsigned int _id;
 	static unsigned int _idCntr;
 };
 
-template <> inline string repr(const Config& value) { return value.repr(); }
+template <> struct repr_wrapper<Config> { static inline string str(const Config& value) { return value.repr(); } };
 void swap(Config&, Config&) /* noexcept */;
 ostream& operator<<(ostream&, const Config&);
 // </GENERATED>

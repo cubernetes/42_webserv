@@ -5,9 +5,6 @@
 #include <string> /* std::string */
 #include <iostream> /* std::ostream */
 
-#include "repr.hpp" /* repr<T> */
-#include "helper.hpp"
-
 using std::string;
 using std::ostream;
 
@@ -21,9 +18,6 @@ public:
 		void swap(Logger&); // copy-swap idiom
 		string repr() const; // return string-serialized version of the object
 		operator string() const; // convert object to string
-
-		template <typename T>
-		Logger(const T& type, DeleteOverload = 0); // disallow accidental casting/conversion
 	// </generated>
 	
 	static void logexception(const std::exception& exception);
@@ -45,7 +39,8 @@ private:
 	static unsigned int _idCntr;
 };
 
-template <> inline string repr(const Logger& value) { return value.repr(); }
+template <typename T> struct repr_wrapper;
+template <> struct repr_wrapper<Logger> { static inline string str(const Logger& value) { return value.repr(); } };
 void swap(Logger&, Logger&) /* noexcept */;
 ostream& operator<<(ostream&, const Logger&);
 // </GENERATED>
