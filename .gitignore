@@ -1,3 +1,8 @@
+# test files
+test.cpp
+test.c
+a.c
+
 # build artefacts
 a.out
 webserv
