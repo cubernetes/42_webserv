@@ -18,7 +18,6 @@ public:
 		Logger(const Logger&); // copy constructor
 		Logger& operator=(Logger); // copy-assignment operator
 		void swap(Logger&); // copy-swap idiom
-		string repr(bool json = false) const; // return string-serialized version of the object
 		operator string() const; // convert object to string
 	// </generated>
 	

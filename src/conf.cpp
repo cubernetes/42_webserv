@@ -44,6 +44,6 @@ int main() {
 	t_server server;
 	populate_default_server_directives(server.first, config.first);
 	config.second.push_back(server);
-	std::cout << repr(config) << '\n';
+	std::cout << repr(config, true) << '\n';
 	return 0;
 }

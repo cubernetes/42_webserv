@@ -38,27 +38,6 @@ Logger& Logger::operator=(Logger other) /* noexcept */ {
 }
 
 // Generated member functions
-string Logger::repr(bool json) const {
-	stringstream out;
-	if (json || Constants::jsonTrace) {
-		out << "{\"class\":\"" << jsonEscape(_class) << "\"";
-		for (map<const char*, pair<t_type, const void*> >::const_iterator it = _members.begin(); it != _members.end(); ++it)
-			out << ",\"" << it->first << "\":" << _memberToStr(it->second, true);
-		out << "}";
-	}
-	else {
-		out << kwrd(_class) + punct("(");
-		int i = 0;
-		for (map<const char*, pair<t_type, const void*> >::const_iterator it = _members.begin(); it != _members.end(); ++it) {
-			if (i++ != 0)
-				out << punct(", ");
-			out << _memberToStr(it->second);
-		}
-		out << punct(")");
-	}
-	return out.str();
-}
-
 void Logger::swap(Logger& other) /* noexcept */ {
 	if (Logger::trace()) print_swap_begin(::repr(*this), ::repr(other));
 	::swap(_id, other._id);

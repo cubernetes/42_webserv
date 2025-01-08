@@ -100,16 +100,25 @@ string Reflection::_memberToStr(const pair<t_type, const void*>& member, bool js
 	return oss.str();
 }
 
-string Reflection::repr() const {
-	string clsRepr = string(_class) + "(";
-	int i = 0;
-	for (map<const char*, pair<t_type, const void*> >::const_iterator it = _members.begin(); it != _members.end(); ++it) {
-		if (i++ != 0)
-			clsRepr += ", ";
-		clsRepr += string(it->first) + "=" + _memberToStr(it->second);
+string Reflection::repr(bool json) const {
+	std::stringstream out;
+	if (json || Constants::jsonTrace) {
+		out << "{\"class\":\"" << jsonEscape(_class) << "\"";
+		for (map<const char*, pair<t_type, const void*> >::const_iterator it = _members.begin(); it != _members.end(); ++it)
+			out << ",\"" << it->first << "\":" << _memberToStr(it->second, true);
+		out << "}";
 	}
-	clsRepr += ")";
-	return clsRepr;
+	else {
+		out << kwrd(_class) + punct("(");
+		int i = 0;
+		for (map<const char*, pair<t_type, const void*> >::const_iterator it = _members.begin(); it != _members.end(); ++it) {
+			if (i++ != 0)
+				out << punct(", ");
+			out << _memberToStr(it->second);
+		}
+		out << punct(")");
+	}
+	return out.str();
 }
 
 void Reflection::print_copy_assign_op(const string& repr_other) const {

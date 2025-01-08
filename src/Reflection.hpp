@@ -54,5 +54,5 @@ protected:
 public:
 	const char *_class;
 	map<const char*, pair<t_type, const void*> > _members;
-	string repr() const;
+	string repr(bool json = false) const;
 };
