@@ -49,4 +49,3 @@ string repr_clr::var(string s) {
 string repr_clr::cmt(string s) {
 	return rgb_bg(rgb(s, ANSI_CMT), ANSI_FG);
 }
-

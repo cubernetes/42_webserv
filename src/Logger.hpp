@@ -5,10 +5,12 @@
 #include <string> /* std::string */
 #include <iostream> /* std::ostream */
 
+#include "Reflection.hpp"
+
 using std::string;
 using std::ostream;
 
-class Logger {
+class Logger : public Reflection {
 public:
 	// <generated>
 		~Logger(); // destructor; consider virtual if it's a base class
@@ -16,7 +18,7 @@ public:
 		Logger(const Logger&); // copy constructor
 		Logger& operator=(Logger); // copy-assignment operator
 		void swap(Logger&); // copy-swap idiom
-		string repr() const; // return string-serialized version of the object
+		string repr(bool json = false) const; // return string-serialized version of the object
 		operator string() const; // convert object to string
 	// </generated>
 	
@@ -35,12 +37,15 @@ public:
 	static bool error();
 	static bool fatal();
 private:
-	unsigned int _id;
+	REFLECT(
+		"Logger",
+		DECL(unsigned int, _id)
+	)
 	static unsigned int _idCntr;
 };
 
 template <typename T> struct repr_wrapper;
-template <> struct repr_wrapper<Logger> { static inline string repr(const Logger& value) { return value.repr(); } };
+template <> struct repr_wrapper<Logger> { static inline string repr(const Logger& value, bool json = false) { return value.repr(json); } };
 void swap(Logger&, Logger&) /* noexcept */;
 ostream& operator<<(ostream&, const Logger&);
 // </GENERATED>

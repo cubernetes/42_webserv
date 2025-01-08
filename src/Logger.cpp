@@ -17,45 +17,52 @@ using std::stringstream;
 
 // De- & Constructors
 Logger::~Logger() {
-	if (Logger::trace())
-		cout << punct("~") << *this << '\n';
+	if (Logger::trace()) print_dtor(::repr(*this));
 }
 
 Logger::Logger() : _id(_idCntr++) {
-	if (Logger::trace())
-		cout << kwrd("Logger") + punct("() -> ") << *this << '\n';
+	reflect();
+	if (Logger::trace()) print_default_ctor(::repr(*this));
 }
 
 Logger::Logger(const Logger& other) : _id(_idCntr++) {
-	if (Logger::trace())
-		cout << kwrd("Logger") + punct("(") << ::repr(other) << punct(") -> ") << *this << '\n';
+	reflect();
+	if (Logger::trace()) print_copy_ctor(::repr(other), ::repr(*this));
 }
 
 // Copy-assignment operator (using copy-swap idiom)
 Logger& Logger::operator=(Logger other) /* noexcept */ {
-	if (Logger::trace())
-		cout << kwrd("Logger") + punct("& ") + kwrd("Logger") + punct("::") + func("operator") + punct("=(") << ::repr(other) << punct(")") + "\n";
+	if (Logger::trace()) print_copy_assign_op(::repr(other));
 	::swap(*this, other);
 	return *this;
 }
 
 // Generated member functions
-string Logger::repr() const {
+string Logger::repr(bool json) const {
 	stringstream out;
-	out << kwrd("Logger") + punct("(") << ::repr(_id) << punct(")");
+	if (json || Constants::jsonTrace) {
+		out << "{\"class\":\"" << jsonEscape(_class) << "\"";
+		for (map<const char*, pair<t_type, const void*> >::const_iterator it = _members.begin(); it != _members.end(); ++it)
+			out << ",\"" << it->first << "\":" << _memberToStr(it->second, true);
+		out << "}";
+	}
+	else {
+		out << kwrd(_class) + punct("(");
+		int i = 0;
+		for (map<const char*, pair<t_type, const void*> >::const_iterator it = _members.begin(); it != _members.end(); ++it) {
+			if (i++ != 0)
+				out << punct(", ");
+			out << _memberToStr(it->second);
+		}
+		out << punct(")");
+	}
 	return out.str();
 }
 
 void Logger::swap(Logger& other) /* noexcept */ {
-	if (Logger::trace()) {
-		cout << cmt("<Swapping Logger *this:") + "\n";
-		cout << *this << '\n';
-		cout << cmt("with the following Logger object:") + "\n";
-		cout << other << '\n';
-	}
+	if (Logger::trace()) print_swap_begin(::repr(*this), ::repr(other));
 	::swap(_id, other._id);
-	if (Logger::trace())
-		cout << cmt("Logger swap done>") + "\n";
+	if (Logger::trace()) print_swap_end();
 }
 
 Logger::operator string() const { return ::repr(*this); }
