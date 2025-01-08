@@ -9,7 +9,7 @@
 
 using std::string;
 
-static bool no_color() {
+bool no_color() {
 	const char *no_color = std::getenv("NO_COLOR");
 	if (no_color == NULL)
 		return false;
@@ -129,5 +129,5 @@ string ansi::rgb(string s, int r, int g, int b) {
 string ansi::rgb_bg(string s, int r, int g, int b) {
 	if (no_color())
 		return s;
-	return ANSI_CSI "30" "m" ANSI_CSI ANSI_RGB_BG ";" + itoa(r) + ";" + itoa(g) + ";" + itoa(b) + "m" + s + ANSI_RST;
+	return ANSI_CSI ANSI_RGB_BG ";" + itoa(r) + ";" + itoa(g) + ";" + itoa(b) + "m" + s + ANSI_RST;
 }

@@ -16,16 +16,17 @@ using std::string;
 #define ANSI_MAGENTA ANSI_CSI "35" "m"
 #define ANSI_CYAN ANSI_CSI    "36" "m"
 #define ANSI_WHITE ANSI_CSI   "37" "m"
-#define ANSI_BLACK_BG ANSI_CSI   "30;40" "m"
-#define ANSI_RED_BG ANSI_CSI     "30;41" "m"
-#define ANSI_GREEN_BG ANSI_CSI   "30;42" "m"
-#define ANSI_YELLOW_BG ANSI_CSI  "30;43" "m"
-#define ANSI_BLUE_BG ANSI_CSI    "30;44" "m"
-#define ANSI_MAGENTA_BG ANSI_CSI "30;45" "m"
-#define ANSI_CYAN_BG ANSI_CSI    "30;46" "m"
-#define ANSI_WHITE_BG ANSI_CSI   "30;47" "m"
+#define ANSI_BLACK_BG ANSI_CSI   "40" "m"
+#define ANSI_RED_BG ANSI_CSI     "41" "m"
+#define ANSI_GREEN_BG ANSI_CSI   "42" "m"
+#define ANSI_YELLOW_BG ANSI_CSI  "43" "m"
+#define ANSI_BLUE_BG ANSI_CSI    "44" "m"
+#define ANSI_MAGENTA_BG ANSI_CSI "45" "m"
+#define ANSI_CYAN_BG ANSI_CSI    "46" "m"
+#define ANSI_WHITE_BG ANSI_CSI   "47" "m"
 
 namespace ansi {
+	bool no_color();
 	string black(string s);
 	string red(string s);
 	string green(string s);

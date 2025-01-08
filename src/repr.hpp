@@ -5,29 +5,53 @@
 #include <vector> /* std::vector */
 #include <map> /* std::map */
 #include <utility> /* std::pair */
+
 #include "Logger.hpp" /* Logger::debug() */
 #include "Constants.hpp" /* Constants::{no_color,repr_json} */
+#include "ansi.hpp"
 
 # define ANSI_CSI "\x1b\x5b"
-# define ANSI_FG ANSI_CSI "48;2;41;41;41" "m"
+# define ANSI_FG     41,41,41
 # define ANSI_RST_FR ANSI_CSI "0" "m"
 # define ANSI_RST    ANSI_CSI "0" "m" ANSI_FG
-# define ANSI_STR    ANSI_FG ANSI_CSI "38;2;184;187;38"  "m"
-# define ANSI_CHR    ANSI_FG ANSI_CSI "38;2;211;134;155" "m"
-# define ANSI_KWRD   ANSI_FG ANSI_CSI "38;2;250;189;47"  "m"
-# define ANSI_PUNCT  ANSI_FG ANSI_CSI "38;2;254;128;25"  "m"
-# define ANSI_FUNC   ANSI_FG ANSI_CSI "38;2;184;187;38"  "m"
-# define ANSI_NUM    ANSI_FG ANSI_CSI "38;2;211;134;155" "m"
-# define ANSI_VAR    ANSI_FG ANSI_CSI "38;2;235;219;178" "m"
-# define ANSI_CMT    ANSI_FG ANSI_CSI "38;2;146;131;116" "m"
+# define ANSI_STR    184,187,38
+# define ANSI_CHR    211,134,155
+# define ANSI_KWRD   250,189,47
+# define ANSI_PUNCT  254,128,25
+# define ANSI_FUNC   184,187,38
+# define ANSI_NUM    211,134,155
+# define ANSI_VAR    235,219,178
+# define ANSI_CMT    146,131,116
 
 using std::string;
 using std::vector;
 using std::map;
 using std::pair;
+using ansi::rgb;
+using ansi::rgb_bg;
 
 void repr_init();
 void repr_done();
+
+namespace repr_clr {
+	string str(string s);
+	string chr(string s);
+	string kwrd(string s);
+	string punct(string s);
+	string func(string s);
+	string num(string s);
+	string var(string s);
+	string cmt(string s);
+}
+
+using repr_clr::str;
+using repr_clr::chr;
+using repr_clr::kwrd;
+using repr_clr::punct;
+using repr_clr::func;
+using repr_clr::num;
+using repr_clr::var;
+using repr_clr::cmt;
 
 // generic template, works for ints, floats, and some other fundamental types
 // repr should be specialized or overridden for custom classes/non-fundamental types
@@ -38,7 +62,7 @@ struct repr_wrapper {
 	static inline string
 	str(const T& value) {
 		std::ostringstream oss;
-		oss << ANSI_NUM << value << ANSI_RST;
+		oss << num(value);
 		return oss.str();
 	}
 };
@@ -51,9 +75,9 @@ struct repr_wrapper<string> {
 	static inline string
 	str(const string& value) {
 		if (REPR_JSON)
-			return string("\"") + value + "\"";
+			return "\"" + value + "\"";
 		else
-			return ANSI_STR "\"" + value + "\"" + (Logger::debug() ? ANSI_PUNCT "s": "") + ANSI_RST;
+			return str("\"" + value + "\"") + (Logger::debug() ? punct("s") : "");
 	}
 };
 
@@ -65,7 +89,7 @@ struct repr_wrapper<char*> {
 		if (REPR_JSON)
 			return string("\"") + value + "\"";
 		else
-			return string(ANSI_STR "\"") + value + "\"" ANSI_STR;
+			return str(string("\"") + value + "\"");
 	}
 };
 
@@ -77,7 +101,7 @@ struct repr_wrapper<char> {
 		if (REPR_JSON)
 			return string("\"") + value + "\"";
 		else
-			return string(ANSI_CHR "'") + value + "'" ANSI_RST;
+			return chr(string("'") + value + "'");
 	}
 };
 
@@ -90,24 +114,24 @@ struct repr_wrapper<vector<T> > {
 		if (REPR_JSON)
 			oss << "[";
 		else if (Logger::debug())
-			oss << ANSI_KWRD "std" ANSI_PUNCT "::" ANSI_KWRD "vector" ANSI_PUNCT "({" ANSI_RST;
+			oss << kwrd("std") + punct("::") + kwrd("vector") + punct("({");
 		else
-			oss << ANSI_PUNCT "[" ANSI_RST;
+			oss << punct("[");
 		for (unsigned int i = 0; i < value.size(); ++i) {
 			if (i != 0) {
 				if (REPR_JSON)
 					oss << ", ";
 				else
-					oss << ANSI_PUNCT ", " ANSI_RST;
+					oss << punct(", ");
 			}
 			oss << repr_wrapper<T>::str(value[i]);
 		}
 		if (REPR_JSON)
 			oss << "]";
 		else if (Logger::debug())
-			oss << ANSI_PUNCT "})" ANSI_RST;
+			oss << punct("})");
 		else
-			oss << ANSI_PUNCT "]" ANSI_RST;
+			oss << punct("]");
 		return oss.str();
 	}
 };
@@ -121,31 +145,31 @@ struct repr_wrapper<map<K, V> > {
 		if (REPR_JSON)
 			oss << "{";
 		else if (Logger::debug())
-			oss << ANSI_KWRD "std" ANSI_PUNCT "::" ANSI_KWRD "map" ANSI_PUNCT "({" ANSI_RST;
+			oss << kwrd("std") + punct("::") + kwrd("map") + punct("({");
 		else
-			oss << ANSI_PUNCT "{" ANSI_RST;
+			oss << punct("{");
 		int i = 0;
 		for (typename map<K, V>::const_iterator it = m.begin(); it != m.end(); ++it) {
 			if (i != 0) {
 				if (REPR_JSON)
 					oss << ", ";
 				else
-					oss << ANSI_PUNCT ", " ANSI_RST;
+					oss << punct(", ");
 			}
 			oss << repr_wrapper<K>::str(it->first);
 			if (REPR_JSON)
 				oss << ": ";
 			else
-				oss << ANSI_PUNCT ": ";
+				oss << punct(": ");
 			oss << repr_wrapper<V>::str(it->second);
 			++i;
 		}
 		if (REPR_JSON)
 			oss << "}";
 		else if (Logger::debug())
-			oss << ANSI_PUNCT "})" ANSI_RST;
+			oss << punct("})");
 		else
-			oss << ANSI_PUNCT "}" ANSI_RST;
+			oss << punct("}");
 		return oss.str();
 	}
 };
@@ -159,14 +183,14 @@ struct repr_wrapper<pair<F, S> > {
 		if (REPR_JSON)
 			oss << "[";
 		else if (Logger::debug())
-			oss << ANSI_KWRD "std" ANSI_PUNCT "::" ANSI_KWRD "pair" ANSI_PUNCT "(" ANSI_RST;
+			oss << kwrd("std") + punct("::") + kwrd("pair") + punct("(");
 		else
-			oss << ANSI_PUNCT "(" ANSI_RST;
-		oss << repr_wrapper<F>::str(p.first) << (REPR_JSON ? ", " : ANSI_PUNCT ", ") << repr_wrapper<S>::str(p.second);
+			oss << punct("(");
+		oss << repr_wrapper<F>::str(p.first) << (REPR_JSON ? ", " : punct(", ")) << repr_wrapper<S>::str(p.second);
 		if (REPR_JSON)
 			oss << "]";
 		else
-		oss << ANSI_PUNCT ")" ANSI_RST;
+		oss << punct(")");
 		return oss.str();
 	}
 };
@@ -186,23 +210,23 @@ repr(const T* value, unsigned int size) {
 	if (REPR_JSON)
 		oss << "[";
 	else if (Logger::debug())
-		oss << ANSI_PUNCT "{" ANSI_RST;
+		oss << punct("{");
 	else
-		oss << ANSI_PUNCT "[" ANSI_RST;
+		oss << punct("[");
 	for (unsigned int i = 0; i < size; ++i) {
 		if (i != 0) {
 			if (REPR_JSON)
 				oss << ", ";
 			else
-				oss << ANSI_PUNCT ", " ANSI_RST;
+				oss << punct(", ");
 		}
 		oss << repr_wrapper<T>::str(value[i]);
 	}
 	if (REPR_JSON)
 		oss << "]";
 	else if (Logger::debug())
-		oss << ANSI_PUNCT "}" ANSI_RST;
+		oss << punct("}");
 	else
-		oss << ANSI_PUNCT "]" ANSI_RST;
+		oss << punct("]");
 	return oss.str();
 }
