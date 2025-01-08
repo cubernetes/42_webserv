@@ -40,7 +40,7 @@ private:
 };
 
 template <typename T> struct repr_wrapper;
-template <> struct repr_wrapper<Logger> { static inline string str(const Logger& value) { return value.repr(); } };
+template <> struct repr_wrapper<Logger> { static inline string repr(const Logger& value) { return value.repr(); } };
 void swap(Logger&, Logger&) /* noexcept */;
 ostream& operator<<(ostream&, const Logger&);
 // </GENERATED>

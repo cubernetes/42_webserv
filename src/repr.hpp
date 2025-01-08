@@ -10,10 +10,14 @@
 #include "Constants.hpp" /* Constants::{no_color,repr_json} */
 #include "ansi.hpp"
 
+#ifndef REPR_JSON
+# define REPR_JSON false
+#endif
+
 # define ANSI_CSI "\x1b\x5b"
 # define ANSI_FG     41,41,41
 # define ANSI_RST_FR ANSI_CSI "0" "m"
-# define ANSI_RST    ANSI_CSI "0" "m" ANSI_FG
+// # define ANSI_RST    ANSI_CSI "0" "m" ANSI_FG
 # define ANSI_STR    184,187,38
 # define ANSI_CHR    211,134,155
 # define ANSI_KWRD   250,189,47
@@ -60,20 +64,20 @@ using repr_clr::cmt;
 template <typename T>
 struct repr_wrapper {
 	static inline string
-	str(const T& value) {
+	repr(const T& value) {
 		std::ostringstream oss;
-		oss << num(value);
-		return oss.str();
+		oss << value;
+		return num(oss.str());
 	}
 };
 
 ///// repr partial template specializations
 
-// not escaping str value atm
+// not escaping string value atm
 template <>
 struct repr_wrapper<string> {
 	static inline string
-	str(const string& value) {
+	repr(const string& value) {
 		if (REPR_JSON)
 			return "\"" + value + "\"";
 		else
@@ -81,11 +85,11 @@ struct repr_wrapper<string> {
 	}
 };
 
-// not escaping str value atm
+// not escaping string value atm
 template <>
 struct repr_wrapper<char*> {
 	static inline string
-	str(const char* const& value) {
+	repr(const char* const& value) {
 		if (REPR_JSON)
 			return string("\"") + value + "\"";
 		else
@@ -97,7 +101,7 @@ struct repr_wrapper<char*> {
 template <>
 struct repr_wrapper<char> {
 	static inline string
-	str(const char& value) {
+	repr(const char& value) {
 		if (REPR_JSON)
 			return string("\"") + value + "\"";
 		else
@@ -109,7 +113,7 @@ struct repr_wrapper<char> {
 template <typename T>
 struct repr_wrapper<vector<T> > {
 	static inline string
-	str(const vector<T>& value) {
+	repr(const vector<T>& value) {
 		std::ostringstream oss;
 		if (REPR_JSON)
 			oss << "[";
@@ -124,7 +128,7 @@ struct repr_wrapper<vector<T> > {
 				else
 					oss << punct(", ");
 			}
-			oss << repr_wrapper<T>::str(value[i]);
+			oss << repr_wrapper<T>::repr(value[i]);
 		}
 		if (REPR_JSON)
 			oss << "]";
@@ -140,7 +144,7 @@ struct repr_wrapper<vector<T> > {
 template <typename K, typename V>
 struct repr_wrapper<map<K, V> > {
 	static inline string
-	str(const map<K, V>& m) {
+	repr(const map<K, V>& m) {
 		std::ostringstream oss;
 		if (REPR_JSON)
 			oss << "{";
@@ -156,12 +160,12 @@ struct repr_wrapper<map<K, V> > {
 				else
 					oss << punct(", ");
 			}
-			oss << repr_wrapper<K>::str(it->first);
+			oss << repr_wrapper<K>::repr(it->first);
 			if (REPR_JSON)
 				oss << ": ";
 			else
 				oss << punct(": ");
-			oss << repr_wrapper<V>::str(it->second);
+			oss << repr_wrapper<V>::repr(it->second);
 			++i;
 		}
 		if (REPR_JSON)
@@ -178,7 +182,7 @@ struct repr_wrapper<map<K, V> > {
 template <typename F, typename S>
 struct repr_wrapper<pair<F, S> > {
 	static inline string
-	str(const pair<F, S>& p) {
+	repr(const pair<F, S>& p) {
 		std::ostringstream oss;
 		if (REPR_JSON)
 			oss << "[";
@@ -186,7 +190,7 @@ struct repr_wrapper<pair<F, S> > {
 			oss << kwrd("std") + punct("::") + kwrd("pair") + punct("(");
 		else
 			oss << punct("(");
-		oss << repr_wrapper<F>::str(p.first) << (REPR_JSON ? ", " : punct(", ")) << repr_wrapper<S>::str(p.second);
+		oss << repr_wrapper<F>::repr(p.first) << (REPR_JSON ? ", " : punct(", ")) << repr_wrapper<S>::repr(p.second);
 		if (REPR_JSON)
 			oss << "]";
 		else
@@ -199,7 +203,7 @@ struct repr_wrapper<pair<F, S> > {
 template <typename T>
 static inline string
 repr(const T& value) {
-	return repr_wrapper<T>::str(value);
+	return repr_wrapper<T>::repr(value);
 }
 
 // convenience wrapper for arrays
@@ -220,7 +224,7 @@ repr(const T* value, unsigned int size) {
 			else
 				oss << punct(", ");
 		}
-		oss << repr_wrapper<T>::str(value[i]);
+		oss << repr_wrapper<T>::repr(value[i]);
 	}
 	if (REPR_JSON)
 		oss << "]";

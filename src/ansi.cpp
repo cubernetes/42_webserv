@@ -9,19 +9,19 @@
 
 using std::string;
 
-bool no_color() {
+static string itoa(int n) {
+	std::ostringstream oss;
+	oss << n;
+	return oss.str();
+}
+
+bool ansi::no_color() {
 	const char *no_color = std::getenv("NO_COLOR");
 	if (no_color == NULL)
 		return false;
 	else if (*no_color == '\0')
 		return false;
 	return true;
-}
-
-static string itoa(int n) {
-	std::ostringstream oss;
-	oss << n;
-	return oss.str();
 }
 
 string ansi::black(string s) {

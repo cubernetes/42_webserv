@@ -18,23 +18,23 @@ using std::stringstream;
 // De- & Constructors
 Logger::~Logger() {
 	if (Logger::trace())
-		cout << ANSI_PUNCT "~" << *this << '\n';
+		cout << punct("~") << *this << '\n';
 }
 
 Logger::Logger() : _id(_idCntr++) {
 	if (Logger::trace())
-		cout << ANSI_KWRD "Logger" ANSI_PUNCT "() -> " << *this << '\n';
+		cout << kwrd("Logger") + punct("() -> ") << *this << '\n';
 }
 
 Logger::Logger(const Logger& other) : _id(_idCntr++) {
 	if (Logger::trace())
-		cout << ANSI_KWRD "Logger" ANSI_PUNCT "(" << ::repr(other) << ANSI_PUNCT ") -> " << *this << '\n';
+		cout << kwrd("Logger") + punct("(") << ::repr(other) << punct(") -> ") << *this << '\n';
 }
 
 // Copy-assignment operator (using copy-swap idiom)
 Logger& Logger::operator=(Logger other) /* noexcept */ {
 	if (Logger::trace())
-		cout << ANSI_KWRD "Logger" ANSI_PUNCT "& " ANSI_KWRD "Logger" ANSI_PUNCT "::" ANSI_FUNC "operator" ANSI_PUNCT "=(" << ::repr(other) << ANSI_PUNCT ")" ANSI_RST "\n";
+		cout << kwrd("Logger") + punct("& ") + kwrd("Logger") + punct("::") + func("operator") + punct("=(") << ::repr(other) << punct(")") + "\n";
 	::swap(*this, other);
 	return *this;
 }
@@ -42,20 +42,20 @@ Logger& Logger::operator=(Logger other) /* noexcept */ {
 // Generated member functions
 string Logger::repr() const {
 	stringstream out;
-	out << ANSI_KWRD "Logger" ANSI_PUNCT "(" << ::repr(_id) << ANSI_PUNCT ")" ANSI_RST;
+	out << kwrd("Logger") + punct("(") << ::repr(_id) << punct(")");
 	return out.str();
 }
 
 void Logger::swap(Logger& other) /* noexcept */ {
 	if (Logger::trace()) {
-		cout << ANSI_CMT "<Swapping Logger *this:" ANSI_RST "\n";
+		cout << cmt("<Swapping Logger *this:") + "\n";
 		cout << *this << '\n';
-		cout << ANSI_CMT "with the following Logger object:" ANSI_RST "\n";
+		cout << cmt("with the following Logger object:") + "\n";
 		cout << other << '\n';
 	}
 	::swap(_id, other._id);
 	if (Logger::trace())
-		cout << ANSI_CMT "Logger swap done>" ANSI_RST "\n";
+		cout << cmt("Logger swap done>") + "\n";
 }
 
 Logger::operator string() const { return ::repr(*this); }
