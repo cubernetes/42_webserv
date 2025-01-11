@@ -7,6 +7,7 @@
 #include "repr.hpp" /* repr<T> */
 #include "helper.hpp"
 #include "Config.hpp"
+#include "HttpServer.hpp"
 
 using std::string;
 using std::ostream;
@@ -37,6 +38,7 @@ public:
 
 	unsigned int exitStatus;
 private:
+	HttpServer _http;
 	Config _config;
 	unsigned int _id;
 	static unsigned int _idCntr;

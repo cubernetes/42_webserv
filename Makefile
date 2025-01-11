@@ -68,6 +68,7 @@ SRC += Constants.cpp
 SRC += Errors.cpp
 SRC += Logger.cpp
 SRC += Utils.cpp
+SRC += HttpServer.cpp
 
 # object vars
 OBJ := $(SRC:.$(EXT)=.o)
