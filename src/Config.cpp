@@ -49,7 +49,7 @@ Config::Config(const string& configPath) :
 		_serverConfigs(),
 		_maxWorkers(),
 		_id(_idCntr++) {
-	parse();
+	//parse();
 	if (Logger::trace())
 		cout << ANSI_KWRD "Config" ANSI_PUNCT "(" << ::repr(configPath) << ANSI_PUNCT ") -> " << *this << '\n';
 }
@@ -199,77 +199,77 @@ t_token Config::new_token(token_type t, const string& s) {
 
 // not sure yet, but I guess:
 // route_pattern ::= LEX_TOKEN
-bool Config::parse_route_pattern(t_tokens& tokens) {
-}
+// bool Config::parse_route_pattern(t_tokens& tokens) {
+// }
 
 // route ::= 'location' route_pattern '{' directives '}'
-bool Config::parse_route(t_tokens& tokens) {
-	parse_route_pattern(tokens);
-}
+// bool Config::parse_route(t_tokens& tokens) {
+// 	return parse_route_pattern(tokens);
+// }
 
 // server_configs ::= [ directive | route ] server_configs?
-bool Config::parse_server_configs(t_tokens& tokens) {
-	parse_directive(tokens);
-	parse_route(tokens);
-	parse_server_configs(tokens);
-}
+// bool Config::parse_server_configs(t_tokens& tokens) {
+// 	parse_directive(tokens);
+// 	parse_route(tokens);
+// 	return parse_server_configs(tokens);
+// }
 
 // server ::= '{' server_configs '}'
-bool Config::parse_server(t_tokens& tokens) {
-	parse_server_configs(tokens);
-}
+// bool Config::parse_server(t_tokens& tokens) {
+// 	return parse_server_configs(tokens);
+// }
 
 // server_list ::= server server_list?
-bool Config::parse_server_list(t_tokens& tokens) {
-	parse_server(tokens);
-	parse_server_list(tokens);
-}
+// bool Config::parse_server_list(t_tokens& tokens) {
+// 	parse_server(tokens);
+// 	return parse_server_list(tokens);
+// }
 
 // arguments ::= argument arguments?
 // argument ::= LEX_TOKEN
-bool Config::parse_arguments(t_tokens& tokens) {
-	if (accept(tokens, ""))
-		return true;
-	string argument = tokens.front();
-	if (argument == ";")
-		return true;
-	else if (argument == "}")
-		return true;
-	tokens.pop_front();
+// bool Config::parse_arguments(t_tokens& tokens) {
+// 	if (accept(tokens, ""))
+// 		return true;
+// 	string argument = tokens.front();
+// 	if (argument == ";")
+// 		return true;
+// 	else if (argument == "}")
+// 		return true;
+// 	tokens.pop_front();
 
-	parse_arguments(tokens);
-}
+// 	parse_arguments(tokens);
+// }
 
 // directive ::= directive_name arguments ';'
 // directive_name ::= LEX_TOKEN
-bool Config::parse_directive(t_tokens& tokens) {
-	if (!accept(tokens, WORD))
-		return false;
+// bool Config::parse_directive(t_tokens& tokens) {
+// 	if (!accept(tokens, WORD))
+// 		return false;
 
-	if (!parse_arguments(tokens))
-		return false;
+// 	if (!parse_arguments(tokens))
+// 		return false;
 
-	if (!accept(tokens, SEMICOLON))
-		return false;
-	return true;
-}
+// 	if (!accept(tokens, SEMICOLON))
+// 		return false;
+// 	return true;
+// }
 
 // http_block ::= '{' server_list '}'
-bool Config::parse_http_block(t_tokens& tokens) {
-	parse_server_list(tokens);
-}
+// bool Config::parse_http_block(t_tokens& tokens) {
+// 	return parse_server_list(tokens);
+// }
 
 // directives ::= directive directives?
-bool Config::parse_directives(t_tokens& tokens) {
-	if (tokens.front().second == "http")
-		return true;
-	return parse_directive(tokens) && parse_directives(tokens);
-}
+// bool Config::parse_directives(t_tokens& tokens) {
+// 	if (tokens.front().second == "http")
+// 		return true;
+// 	return parse_directive(tokens) && parse_directives(tokens);
+// }
 
-// config ::= directives? http_block
-bool Config::parse_config(t_tokens& tokens) {
-	return parse_directives(tokens) && parse_http_block(tokens);
-}
+// // config ::= directives? http_block
+// bool Config::parse_config(t_tokens& tokens) {
+// 	return parse_directives(tokens) && parse_http_block(tokens);
+// }
 
 t_tokens Config::lex_config(std::ifstream& config) {
 	t_tokens tokens;
@@ -300,25 +300,25 @@ t_tokens Config::lex_config(std::ifstream& config) {
 	return tokens;
 }
 
-void Config::parse() {
-	std::ifstream config(_configPath.c_str());
-	if (!config.good())
-		throw runtime_error(Errors::Config::OpeningError);
-	// _accessLog = "log/server1-acc.log";
-	// _errorLog = "log/server1-err.log";
-	// _maxBodySize = 4096;
-	// _root = "www";
-	// _errorPage = "www/404.html";
-	// _enableDirListing = true;
-	// _indexFiles.push_back("index.html");
-	// _indexFiles.push_back("index.htm");
-	// _indexFiles.push_back("webserv-index.html");
-	// _cgiHandlers["py"] = CgiHandler("py");
-	// _cgiHandlers["php"] = CgiHandler("php");
-	// _serverConfigs.push_back(ServerConfig(this->_accessLog, this->_errorLog, this->_maxBodySize, this->_root, this->_errorPage, this->_enableDirListing, this->_indexFiles, this->_cgiHandlers, "Server1", "127.0.0.1", 8080));
-	// _maxWorkers = 8;
+// void Config::parse() {
+// 	std::ifstream config(_configPath.c_str());
+// 	if (!config.good())
+// 		throw runtime_error(Errors::Config::OpeningError);
+// 	// _accessLog = "log/server1-acc.log";
+// 	// _errorLog = "log/server1-err.log";
+// 	// _maxBodySize = 4096;
+// 	// _root = "www";
+// 	// _errorPage = "www/404.html";
+// 	// _enableDirListing = true;
+// 	// _indexFiles.push_back("index.html");
+// 	// _indexFiles.push_back("index.htm");
+// 	// _indexFiles.push_back("webserv-index.html");
+// 	// _cgiHandlers["py"] = CgiHandler("py");
+// 	// _cgiHandlers["php"] = CgiHandler("php");
+// 	// _serverConfigs.push_back(ServerConfig(this->_accessLog, this->_errorLog, this->_maxBodySize, this->_root, this->_errorPage, this->_enableDirListing, this->_indexFiles, this->_cgiHandlers, "Server1", "127.0.0.1", 8080));
+// 	// _maxWorkers = 8;
 
-	t_tokens tokens = lex_config(config);
-	if (!parse_config(tokens))
-		throw runtime_error(Errors::Config::ParseError);
-}
+// 	t_tokens tokens = lex_config(config);
+// 	if (!parse_config(tokens))
+// 		throw runtime_error(Errors::Config::ParseError);
+// }

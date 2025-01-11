@@ -25,7 +25,7 @@ typedef enum {
 	CLOSING_BRACE,
 	WORD,
 	EOF_TOK,
-	UNKNOWN,
+	UNKNOWN
 } token_type;
 
 typedef pair<token_type, string> t_token;
@@ -71,17 +71,17 @@ protected:
 	unsigned int _maxWorkers;
 private:
 	t_tokens lex_config(std::ifstream&);
-	void parse();
-	bool parse_config(t_tokens&);
-	bool parse_directives(t_tokens&);
-	bool parse_http_block(t_tokens&);
-	bool parse_directive(t_tokens&);
-	bool parse_arguments(t_tokens&);
-	bool parse_server_list(t_tokens&);
-	bool parse_server(t_tokens&);
+	// void parse();
+	// bool parse_config(t_tokens&);
+	// bool parse_directives(t_tokens&);
+	// bool parse_http_block(t_tokens&);
+	// bool parse_directive(t_tokens&);
+	// bool parse_arguments(t_tokens&);
+	// bool parse_server_list(t_tokens&);
+	// bool parse_server(t_tokens&);
 	bool parse_server_configs(t_tokens&);
-	bool parse_route(t_tokens&);
-	bool parse_route_pattern(t_tokens&);
+	// bool parse_route(t_tokens&);
+	// bool parse_route_pattern(t_tokens&);
 	bool accept(t_tokens&, token_type);
 	bool expect(t_tokens&, token_type);
 	void unexpected(t_tokens&);

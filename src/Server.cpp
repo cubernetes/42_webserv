@@ -19,17 +19,17 @@ Server::~Server() {
 		cout << ANSI_PUNCT "~" << *this << '\n';
 }
 
-Server::Server() : exitStatus(), _config(), _id(_idCntr++) {
+Server::Server() : exitStatus(), _http(), _config(), _id(_idCntr++) {
 	if (Logger::trace())
 		cout << ANSI_KWRD "Server" ANSI_PUNCT "() -> " << *this << '\n';
 }
 
-Server::Server(unsigned int newExitStatus, const Config& config) : exitStatus(newExitStatus), _config(config), _id(_idCntr++) {
+Server::Server(unsigned int newExitStatus, const Config& config) : exitStatus(newExitStatus), _http(), _config(config), _id(_idCntr++) {
 	if (Logger::trace())
 		cout << *this << ANSI_PUNCT " -> " << *this << '\n';
 }
 
-Server::Server(const Server& other) : exitStatus(other.exitStatus), _config(other._config), _id(_idCntr++) {
+Server::Server(const Server& other) : exitStatus(other.exitStatus), _http(other._http), _config(other._config), _id(_idCntr++) {
 	if (Logger::trace())
 		cout << ANSI_KWRD "Server" ANSI_PUNCT "(" << ::repr(other) << ANSI_PUNCT ") -> " << *this << '\n';
 }

@@ -30,8 +30,10 @@ HttpServer::~HttpServer() {
 }
 
 HttpServer::HttpServer() : 
-	server_fd(-1), 
+	server_fd(-1),
+	poll_fds(),
 	running(false),
+	config(),
 	_id(_idCntr++) {
 	if (Logger::trace())
 		cout << ANSI_KWRD "HttpServer" ANSI_PUNCT "() -> " << *this << '\n';
@@ -39,6 +41,7 @@ HttpServer::HttpServer() :
 
 HttpServer::HttpServer(const HttpServer& other) :
 	server_fd(-1),
+	poll_fds(other.poll_fds),
 	running(other.running),
 	config(other.config),
 	_id(_idCntr++) {
@@ -86,11 +89,13 @@ HttpServer::operator string() const {
 }
 
 bool HttpServer::setup(const Config& conf) {
-	config = conf;
+	//config = conf;
+	(void)conf;
 	return setupSocket("127.0.0.1", 8080);  // Hardcoded for now
 }
 
 bool HttpServer::setupSocket(const std::string& ip, int port) {
+	(void)ip;
 	server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd < 0) {
 		Logger::logerror("Failed to create socket");
@@ -112,7 +117,12 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 	
 	struct sockaddr_in address;
 	address.sin_family = AF_INET;
-	address.sin_port = htons(port);
+	if (port > 0 && port <= UINT16_MAX) {
+		address.sin_port = htons(static_cast<uint16_t>(port));
+	} else {
+		Logger::logerror("Invalid port number");
+		return false;
+	}
 	address.sin_addr.s_addr = INADDR_ANY;
 	
 	if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
