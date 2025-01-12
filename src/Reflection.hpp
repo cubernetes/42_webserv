@@ -40,6 +40,8 @@ enum e_type {
 typedef enum e_type t_type;
 
 class Reflection {
+public:
+	virtual ~Reflection() {}
 protected:
 	string _memberToStr(const pair<t_type, const void*>& member, bool json = false) const;
 	void reflect_member(t_type type, const char *memberId, const void *memberPtr);

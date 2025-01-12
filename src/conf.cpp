@@ -3,6 +3,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <fstream>
 
 #include "repr.hpp"
 #include "conf.hpp"
@@ -36,12 +37,21 @@ void populate_default_route_directives(t_directives& directives, t_directives& s
 	directives["return"] = "";
 }
 
-void default_route(t_route& route) {
+void default_route(t_route& route, t_directives& server_directives) {
 	route.first = "";
-	populate_default_route_directives(route.second, );
+	populate_default_route_directives(route.second, server_directives);
 }
 
-int main() {
+string readConfig(string configPath) {
+	std::ifstream is(configPath.c_str());
+	std::stringstream ss;
+	ss << is.rdbuf();
+	return ss.str();
+}
+
+t_config parseConfig(string rawConfig) {
+	(void)rawConfig;
+
 	t_config config;
 	populate_default_global_directives(config.first);
 
@@ -49,11 +59,27 @@ int main() {
 	populate_default_server_directives(server.first, config.first);
 
 	t_route route;
-	default_route(route);
+	default_route(route, server.first);
 	server.second.push_back(route);
 
 	config.second.push_back(server);
 
-	std::cout << repr(config, true) << '\n';
-	return 0;
+	return config;
 }
+
+// int main() {
+// 	t_config config;
+// 	populate_default_global_directives(config.first);
+// 
+// 	t_server server;
+// 	populate_default_server_directives(server.first, config.first);
+// 
+// 	t_route route;
+// 	default_route(route, server.first);
+// 	server.second.push_back(route);
+// 
+// 	config.second.push_back(server);
+// 
+// 	std::cout << ::repr(config, true) << '\n';
+// 	return 0;
+// }

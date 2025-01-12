@@ -1,4 +1,3 @@
-// <GENERATED>
 #pragma once /* Server.hpp */
 
 #include <string> /* std::string */
@@ -8,43 +7,38 @@
 #include "helper.hpp"
 #include "Config.hpp"
 #include "HttpServer.hpp"
+#include "Reflection.hpp"
+#include "conf.hpp"
 
 using std::string;
 using std::ostream;
 
-class Server {
+class Server : public Reflection {
 public:
-	// <generated>
-		~Server(); // destructor; consider virtual if it's a base class
-		Server(); // default constructor
-		Server(unsigned int, const Config&); // serializing constructor
-		Server(const Server&); // copy constructor
-		Server& operator=(Server); // copy-assignment operator
-		void swap(Server&); // copy-swap idiom
-		string repr() const; // return string-serialized version of the object
-		operator string() const; // convert object to string
-
-		int getExitStatus() const;
-		const Config& get_config() const;
-
-		void setExitStatus(int);
-		void set_config(const Config&);
-
-		template <typename T>
-		Server(const T& type, DeleteOverload = 0); // disallow accidental casting/conversion
-	// </generated>
+	~Server();
+	Server();
+	Server(const string& confPath);
+	Server(const Server& other);
+	Server& operator=(Server);
+	void swap(Server& other);
+	operator string() const;
 
 	void serve();
 
-	unsigned int exitStatus;
+public:
+	REFLECT(
+		"Server",
+		DECL(unsigned int, exitStatus),
+		DECL(const string, rawConfig),
+		DECL(t_config, config), // maybe private, since non-const?
+		DECL(unsigned int, _id), // should be private
+		DECL(HttpServer, _http), // should be private
+	)
 private:
-	HttpServer _http;
-	Config _config;
-	unsigned int _id;
 	static unsigned int _idCntr;
 };
 
-template <> inline string repr(const Server& value) { return value.repr(); }
+template <typename T> struct repr_wrapper;
+template <> struct repr_wrapper<Server> { static inline string repr(const Server& value, bool json = false) { return value.repr(json); } };
 void swap(Server&, Server&) /* noexcept */;
 ostream& operator<<(ostream&, const Server&);
-// </GENERATED>

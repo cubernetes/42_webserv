@@ -29,6 +29,7 @@ using std::map;
 using std::pair;
 using ansi::rgb;
 using ansi::rgb_bg;
+using std::ostream;
 
 void repr_init();
 void repr_done();

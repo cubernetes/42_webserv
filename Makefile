@@ -8,7 +8,7 @@ NAME := webserv
 EXT := cpp
 
 # tools
-CXX := c++
+CXX := clang++ # TODO change to c++
 RM := /bin/rm -f
 MKDIR := /bin/mkdir -p
 
@@ -18,7 +18,7 @@ CFLAGS += -O2
 CFLAGS += -Wall
 CFLAGS += -Wextra
 CFLAGS += -Wshadow
-CFLAGS += -pedantic
+#CFLAGS += -pedantic
 CFLAGS += -Wconversion
 CFLAGS += -Wunreachable-code
 # CFLAGS += -std=c++98
@@ -57,18 +57,18 @@ endif
 SRC :=
 
 vpath %.$(EXT) src
-SRC += repr.cpp
 SRC += main.cpp
+SRC += conf.cpp
+SRC += repr.cpp
+SRC += ansi.cpp
+SRC += Reflection.cpp
 SRC += Server.cpp
-SRC += BaseConfig.cpp
-SRC += Config.cpp
-SRC += ServerConfig.cpp
-SRC += CgiHandler.cpp
 SRC += Constants.cpp
 SRC += Errors.cpp
 SRC += Logger.cpp
 SRC += Utils.cpp
 SRC += HttpServer.cpp
+#SRC += CgiHandler.cpp
 
 # object vars
 OBJ := $(SRC:.$(EXT)=.o)
@@ -107,7 +107,8 @@ re:
 
 # This allows $(NAME) to be run using either an absolute, relative or no path.
 # You can pass arguments like this: make run ARGS="hello ' to this world ! ' ."
-run:
+run: 
+	make all
 	@echo
 	@PATH=".$${PATH:+:$${PATH}}" && $(NAME) $(ARGS)
 

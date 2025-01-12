@@ -1,4 +1,3 @@
-/* // <GENERATED> */
 #pragma once /* Logger.hpp */
 
 #include <exception>
@@ -12,14 +11,12 @@ using std::ostream;
 
 class Logger : public Reflection {
 public:
-	// <generated>
-		~Logger(); // destructor; consider virtual if it's a base class
-		Logger(); // default constructor
-		Logger(const Logger&); // copy constructor
-		Logger& operator=(Logger); // copy-assignment operator
-		void swap(Logger&); // copy-swap idiom
-		operator string() const; // convert object to string
-	// </generated>
+	~Logger();
+	Logger();
+	Logger(const Logger& other);
+	Logger& operator=(Logger);
+	void swap(Logger& other);
+	operator string() const;
 	
 	static void logexception(const std::exception& exception);
 	static void logerror(const char* error);
@@ -47,4 +44,10 @@ template <typename T> struct repr_wrapper;
 template <> struct repr_wrapper<Logger> { static inline string repr(const Logger& value, bool json = false) { return value.repr(json); } };
 void swap(Logger&, Logger&) /* noexcept */;
 ostream& operator<<(ostream&, const Logger&);
-// </GENERATED>
+
+#define TRACE_DTOR if (Logger::trace()) print_dtor(::repr(*this))
+#define TRACE_DEFAULT_CTOR if (Logger::trace()) print_default_ctor(::repr(*this))
+#define TRACE_COPY_CTOR if (Logger::trace()) print_copy_ctor(::repr(other), ::repr(*this))
+#define TRACE_COPY_ASSIGN_OP if (Logger::trace()) print_copy_assign_op(::repr(other))
+#define TRACE_SWAP_BEGIN if (Logger::trace()) print_swap_begin(::repr(*this), ::repr(other))
+#define TRACE_SWAP_END if (Logger::trace()) print_swap_end()
