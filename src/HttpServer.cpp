@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sstream>
 #include "HttpServer.hpp"
+#include <cstdint>
 #include "repr.hpp"
 
 using std::cout;
@@ -148,7 +149,7 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 
 void HttpServer::run() {
 	running = true;
-	
+
 	while (running) {
 		int ready = poll(poll_fds.data(), poll_fds.size(), -1);
 		if (ready < 0) {
@@ -195,6 +196,7 @@ void HttpServer::handleNewConnection() {
 	struct pollfd pfd;
 	pfd.fd = client_fd;
 	pfd.events = POLLIN;
+	pfd.revents = 0;
 	poll_fds.push_back(pfd);
 	
 	cout << "New client connected. FD: " << client_fd << std::endl;
