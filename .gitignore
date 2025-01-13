@@ -2,7 +2,6 @@
 test.cpp
 test.c
 a.c
-test_sources/
 
 # build artefacts
 a.out
