@@ -4,9 +4,12 @@
 #include <utility>
 #include <vector>
 #include <fstream>
+#include <sstream>
 
-#include "repr.hpp"
+// #include "repr.hpp"
 #include "conf.hpp"
+
+using std::string;
 
 void populate_default_global_directives(t_directives& directives) {
 	directives["pid"] = "run/webserv.pid";
@@ -16,7 +19,7 @@ void populate_default_global_directives(t_directives& directives) {
 	directives["listen"] = "127.0.0.1:80";
 }
 
-void take_from_default(t_directives& directives, t_directives& global_directives, const std::string& directive, const std::string& value) {
+void take_from_default(t_directives& directives, t_directives& global_directives, const string& directive, const string& value) {
 	directives[directive] = global_directives[directive].empty() ? value : global_directives[directive];
 }
 

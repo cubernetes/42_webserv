@@ -1,5 +1,4 @@
-#ifndef LOGGER_HPP /* Logger.hpp */
-# define LOGGER_HPP
+#pragma once
 
 #include <exception>
 #include <string>
@@ -16,7 +15,7 @@ using std::string;
 #define TRACE_SWAP_BEGIN if (Logger::trace()) print_swap_begin(::repr(*this), ::repr(other))
 #define TRACE_SWAP_END if (Logger::trace()) print_swap_end()
 
-class Logger : public Reflection {
+class Logger /* : public Reflection */ {
 public:
 	~Logger();
 	Logger();
@@ -40,14 +39,14 @@ public:
 	static bool error();
 	static bool fatal();
 private:
-	REFLECT(
-		"Logger",
-		DECL(unsigned int, _id)
-	)
+	// REFLECT(
+	// 	"Logger",
+	// 	DECL(unsigned int, _id)
+	// )
+	unsigned int _id;
+
 	static unsigned int _idCntr;
 };
 
 void swap(Logger&, Logger&) /* noexcept */;
 std::ostream& operator<<(std::ostream&, const Logger&);
-
-#endif

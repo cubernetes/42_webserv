@@ -20,7 +20,7 @@ void Reflection::reflect_member(t_type type, const char *memberId, const void *m
 	_members[memberId] = std::make_pair(type, memberPtr);
 }
 
-string Reflection::_membertOsTR(const pair<t_type, const void*>& member, bool json) const {
+string Reflection::_memberToStr(const pair<t_type, const void*>& member, bool json) const {
 	std::ostringstream oss;
 	switch (member.first) {
 		case STRING:

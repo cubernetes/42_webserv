@@ -3,13 +3,13 @@
 #include <string> /* std::string */
 #include <iostream> /* std::ostream */
 
-#include "Reflection.hpp"
-#include "repr.hpp"
+// #include "Reflection.hpp"
+// #include "repr.hpp"
 
 using std::string;
 using std::ostream;
 
-class CgiHandler : public Reflection {
+class CgiHandler /* : public Reflection */ {
 public:
 		~CgiHandler(); // destructor; consider virtual if it's a base class
 		CgiHandler(); // default constructor
@@ -27,12 +27,16 @@ public:
 		void set_extension(const string&); // TODO: can't we just make them public?
 		void set_program(const string&); // TODO: can't we just make them public?
 private:
-	REFLECT(
-		"CgiHandler",
-		DECL(string, _extension),
-		DECL(string, _program),
-		DECL(unsigned int, _id)
-	)
+	// REFLECT(
+	// 	"CgiHandler",
+	// 	DECL(string, _extension),
+	// 	DECL(string, _program),
+	// 	DECL(unsigned int, _id)
+	// )
+	string _extension;
+	string _program;
+	unsgined int _id;
+
 	static unsigned int _idCntr;
 };
 

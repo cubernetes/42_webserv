@@ -2135,22 +2135,7 @@
          19,18,17,16,15,14,13,12,11,10, \
          9,8,7,6,5,4,3,2,1,0
 
-class dummy1 {};
-class dummy2 {};
-
-#ifndef LOGGER_HPP
-# include "Logger.hpp"
 class Logger;
-#else
-# define Logger dummy2
-#endif
-
-#ifndef HTTPSERVER_HPP
-# include "HttpServer.hpp"
-class HttpServer;
-#else
-# define HttpServer dummy1
-#endif
 
 #define TYPE_TO_ENUM(t) _Generic((t),     \
 		int:                 INT,         \
@@ -2175,15 +2160,9 @@ class HttpServer;
 		std::string*:        STRINGP,     \
 		bool:                BOOL,        \
 		bool*:               BOOLP,       \
-		Logger:              LOGGER,      \
 		Logger*:             LOGGERP,     \
-		HttpServer:          HTTPSERVER,  \
-		HttpServer*:         HTTPSERVERP, \
 		default:             UNKNOWN      \
 	)
-
-#undef Logger
-#undef HttpServer
 
 #define OP(i, n) DEC(i), DEC(DEC(INC(n)))
 #define PRED(i, n) i

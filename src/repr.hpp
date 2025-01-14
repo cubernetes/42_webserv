@@ -5,8 +5,6 @@
 #include <vector> /* std::vector */
 #include <map> /* std::map */
 #include <utility> /* std::pair */
-#include <cstddef> /* std::size_t, std::ssize_t */
-#include <cstdint> /* std::u?int... */
 
 #include "Logger.hpp" /* Logger::debug() */
 #include "Constants.hpp" /* Constants::{no_color,repr_json} */
@@ -57,7 +55,7 @@ using repr_clr::var;
 using repr_clr::cmt;
 
 template <typename T>
-struct repr_wrapper<T> {
+struct repr_wrapper {
 	static inline string
 	repr(const T& value, bool json = false) {
 		return value.repr(json);
@@ -65,37 +63,30 @@ struct repr_wrapper<T> {
 };
 
 ///// repr partial template specializations
-#define INT_REPR static inline string \
-	repr(const T& value, bool json = false) { \
-		std::ostringstream oss; \
-		oss << value; \
-		if (json) \
-			return oss.str(); \
-		else \
-			return num(oss.str()); \
+
+#define INT_REPR(T) template <> struct repr_wrapper<T> { \
+		static inline string \
+		repr(const T& value, bool json = false) { \
+			std::ostringstream oss; \
+			oss << value; \
+			if (json) \
+				return oss.str(); \
+			else \
+				return num(oss.str()); \
+		} \
 	}
 
-template <> struct repr_wrapper<int> { INT_REPR; };
-template <> struct repr_wrapper<unsigned int> { INT_REPR; };
-template <> struct repr_wrapper<short> { INT_REPR; };
-template <> struct repr_wrapper<unsigned short> { INT_REPR; };
-template <> struct repr_wrapper<long> { INT_REPR; };
-template <> struct repr_wrapper<unsigned long> { INT_REPR; };
-template <> struct repr_wrapper<long long> { INT_REPR; };
-template <> struct repr_wrapper<unsigned long long> { INT_REPR; };
-template <> struct repr_wrapper<float> { INT_REPR; };
-template <> struct repr_wrapper<double> { INT_REPR; };
-template <> struct repr_wrapper<long double> { INT_REPR; };
-template <> struct repr_wrapper<std::size_t> { INT_REPR; };
-template <> struct repr_wrapper<std::ssize_t> { INT_REPR; };
-template <> struct repr_wrapper<std::int8_t> { INT_REPR; };
-template <> struct repr_wrapper<std::uint8_t> { INT_REPR; };
-template <> struct repr_wrapper<std::int16_t> { INT_REPR; };
-template <> struct repr_wrapper<std::uint16_t> { INT_REPR; };
-template <> struct repr_wrapper<std::int32_t> { INT_REPR; };
-template <> struct repr_wrapper<std::uint32_t> { INT_REPR; };
-template <> struct repr_wrapper<std::int64_t> { INT_REPR; };
-template <> struct repr_wrapper<std::uint64_t> { INT_REPR; };
+INT_REPR(int);
+INT_REPR(short);
+INT_REPR(long);
+INT_REPR(long long);
+INT_REPR(unsigned int);
+INT_REPR(unsigned short);
+INT_REPR(unsigned long);
+INT_REPR(unsigned long long);
+INT_REPR(float);
+INT_REPR(double);
+INT_REPR(long double);
 
 template <> struct repr_wrapper<bool> {
 	static inline string
@@ -238,7 +229,7 @@ repr(const T& value, bool json = false) {
 	return repr_wrapper<T>::repr(value, json);
 }
 
-// convenience wrapper for arrays
+// convenience wrapper for arrays with size
 template <typename T>
 static inline string
 repr(const T* value, unsigned int size, bool json = false) {
@@ -267,9 +258,12 @@ repr(const T* value, unsigned int size, bool json = false) {
 	return oss.str();
 }
 
+// to print using `std::cout << ...'
 template<typename T>
 static inline ostream& operator<<(ostream& os, const vector<T>& val) { return os << repr(val); }
+
 template<typename K, typename V>
 static inline ostream& operator<<(ostream& os, const map<K, V>& val) { return os << repr(val); }
+
 template<typename F, typename S>
 static inline ostream& operator<<(ostream& os, const pair<F, S>& val) { return os << repr(val); }

@@ -2,7 +2,7 @@
 
 #include "HttpServer.hpp"
 #include "conf.hpp"
-#include "repr.hpp"
+// #include "repr.hpp"
 #include "Server.hpp"
 #include "Logger.hpp"
 #include "Utils.hpp"
@@ -15,12 +15,10 @@ int main(int ac, char **av) {
 		HttpServer server;
 
 		string configPath = Utils::parseArgs(ac, av);
-		// HttpServer server(configPath);
-
-		// if (!server.setup(config)) {
-        //     Logger::logerror("Failed to setup server");
-        //     return 1;
-        // }
+		if (!server.setup(parseConfig(readConfig(configPath)))) {
+            Logger::logerror("Failed to setup server");
+            return 1;
+        }
 
 		server.run();
 		// return (int)server.exitStatus;

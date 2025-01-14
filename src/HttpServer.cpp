@@ -21,7 +21,7 @@ using std::stringstream;
 unsigned int HttpServer::_idCntr = 0;
 
 HttpServer::~HttpServer() {
-	TRACE_DTOR;
+	// TODO: TRACE_DTOR;
 		
 	if (server_fd >= 0)
 		close(server_fd);
@@ -38,7 +38,7 @@ HttpServer::HttpServer() :
 	running(false),
 	config(),
 	_id(_idCntr++) {
-	TRACE_DEFAULT_CTOR;
+	// TODO: reflect(); TRACE_DEFAULT_CTOR;
 }
 
 HttpServer::HttpServer(const HttpServer& other) :
@@ -47,28 +47,27 @@ HttpServer::HttpServer(const HttpServer& other) :
 	running(other.running),
 	config(other.config),
 	_id(_idCntr++) {
-	TRACE_COPY_CTOR;
+	// TODO: reflect(); TRACE_COPY_CTOR;
 }
 
 HttpServer& HttpServer::operator=(HttpServer other) {
-	TRACE_COPY_ASSIGN_OP;
+	// TODO: TRACE_COPY_ASSIGN_OP;
 	swap(other);
 	return *this;
 }
 
 void HttpServer::swap(HttpServer& other) {
-	TRACE_SWAP_BEGIN;
+	// TODO: TRACE_SWAP_BEGIN;
 	std::swap(server_fd, other.server_fd);
 	std::swap(poll_fds, other.poll_fds);
 	std::swap(running, other.running);
 	std::swap(config, other.config);
 	std::swap(_id, other._id);
-	TRACE_SWAP_END;
+	// TODO: TRACE_SWAP_END;
 }
 
-HttpServer::operator string() const {
-	return repr();
-}
+// HttpServer::operator string() const { return repr(); }
+HttpServer::operator string() const { return "HttpServer"; }
 
 bool HttpServer::setup(const t_config& conf) {
 	//config = conf;
@@ -130,8 +129,9 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 
 void HttpServer::run() {
 	running = true;
+	int j = 8;
 
-	while (running) {
+	while (j--) {
 		int ready = poll(poll_fds.data(), poll_fds.size(), -1);
 		if (ready < 0) {
 			if (errno == EINTR)

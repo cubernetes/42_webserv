@@ -2,7 +2,7 @@
 #include <string> /* std::string */
 #include <sstream> /* std::stringstream */
 
-#include "repr.hpp"
+// #include "repr.hpp"
 #include "Logger.hpp"
 #include "Constants.hpp"
 
@@ -16,31 +16,34 @@ using std::stringstream;
 
 // De- & Constructors
 Logger::~Logger() {
-	TRACE_DTOR;
+	// TRACE_DTOR;
 }
 
 Logger::Logger() : _id(_idCntr++) {
-	reflect(); TRACE_DEFAULT_CTOR;
+	// reflect(); TRACE_DEFAULT_CTOR;
 }
 
 Logger::Logger(const Logger& other) : _id(_idCntr++) {
-	reflect(); TRACE_COPY_CTOR;
+	// reflect(); TRACE_COPY_CTOR;
+	(void)other;
+	// TODO: use other
 }
 
 // Copy-assignment operator (using copy-swap idiom)
 Logger& Logger::operator=(Logger other) /* noexcept */ {
-	TRACE_COPY_ASSIGN_OP;
+	// TRACE_COPY_ASSIGN_OP;
 	::swap(*this, other);
 	return *this;
 }
 
 void Logger::swap(Logger& other) /* noexcept */ {
-	TRACE_SWAP_BEGIN;
+	// TRACE_SWAP_BEGIN;
 	::swap(_id, other._id);
-	TRACE_SWAP_END;
+	// TRACE_SWAP_END;
 }
 
-Logger::operator string() const { return ::repr(*this); }
+// Logger::operator string() const { return ::repr(*this); }
+Logger::operator string() const { return "Logger"; }
 
 void swap(Logger& a, Logger& b) /* noexcept */ { a.swap(b); }
 ostream& operator<<(ostream& os, const Logger& other) { return os << static_cast<string>(other); }
