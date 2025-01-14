@@ -18,11 +18,11 @@ Server::~Server() {
 	TRACE_DTOR;
 }
 
-Server::Server() : exitStatus(), _http(), rawConfig(readConfig(Constants::defaultConfPath)), config(parseConfig(rawConfig)), _id(_idCntr++) {
+Server::Server() : exitStatus(), rawConfig(readConfig(Constants::defaultConfPath)), config(parseConfig(rawConfig)), _http(), _id(_idCntr++) {
 	reflect(); TRACE_DEFAULT_CTOR;
 }
 
-Server::Server(const string& confPath) : exitStatus(), _http(), rawConfig(readConfig(confPath)), config(parseConfig(rawConfig)), _id(_idCntr++) {
+Server::Server(const string& confPath) : exitStatus(), rawConfig(readConfig(confPath)), config(parseConfig(rawConfig)), _http(), _id(_idCntr++) {
 	reflect();
 	if (Logger::trace()) { // TODO: abstract away
 		if (Constants::jsonTrace)
@@ -32,7 +32,7 @@ Server::Server(const string& confPath) : exitStatus(), _http(), rawConfig(readCo
 	}
 }
 
-Server::Server(const Server& other) : exitStatus(other.exitStatus), _http(other._http), rawConfig(other.rawConfig), config(other.config), _id(_idCntr++) {
+Server::Server(const Server& other) : exitStatus(other.exitStatus), rawConfig(other.rawConfig), config(other.config), _http(other._http), _id(_idCntr++) {
 	reflect(); TRACE_COPY_CTOR;
 }
 

@@ -35,6 +35,8 @@ enum e_type {
 	BOOLP,
 	LOGGER,
 	LOGGERP,
+	HTTPSERVER,
+	HTTPSERVERP,
 	UNKNOWN
 };
 typedef enum e_type t_type;

@@ -6,9 +6,12 @@
 #include <errno.h>
 #include <string.h>
 #include <sstream>
-#include "HttpServer.hpp"
 #include <cstdint>
+
+#include "HttpServer.hpp"
 #include "repr.hpp"
+#include "conf.hpp"
+#include "Logger.hpp"
 
 using std::cout;
 using std::string;
@@ -18,8 +21,7 @@ using std::stringstream;
 unsigned int HttpServer::_idCntr = 0;
 
 HttpServer::~HttpServer() {
-	if (Logger::trace())
-		cout << ANSI_PUNCT "~" << *this << '\n';
+	TRACE_DTOR;
 		
 	if (server_fd >= 0)
 		close(server_fd);
@@ -36,8 +38,7 @@ HttpServer::HttpServer() :
 	running(false),
 	config(),
 	_id(_idCntr++) {
-	if (Logger::trace())
-		cout << ANSI_KWRD "HttpServer" ANSI_PUNCT "() -> " << *this << '\n';
+	TRACE_DEFAULT_CTOR;
 }
 
 HttpServer::HttpServer(const HttpServer& other) :
@@ -46,50 +47,30 @@ HttpServer::HttpServer(const HttpServer& other) :
 	running(other.running),
 	config(other.config),
 	_id(_idCntr++) {
-	if (Logger::trace())
-		cout << ANSI_KWRD "HttpServer" ANSI_PUNCT "(" << ::repr(other) << ANSI_PUNCT ") -> " << *this << '\n';
+	TRACE_COPY_CTOR;
 }
 
 HttpServer& HttpServer::operator=(HttpServer other) {
-	if (Logger::trace())
-		cout << ANSI_KWRD "HttpServer" ANSI_PUNCT "& " ANSI_KWRD "HttpServer" ANSI_PUNCT "::" 
-			ANSI_FUNC "operator" ANSI_PUNCT "=(" << ::repr(other) << ANSI_PUNCT ")" ANSI_RST "\n";
+	TRACE_COPY_ASSIGN_OP;
 	swap(other);
 	return *this;
 }
 
 void HttpServer::swap(HttpServer& other) {
-	if (Logger::trace()) {
-		cout << ANSI_CMT "<Swapping HttpServer *this:" ANSI_RST "\n";
-		cout << *this << '\n';
-		cout << ANSI_CMT "with the following HttpServer object:" ANSI_RST "\n";
-		cout << other << '\n';
-	}
-	
+	TRACE_SWAP_BEGIN;
 	std::swap(server_fd, other.server_fd);
 	std::swap(poll_fds, other.poll_fds);
 	std::swap(running, other.running);
 	std::swap(config, other.config);
 	std::swap(_id, other._id);
-	
-	if (Logger::trace())
-		cout << ANSI_CMT "HttpServer swap done>" ANSI_RST "\n";
-}
-
-string HttpServer::repr() const {
-	stringstream out;
-	out << ANSI_KWRD "HttpServer" ANSI_PUNCT "("
-		<< "fd=" << server_fd << ANSI_PUNCT ", "
-		<< "id=" << _id
-		<< ANSI_PUNCT ")" ANSI_RST;
-	return out.str();
+	TRACE_SWAP_END;
 }
 
 HttpServer::operator string() const {
 	return repr();
 }
 
-bool HttpServer::setup(const Config& conf) {
+bool HttpServer::setup(const t_config& conf) {
 	//config = conf;
 	(void)conf;
 	return setupSocket("127.0.0.1", 8080);  // Hardcoded for now

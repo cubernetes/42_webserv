@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include "Reflection.hpp"
 
 #define CAT(a, ...) PRIMITIVE_CAT(a, __VA_ARGS__)
 #define PRIMITIVE_CAT(a, ...) a ## __VA_ARGS__
@@ -2136,37 +2135,56 @@
          19,18,17,16,15,14,13,12,11,10, \
          9,8,7,6,5,4,3,2,1,0
 
-class Logger;
+class dummy1 {};
+class dummy2 {};
 
-#define TYPE_TO_ENUM(t) _Generic((t), \
-		int:                 INT,     \
-		int*:                INTP,    \
-		unsigned int:        UINT,    \
-		unsigned int*:       UINTP,   \
-		char:                CHAR,    \
-		char*:               CHARP,   \
-		unsigned char:       UCHAR,   \
-		unsigned char*:      UCHARP,  \
-		short:               SHORT,   \
-		short*:              SHORTP,  \
-		long:                LONG,    \
-		long*:               LONGP,   \
-		long long:           ULONG,   \
-		long long*:          ULONGP,  \
-		unsigned long:       LLONG,   \
-		unsigned long*:      LLONGP,  \
-		unsigned long long:  ULLONG,  \
-		unsigned long long*: ULLONGP, \
-		std::string:         STRING,  \
-		std::string*:        STRINGP, \
-		bool:                BOOL,    \
-		bool*:               BOOLP,   \
-		Logger*:             LOGGERP, \
-		default:             UNKNOWN  \
+#ifndef LOGGER_HPP
+# include "Logger.hpp"
+class Logger;
+#else
+# define Logger dummy2
+#endif
+
+#ifndef HTTPSERVER_HPP
+# include "HttpServer.hpp"
+class HttpServer;
+#else
+# define HttpServer dummy1
+#endif
+
+#define TYPE_TO_ENUM(t) _Generic((t),     \
+		int:                 INT,         \
+		int*:                INTP,        \
+		unsigned int:        UINT,        \
+		unsigned int*:       UINTP,       \
+		char:                CHAR,        \
+		char*:               CHARP,       \
+		unsigned char:       UCHAR,       \
+		unsigned char*:      UCHARP,      \
+		short:               SHORT,       \
+		short*:              SHORTP,      \
+		long:                LONG,        \
+		long*:               LONGP,       \
+		long long:           ULONG,       \
+		long long*:          ULONGP,      \
+		unsigned long:       LLONG,       \
+		unsigned long*:      LLONGP,      \
+		unsigned long long:  ULLONG,      \
+		unsigned long long*: ULLONGP,     \
+		std::string:         STRING,      \
+		std::string*:        STRINGP,     \
+		bool:                BOOL,        \
+		bool*:               BOOLP,       \
+		Logger:              LOGGER,      \
+		Logger*:             LOGGERP,     \
+		HttpServer:          HTTPSERVER,  \
+		HttpServer*:         HTTPSERVERP, \
+		default:             UNKNOWN      \
 	)
-#define DECL(type, name, ...) void CAT(declfn, __LINE__)() { \
-		reflect_member(TYPE_TO_ENUM(name), #name, &name); \
-	} type name IF(NOT(IS_PAREN(__VA_ARGS__ ())))(= __VA_ARGS__,)
+
+#undef Logger
+#undef HttpServer
+
 #define OP(i, n) DEC(i), DEC(DEC(INC(n)))
 #define PRED(i, n) i
 #define DEC_N(n, i) EVALB(WHILE_RET_2ND(PRED, OP, i, n))
@@ -2182,4 +2200,9 @@ class Logger;
 	  IF(PP_NARG(__VA_ARGS__))(x; __VA_ARGS__,x) \
 	)
 #define CONCAT_INDIRECT() CONCAT
+
+// only these should be public
 #define REFLECT(cls_id, ...) EVALA(CONCAT(__VA_ARGS__)); GEN_REFLECT(cls_id, PP_NARG(__VA_ARGS__))
+#define DECL(type, name, ...) void CAT(declfn, __LINE__)() { \
+		reflect_member(TYPE_TO_ENUM(name), #name, &name); \
+	} type name IF(NOT(IS_PAREN(__VA_ARGS__ ())))(= __VA_ARGS__,)

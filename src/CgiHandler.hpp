@@ -1,46 +1,40 @@
-// <GENERATED>
 #pragma once /* CgiHandler.hpp */
 
 #include <string> /* std::string */
 #include <iostream> /* std::ostream */
 
-#include "repr.hpp" /* repr<T> */
-#include "helper.hpp"
+#include "Reflection.hpp"
+#include "repr.hpp"
 
 using std::string;
 using std::ostream;
 
-class CgiHandler {
+class CgiHandler : public Reflection {
 public:
-	// <generated>
 		~CgiHandler(); // destructor; consider virtual if it's a base class
 		CgiHandler(); // default constructor
-		explicit CgiHandler(const string&);
-		explicit CgiHandler(const char*);
-		CgiHandler(const string&, const string&); // serializing constructor
-		CgiHandler(const CgiHandler&); // copy constructor
+		explicit CgiHandler(const string&); // TODO: do we need?
+		explicit CgiHandler(const char*); // TODO: do we need?
+		CgiHandler(const string& extension, const string& program); // serializing constructor
+		CgiHandler(const CgiHandler& other); // copy constructor
 		CgiHandler& operator=(CgiHandler); // copy-assignment operator
 		void swap(CgiHandler&); // copy-swap idiom
-		string repr() const; // return string-serialized version of the object
 		operator string() const; // convert object to string
 
-		const string& get_extension() const;
-		const string& get_program() const;
+		const string& get_extension() const; // TODO: can't we just make them public?
+		const string& get_program() const; // TODO: can't we just make them public?
 
-		void set_extension(const string&);
-		void set_program(const string&);
-
-		template <typename T>
-		CgiHandler(const T& type, DeleteOverload = 0); // disallow accidental casting/conversion
-	// </generated>
+		void set_extension(const string&); // TODO: can't we just make them public?
+		void set_program(const string&); // TODO: can't we just make them public?
 private:
-	string _extension;
-	string _program;
-	unsigned int _id;
+	REFLECT(
+		"CgiHandler",
+		DECL(string, _extension),
+		DECL(string, _program),
+		DECL(unsigned int, _id)
+	)
 	static unsigned int _idCntr;
 };
 
-template <> inline string repr(const CgiHandler& value) { return value.repr(); }
 void swap(CgiHandler&, CgiHandler&) /* noexcept */;
 ostream& operator<<(ostream&, const CgiHandler&);
-// </GENERATED>

@@ -5,6 +5,8 @@
 #include <vector> /* std::vector */
 #include <map> /* std::map */
 #include <utility> /* std::pair */
+#include <cstddef> /* std::size_t, std::ssize_t */
+#include <cstdint> /* std::u?int... */
 
 #include "Logger.hpp" /* Logger::debug() */
 #include "Constants.hpp" /* Constants::{no_color,repr_json} */
@@ -54,24 +56,54 @@ using repr_clr::num;
 using repr_clr::var;
 using repr_clr::cmt;
 
-// generic template, works for ints, floats, and some other fundamental types
-// repr should be specialized or overridden for custom classes/non-fundamental types
-// using C++ concepts, we should make this function only take integer template argument types
-// Also, it needs to be wrapped in a struct/class, otherwise partial specializations don't work
 template <typename T>
-struct repr_wrapper {
+struct repr_wrapper<T> {
 	static inline string
 	repr(const T& value, bool json = false) {
-		std::ostringstream oss;
-		oss << value;
-		if (json)
-			return oss.str();
-		else
-			return num(oss.str());
+		return value.repr(json);
 	}
 };
 
 ///// repr partial template specializations
+#define INT_REPR static inline string \
+	repr(const T& value, bool json = false) { \
+		std::ostringstream oss; \
+		oss << value; \
+		if (json) \
+			return oss.str(); \
+		else \
+			return num(oss.str()); \
+	}
+
+template <> struct repr_wrapper<int> { INT_REPR; };
+template <> struct repr_wrapper<unsigned int> { INT_REPR; };
+template <> struct repr_wrapper<short> { INT_REPR; };
+template <> struct repr_wrapper<unsigned short> { INT_REPR; };
+template <> struct repr_wrapper<long> { INT_REPR; };
+template <> struct repr_wrapper<unsigned long> { INT_REPR; };
+template <> struct repr_wrapper<long long> { INT_REPR; };
+template <> struct repr_wrapper<unsigned long long> { INT_REPR; };
+template <> struct repr_wrapper<float> { INT_REPR; };
+template <> struct repr_wrapper<double> { INT_REPR; };
+template <> struct repr_wrapper<long double> { INT_REPR; };
+template <> struct repr_wrapper<std::size_t> { INT_REPR; };
+template <> struct repr_wrapper<std::ssize_t> { INT_REPR; };
+template <> struct repr_wrapper<std::int8_t> { INT_REPR; };
+template <> struct repr_wrapper<std::uint8_t> { INT_REPR; };
+template <> struct repr_wrapper<std::int16_t> { INT_REPR; };
+template <> struct repr_wrapper<std::uint16_t> { INT_REPR; };
+template <> struct repr_wrapper<std::int32_t> { INT_REPR; };
+template <> struct repr_wrapper<std::uint32_t> { INT_REPR; };
+template <> struct repr_wrapper<std::int64_t> { INT_REPR; };
+template <> struct repr_wrapper<std::uint64_t> { INT_REPR; };
+
+template <> struct repr_wrapper<bool> {
+	static inline string
+	repr(const bool& value, bool json = false) {
+		if (json) return value ? "true" : "false";
+		else return num(value ? "true" : "false");
+	}
+};
 
 // not escaping string value atm
 template <>

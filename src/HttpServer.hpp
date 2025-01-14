@@ -1,13 +1,17 @@
-#pragma once
+#ifndef HTTPSERVER_HPP
+# define HTTPSERVER_HPP
 
 #include <vector>
 #include <map>
 #include <string>
 #include <sys/poll.h>
-#include "Config.hpp"
-#include "Logger.hpp"
 
-class HttpServer {
+#include "Reflection.hpp"
+#include "conf.hpp"
+
+using std::string;
+
+class HttpServer : public Reflection {
 public:
 	// Orthodox Canonical Form requirements
 	~HttpServer();
@@ -16,7 +20,7 @@ public:
 	HttpServer& operator=(HttpServer);
 	
 	// Core functionality
-	bool setup(const Config& config);
+	bool setup(const t_config& config);
 	void run();
 
 	// Required for repr
@@ -25,13 +29,16 @@ public:
 	operator string() const;
 
 private:
-	int server_fd;
-	std::vector<struct pollfd> poll_fds;
-	bool running;
-	Config config;
+	REFLECT(
+		"HttpServer",
+		DECL(int, server_fd),
+		DECL(std::vector<struct pollfd>, poll_fds),
+		DECL(bool, running),
+		DECL(t_config, config),
+		DECL(unsigned int, _id)
+	)
 	
 	// Instance tracking
-	unsigned int _id;
 	static unsigned int _idCntr;
 
 	// Helper methods
@@ -44,3 +51,5 @@ private:
 
 void swap(HttpServer&, HttpServer&);
 std::ostream& operator<<(std::ostream&, const HttpServer&);
+
+#endif

@@ -16,34 +16,28 @@ using std::stringstream;
 
 // De- & Constructors
 Logger::~Logger() {
-	// TRACE_DTOR;
-	if (Logger::trace()) print_dtor(::repr(*this));
+	TRACE_DTOR;
 }
 
 Logger::Logger() : _id(_idCntr++) {
-	reflect(); // TRACE_DEFAULT_CTOR;
-	if (Logger::trace()) print_default_ctor(::repr(*this));
+	reflect(); TRACE_DEFAULT_CTOR;
 }
 
 Logger::Logger(const Logger& other) : _id(_idCntr++) {
-	reflect(); // TRACE_COPY_CTOR;
-	if (Logger::trace()) print_copy_ctor(::repr(other), ::repr(*this));
+	reflect(); TRACE_COPY_CTOR;
 }
 
 // Copy-assignment operator (using copy-swap idiom)
 Logger& Logger::operator=(Logger other) /* noexcept */ {
-	// TRACE_COPY_ASSIGN_OP;
-	if (Logger::trace()) print_copy_assign_op(::repr(other));
+	TRACE_COPY_ASSIGN_OP;
 	::swap(*this, other);
 	return *this;
 }
 
 void Logger::swap(Logger& other) /* noexcept */ {
-	// TRACE_SWAP_BEGIN;
-	if (Logger::trace()) print_swap_begin(::repr(*this), ::repr(other));
+	TRACE_SWAP_BEGIN;
 	::swap(_id, other._id);
-	// TRACE_SWAP_END;
-	if (Logger::trace()) print_swap_end();
+	TRACE_SWAP_END;
 }
 
 Logger::operator string() const { return ::repr(*this); }

@@ -1,13 +1,20 @@
-#pragma once /* Logger.hpp */
+#ifndef LOGGER_HPP /* Logger.hpp */
+# define LOGGER_HPP
 
 #include <exception>
-#include <string> /* std::string */
-#include <iostream> /* std::ostream */
+#include <string>
+#include <iostream>
+
+using std::string;
 
 #include "Reflection.hpp"
 
-using std::string;
-using std::ostream;
+#define TRACE_DTOR if (Logger::trace()) print_dtor(::repr(*this))
+#define TRACE_DEFAULT_CTOR if (Logger::trace()) print_default_ctor(::repr(*this))
+#define TRACE_COPY_CTOR if (Logger::trace()) print_copy_ctor(::repr(other), ::repr(*this))
+#define TRACE_COPY_ASSIGN_OP if (Logger::trace()) print_copy_assign_op(::repr(other))
+#define TRACE_SWAP_BEGIN if (Logger::trace()) print_swap_begin(::repr(*this), ::repr(other))
+#define TRACE_SWAP_END if (Logger::trace()) print_swap_end()
 
 class Logger : public Reflection {
 public:
@@ -40,14 +47,7 @@ private:
 	static unsigned int _idCntr;
 };
 
-template <typename T> struct repr_wrapper;
-template <> struct repr_wrapper<Logger> { static inline string repr(const Logger& value, bool json = false) { return value.repr(json); } };
 void swap(Logger&, Logger&) /* noexcept */;
-ostream& operator<<(ostream&, const Logger&);
+std::ostream& operator<<(std::ostream&, const Logger&);
 
-#define TRACE_DTOR if (Logger::trace()) print_dtor(::repr(*this))
-#define TRACE_DEFAULT_CTOR if (Logger::trace()) print_default_ctor(::repr(*this))
-#define TRACE_COPY_CTOR if (Logger::trace()) print_copy_ctor(::repr(other), ::repr(*this))
-#define TRACE_COPY_ASSIGN_OP if (Logger::trace()) print_copy_assign_op(::repr(other))
-#define TRACE_SWAP_BEGIN if (Logger::trace()) print_swap_begin(::repr(*this), ::repr(other))
-#define TRACE_SWAP_END if (Logger::trace()) print_swap_end()
+#endif

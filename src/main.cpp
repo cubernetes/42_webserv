@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include "Config.hpp"
 #include "HttpServer.hpp"
 #include "conf.hpp"
 #include "repr.hpp"
@@ -13,15 +12,19 @@ using std::cout;
 
 int main(int ac, char **av) {
 	try {
+		HttpServer server;
+
 		string configPath = Utils::parseArgs(ac, av);
-		HttpServer server(configPath);
-		if (!server.setup(config)) {
-            Logger::logerror("Failed to setup server");
-            return 1;
-        }
+		// HttpServer server(configPath);
+
+		// if (!server.setup(config)) {
+        //     Logger::logerror("Failed to setup server");
+        //     return 1;
+        // }
 
 		server.run();
-		return (int)webserv.exitStatus;
+		// return (int)server.exitStatus;
+		return 0;
 	} catch (const std::runtime_error& error) {
 		Logger::logexception(error);
 		return 1;

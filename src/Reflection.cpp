@@ -9,6 +9,7 @@
 #include "repr.hpp"
 #include "Reflection.hpp"
 #include "Logger.hpp"
+#include "HttpServer.hpp"
 
 using std::string;
 using std::map;
@@ -19,7 +20,7 @@ void Reflection::reflect_member(t_type type, const char *memberId, const void *m
 	_members[memberId] = std::make_pair(type, memberPtr);
 }
 
-string Reflection::_memberToStr(const pair<t_type, const void*>& member, bool json) const {
+string Reflection::_membertOsTR(const pair<t_type, const void*>& member, bool json) const {
 	std::ostringstream oss;
 	switch (member.first) {
 		case STRING:
@@ -93,6 +94,12 @@ string Reflection::_memberToStr(const pair<t_type, const void*>& member, bool js
 			break;
 		case LOGGERP:
 			oss << ::repr(*(Logger **)member.second, json);
+			break;
+		case HTTPSERVER:
+			oss << ::repr(*(HttpServer *)member.second, json);
+			break;
+		case HTTPSERVERP:
+			oss << ::repr(*(HttpServer **)member.second, json);
 			break;
 		default:
 			oss << ::repr(member.second, json); // TODO: RAW PTR: TEST COLOR
