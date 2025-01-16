@@ -43,6 +43,8 @@ namespace ansi {
 	string magenta_bg(string s);
 	string cyan_bg(string s);
 	string white_bg(string s);
-	string rgb(string s, int r, int g, int b);
-	string rgb_bg(string s, int r, int g, int b);
+	string rgb_p(string s, int r, int g, int b);
+	string rgb_bg_p(string s, int r, int g, int b);
+	string rgb(string s, const string& rgb_semicolon);
+	string rgb_bg(string s, const string& rgb_semicolon);
 }

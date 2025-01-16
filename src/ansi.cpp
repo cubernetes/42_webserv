@@ -120,14 +120,26 @@ string ansi::white_bg(string s) {
 	return ANSI_WHITE_BG + s + ANSI_RST;
 }
 
-string ansi::rgb(string s, int r, int g, int b) {
+string ansi::rgb_p(string s, int r, int g, int b) {
 	if (no_color())
 		return s;
 	return ANSI_CSI ANSI_RGB ";" + itoa(r) + ";" + itoa(g) + ";" + itoa(b) + "m" + s + ANSI_RST;
 }
 
-string ansi::rgb_bg(string s, int r, int g, int b) {
+string ansi::rgb(string s, const string& rgb_semicolon) {
+	if (no_color())
+		return s;
+	return ANSI_CSI ANSI_RGB ";" + rgb_semicolon + "m" + s + ANSI_RST;
+}
+
+string ansi::rgb_bg_p(string s, int r, int g, int b) {
 	if (no_color())
 		return s;
 	return ANSI_CSI ANSI_RGB_BG ";" + itoa(r) + ";" + itoa(g) + ";" + itoa(b) + "m" + s + ANSI_RST;
+}
+
+string ansi::rgb_bg(string s, const string& rgb_semicolon) {
+	if (no_color())
+		return s;
+	return ANSI_CSI ANSI_RGB_BG ";" + rgb_semicolon + "m" + s + ANSI_RST;
 }

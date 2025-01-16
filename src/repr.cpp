@@ -15,7 +15,7 @@ void repr_init() {
 
 void repr_done() {
 	if (!ansi::no_color())
-		std::cout << ANSI_RST_FR << '\n';
+		std::cout << ANSI_RST << '\n';
 }
 
 string repr_clr::str(string s) {

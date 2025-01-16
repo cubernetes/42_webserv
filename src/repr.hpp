@@ -14,18 +14,15 @@
 #include "ansi.hpp"
 #include "Reflection.hpp"
 
-# define ANSI_CSI "\x1b\x5b"
-# define ANSI_FG     41,41,41
-# define ANSI_RST_FR ANSI_CSI "0" "m"
-// # define ANSI_RST    ANSI_CSI "0" "m" ANSI_FG
-# define ANSI_STR    184,187,38
-# define ANSI_CHR    211,134,155
-# define ANSI_KWRD   250,189,47
-# define ANSI_PUNCT  254,128,25
-# define ANSI_FUNC   184,187,38
-# define ANSI_NUM    211,134,155
-# define ANSI_VAR    235,219,178
-# define ANSI_CMT    146,131,116
+# define ANSI_FG     "41;41;41"
+# define ANSI_STR    "184;187;38"
+# define ANSI_CHR    "211;134;155"
+# define ANSI_KWRD   "250;189;47"
+# define ANSI_PUNCT  "254;128;25"
+# define ANSI_FUNC   "184;187;38"
+# define ANSI_NUM    "211;134;155"
+# define ANSI_VAR    "235;219;178"
+# define ANSI_CMT    "146;131;116"
 
 using std::string;
 using std::vector;
