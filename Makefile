@@ -114,6 +114,7 @@ run:
 	@PATH=".$${PATH:+:$${PATH}}" && $(NAME) $(ARGS)
 
 valrun:
+	make all
 	@echo
 	@PATH=".$${PATH:+:$${PATH}}" && valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --track-fds=yes $(NAME) $(ARGS)
 
