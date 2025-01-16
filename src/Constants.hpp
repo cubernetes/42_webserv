@@ -7,5 +7,6 @@ using std::string;
 namespace Constants {
 	extern const string defaultConfPath;
 	extern const int logLevel;
-	extern const int jsonTrace;
+	extern const bool keywordTrace;
+	extern const bool jsonTrace;
 }

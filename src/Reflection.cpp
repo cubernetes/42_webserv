@@ -121,7 +121,9 @@ string Reflection::repr(bool json) const {
 		for (map<const char*, pair<t_type, const void*> >::const_iterator it = _members.begin(); it != _members.end(); ++it) {
 			if (i++ != 0)
 				out << punct(", ");
-			out << _memberToStr(it->second);
+			if (Constants::keywordTrace)
+				out << cmt(it->first) << cmt("=");
+			out << (this->*it->second.first)(false);
 		}
 		out << punct(")");
 	}
