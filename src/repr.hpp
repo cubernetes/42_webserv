@@ -5,10 +5,15 @@
 #include <vector> /* std::vector */
 #include <map> /* std::map */
 #include <utility> /* std::pair */
+#include <sys/poll.h> /* struct pollfd */
+#include <utility> /* std::make_pair */
 
 #include "Logger.hpp" /* Logger::debug() */
+#define LOGGER_DEBUG Logger::debug()
+
 #include "Constants.hpp" /* Constants::{no_color,repr_json} */
 #include "ansi.hpp"
+#include "Reflection.hpp"
 
 # define ANSI_CSI "\x1b\x5b"
 # define ANSI_FG     41,41,41
@@ -62,6 +67,42 @@ struct repr_wrapper {
 	}
 };
 
+// convenience wrapper
+template <typename T>
+static inline string
+repr(const T& value, bool json = false) {
+	return repr_wrapper<T>::repr(value, json);
+}
+
+// convenience wrapper for arrays with size
+template <typename T>
+static inline string
+repr(const T* value, unsigned int size, bool json = false) {
+	std::ostringstream oss;
+	if (json)
+		oss << "[";
+	else if (LOGGER_DEBUG)
+		oss << punct("{");
+	else
+		oss << punct("[");
+	for (unsigned int i = 0; i < size; ++i) {
+		if (i != 0) {
+			if (json)
+				oss << ", ";
+			else
+				oss << punct(", ");
+		}
+		oss << repr_wrapper<T>::repr(value[i], json);
+	}
+	if (json)
+		oss << "]";
+	else if (LOGGER_DEBUG)
+		oss << punct("}");
+	else
+		oss << punct("]");
+	return oss.str();
+}
+
 ///// repr partial template specializations
 
 #define INT_REPR(T) template <> struct repr_wrapper<T> { \
@@ -104,12 +145,12 @@ struct repr_wrapper<string> {
 		if (json)
 			return "\"" + value + "\"";
 		else
-			return str("\"" + value + "\"") + (Logger::debug() ? punct("s") : "");
+			return str("\"" + value + "\"") + (LOGGER_DEBUG ? punct("s") : "");
 	}
 };
 
 // not escaping string value atm
-template <>
+template <> 
 struct repr_wrapper<char*> {
 	static inline string
 	repr(const char* const& value, bool json = false) {
@@ -121,16 +162,45 @@ struct repr_wrapper<char*> {
 };
 
 // not escaping char value atm
-template <>
-struct repr_wrapper<char> {
-	static inline string
-	repr(const char& value, bool json = false) {
-		if (json)
-			return string("\"") + value + "\"";
-		else
-			return chr(string("'") + value + "'");
+#define CHAR_REPR(T) template <> \
+	struct repr_wrapper<T> { \
+		static inline string \
+		repr(const T& value, bool json = false) { \
+			if (json) \
+				return string("\"") + static_cast<char>(value) + "\""; \
+			else \
+				return chr(string("'") + static_cast<char>(value) + "'"); \
+		} \
 	}
-};
+
+CHAR_REPR(char);
+CHAR_REPR(unsigned char);
+CHAR_REPR(signed char);
+
+#define MAKE_MEMBER_INIT_LIST(_, name) , name()
+#define MAKE_DECL(type, name) type name;
+#define MAKE_REPR_FN(_, name) string CAT(repr_, name)(bool json) { return ::repr(name, json); }
+#define MAKE_ASSIGN(_, name) singleton.name = value.name;
+#define MAKE_REFLECT(_, name) members[#name] = std::make_pair((t_repr_closure)&repr_wrapper::CAT(repr_, name), &singleton.name);
+#define POST_REFLECT(cls_id, ...) \
+	template <> \
+	struct repr_wrapper<cls_id> : public Reflection { \
+		void reflect() {} \
+		repr_wrapper() : __nop___unique() FOR_EACH_PAIR(MAKE_MEMBER_INIT_LIST, __VA_ARGS__) {} \
+		int __nop___unique; \
+		FOR_EACH_PAIR(MAKE_DECL, __VA_ARGS__) \
+		FOR_EACH_PAIR(MAKE_REPR_FN, __VA_ARGS__) \
+		static inline string \
+		repr(const cls_id& value, bool json = false) { \
+			static repr_wrapper<cls_id> singleton; \
+			FOR_EACH_PAIR(MAKE_ASSIGN, __VA_ARGS__) \
+			t_members members; \
+			FOR_EACH_PAIR(MAKE_REFLECT, __VA_ARGS__) \
+			return singleton.repr_struct(#cls_id, members, json); \
+		} \
+	}
+
+POST_REFLECT(struct pollfd, int, fd, short, events, short, revents);
 
 // for vector
 template <typename T>
@@ -140,7 +210,7 @@ struct repr_wrapper<vector<T> > {
 		std::ostringstream oss;
 		if (json)
 			oss << "[";
-		else if (Logger::debug())
+		else if (LOGGER_DEBUG)
 			oss << kwrd("std") + punct("::") + kwrd("vector") + punct("({");
 		else
 			oss << punct("[");
@@ -155,7 +225,7 @@ struct repr_wrapper<vector<T> > {
 		}
 		if (json)
 			oss << "]";
-		else if (Logger::debug())
+		else if (LOGGER_DEBUG)
 			oss << punct("})");
 		else
 			oss << punct("]");
@@ -171,7 +241,7 @@ struct repr_wrapper<map<K, V> > {
 		std::ostringstream oss;
 		if (json)
 			oss << "{";
-		else if (Logger::debug())
+		else if (LOGGER_DEBUG)
 			oss << kwrd("std") + punct("::") + kwrd("map") + punct("({");
 		else
 			oss << punct("{");
@@ -193,7 +263,7 @@ struct repr_wrapper<map<K, V> > {
 		}
 		if (json)
 			oss << "}";
-		else if (Logger::debug())
+		else if (LOGGER_DEBUG)
 			oss << punct("})");
 		else
 			oss << punct("}");
@@ -209,7 +279,7 @@ struct repr_wrapper<pair<F, S> > {
 		std::ostringstream oss;
 		if (json)
 			oss << "[";
-		else if (Logger::debug())
+		else if (LOGGER_DEBUG)
 			oss << kwrd("std") + punct("::") + kwrd("pair") + punct("(");
 		else
 			oss << punct("(");
@@ -222,48 +292,12 @@ struct repr_wrapper<pair<F, S> > {
 	}
 };
 
-// convenience wrapper
-template <typename T>
-static inline string
-repr(const T& value, bool json = false) {
-	return repr_wrapper<T>::repr(value, json);
-}
-
-// convenience wrapper for arrays with size
-template <typename T>
-static inline string
-repr(const T* value, unsigned int size, bool json = false) {
-	std::ostringstream oss;
-	if (json)
-		oss << "[";
-	else if (Logger::debug())
-		oss << punct("{");
-	else
-		oss << punct("[");
-	for (unsigned int i = 0; i < size; ++i) {
-		if (i != 0) {
-			if (json)
-				oss << ", ";
-			else
-				oss << punct(", ");
-		}
-		oss << repr_wrapper<T>::repr(value[i], json);
-	}
-	if (json)
-		oss << "]";
-	else if (Logger::debug())
-		oss << punct("}");
-	else
-		oss << punct("]");
-	return oss.str();
-}
-
 // to print using `std::cout << ...'
 template<typename T>
-static inline ostream& operator<<(ostream& os, const vector<T>& val) { return os << repr(val); }
+static inline ostream& operator<<(ostream& os, const vector<T>& val) { return os << repr(val, Constants::jsonTrace); }
 
 template<typename K, typename V>
-static inline ostream& operator<<(ostream& os, const map<K, V>& val) { return os << repr(val); }
+static inline ostream& operator<<(ostream& os, const map<K, V>& val) { return os << repr(val, Constants::jsonTrace); }
 
 template<typename F, typename S>
-static inline ostream& operator<<(ostream& os, const pair<F, S>& val) { return os << repr(val); }
+static inline ostream& operator<<(ostream& os, const pair<F, S>& val) { return os << repr(val, Constants::jsonTrace); }
