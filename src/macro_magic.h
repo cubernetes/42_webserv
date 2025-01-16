@@ -141,7 +141,8 @@
 #define OP(i, n) DEC(i), DEC(DEC(INC(n)))
 #define PRED(i, n) i
 #define DEC_N(n, i) EVAL_(WHILE_RET_2ND(PRED, OP, i, n))
-#define F(i, n) CAT(reflect_member_, DEC_N(n, INC(i)))();
+//#define F(i, n) CAT(reflect_member_, DEC_N(n, INC(i)))();
+#define F(i, n) CAT(reflect_member_, i)();
 #define GEN_REFLECT(cls_id, n) \
 	void reflect() { \
 		_class = cls_id; EVAL(REPEAT(n, F, __LINE__)) \
@@ -166,25 +167,21 @@
 #define TAIL2_(FIRST, ...) TAIL(__VA_ARGS__)
 #define TAIL2(...) TAIL2_(__VA_ARGS__)
 
-#define IS_EMPTY(...) IS_PAREN(HEAD(__VA_ARGS__) ())
+#define PRIMITIVE_IS_EMPTY(...) BITAND(IS_PAREN(HEAD(__VA_ARGS__) ()))(NOT(DEC(NARG(__VA_ARGS__))))
+#define IS_EMPTY_PAREN(x) IF(IS_PAREN(x))(PRIMITIVE_IS_EMPTY x,0)
+#define IS_EMPTY(...) BITAND(BITAND(PRIMITIVE_IS_EMPTY(__VA_ARGS__))(NOT(IS_PAREN(HEAD(__VA_ARGS__)))))(NOT(DEC(NARG(__VA_ARGS__))))
 #define NOT_EMPTY(...) NOT(IS_EMPTY(__VA_ARGS__))
 
-#define REFLECT(cls_id, ...) typedef cls_id Self; EVAL(CONCAT(__VA_ARGS__)); GEN_REFLECT(#cls_id, NARG(__VA_ARGS__))
-
-#define DECL(type, name, ...) \
-	void CAT(reflect_member_, __LINE__)() { \
-		reflect_member((t_repr_closure)&Self::CAT(repr_closure_, __LINE__), #name, &name); \
-	} \
-	string CAT(repr_closure_, __LINE__)(bool json) const { \
-		return ::repr(name, json); \
-	} \
-	type name IF(NOT_EMPTY(__VA_ARGS__))(= __VA_ARGS__,)
+#define DEPAREN(...) DEPAREN_ __VA_ARGS__
+#define DEPAREN_(...) __VA_ARGS__
+#define IS_ENCLOSED(...) IS_EMPTY(EAT __VA_ARGS__)
+#define OPT_DEPAREN(...) IF(IS_ENCLOSED(__VA_ARGS__))(DEPAREN(__VA_ARGS__),__VA_ARGS__)
 
 #define FOR_EACH(TRANSFORM, ...) EVAL(FOR_EACH_(TRANSFORM, __VA_ARGS__))
 #define FOR_EACH_(TF, ...) \
 	IF(NOT_EMPTY(__VA_ARGS__)) \
 	( \
-	  DEFER(TF) (HEAD(__VA_ARGS__)) \
+	  DEFER(TF) (OPT_DEPAREN(HEAD(__VA_ARGS__))) \
 	  DEFER2(FOR_EACH_INDIRECT) () (TF, TAIL(__VA_ARGS__)) \
 	  , \
 	)
@@ -194,8 +191,32 @@
 #define FOR_EACH_PAIR_(TF, ...) \
 	IF(NOT_EMPTY(__VA_ARGS__)) \
 	( \
-	  DEFER(TF) (HEAD2(__VA_ARGS__)) \
+	  DEFER(TF) (OPT_DEPAREN(HEAD2(__VA_ARGS__))) \
 	  DEFER2(FOR_EACH_PAIR_INDIRECT) () (TF, TAIL2(__VA_ARGS__)) \
 	  , \
 	)
 #define FOR_EACH_PAIR_INDIRECT() FOR_EACH_PAIR_
+
+#define FOR_EACH_IDX(TRANSFORM, ...) EVAL(FOR_EACH_IDX_(0, TRANSFORM, __VA_ARGS__))
+#define FOR_EACH_IDX_(IDX, TF, ...) \
+	IF(NOT_EMPTY(__VA_ARGS__)) \
+	( \
+	  DEFER(TF) (IDX, OPT_DEPAREN(HEAD(__VA_ARGS__))) \
+	  DEFER2(FOR_EACH_IDX_INDIRECT) () (INC(IDX), TF, TAIL(__VA_ARGS__)) \
+	  , \
+	)
+#define FOR_EACH_IDX_INDIRECT() FOR_EACH_IDX_
+
+#define DECL_N(n, type, name, ...) \
+	void CAT(reflect_member_, n)() { \
+		reflect_member((t_repr_closure)&Self::CAT(repr_closure_, n), #name, &name); \
+	} \
+	string CAT(repr_closure_, n)(bool json) const { \
+		return ::repr(name, json); \
+	} \
+	type name DEFER(IF)(NOT_EMPTY(__VA_ARGS__))(= __VA_ARGS__,);
+
+#define REFLECT(cls_id, ...) \
+	typedef cls_id Self; \
+	FOR_EACH_IDX(DECL_N, __VA_ARGS__) \
+	GEN_REFLECT(#cls_id, NARG(__VA_ARGS__))

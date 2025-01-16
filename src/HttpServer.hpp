@@ -35,11 +35,11 @@ private:
 
 	REFLECT(
 		HttpServer,
-		DECL(int, server_fd),
-		DECL(std::vector<struct pollfd>, poll_fds),
-		DECL(bool, running),
-		DECL(t_config, config),
-		DECL(unsigned int, _id)
+		(int, server_fd),
+		(std::vector<struct pollfd>, poll_fds),
+		(bool, running),
+		(t_config, config),
+		(unsigned int, _id)
 	)
 	static unsigned int _idCntr;
 

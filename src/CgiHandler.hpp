@@ -28,9 +28,9 @@ public:
 private:
 	REFLECT(
 		CgiHandler,
-		DECL(string, _extension),
-		DECL(string, _program),
-		DECL(unsigned int, _id)
+		(string, _extension),
+		(string, _program),
+		(unsigned int, _id)
 	)
 	static unsigned int _idCntr;
 };
