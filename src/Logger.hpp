@@ -6,8 +6,6 @@
 
 using std::string;
 
-#include "Reflection.hpp"
-
 #define TRACE_DTOR if (Logger::trace()) print_dtor(::repr(*this))
 #define TRACE_DEFAULT_CTOR if (Logger::trace()) print_default_ctor(::repr(*this))
 #define TRACE_COPY_CTOR if (Logger::trace()) print_copy_ctor(::repr(other), ::repr(*this))
@@ -15,14 +13,14 @@ using std::string;
 #define TRACE_SWAP_BEGIN if (Logger::trace()) print_swap_begin(::repr(*this), ::repr(other))
 #define TRACE_SWAP_END if (Logger::trace()) print_swap_end()
 
-class Logger /* : public Reflection */ {
+// Logger is used in repr, therefore, the Logger MUST not use Reflection
+class Logger {
 public:
 	~Logger();
 	Logger();
 	Logger(const Logger& other);
 	Logger& operator=(Logger);
 	void swap(Logger& other);
-	operator string() const;
 	
 	static void logexception(const std::exception& exception);
 	static void logerror(const char* error);
@@ -39,14 +37,8 @@ public:
 	static bool error();
 	static bool fatal();
 private:
-	// REFLECT(
-	// 	"Logger",
-	// 	DECL(unsigned int, _id)
-	// )
 	unsigned int _id;
-
 	static unsigned int _idCntr;
 };
 
 void swap(Logger&, Logger&) /* noexcept */;
-std::ostream& operator<<(std::ostream&, const Logger&);
