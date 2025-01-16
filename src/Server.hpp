@@ -3,14 +3,14 @@
 #include <string>
 #include <iostream>
 
-// #include "Reflection.hpp"
+#include "Reflection.hpp"
 #include "HttpServer.hpp"
 #include "conf.hpp"
 
 using std::string;
 using std::ostream;
 
-class Server /* : public Reflection */ {
+class Server : public Reflection {
 public:
 	~Server();
 	Server();
@@ -22,19 +22,14 @@ public:
 
 	void serve();
 public:
-	// REFLECT(
-	// 	"Server",
-	// 	DECL(unsigned int, exitStatus),
-	// 	DECL(const string, rawConfig),
-	// 	DECL(t_config, config), // maybe private, since non-const?
-	// 	DECL(HttpServer, _http), // should be private
-	// 	DECL(unsigned int, _id) // should be private
-	// )
-	unsigned int exitStatus;
-	const string rawConfig;
-	t_config config; // maybe private, since non-const?
-	HttpServer _http; // should be private
-	unsigned int _id; // should be private
+	REFLECT(
+		Server,
+		DECL(unsigned int, exitStatus),
+		DECL(const string, rawConfig),
+		DECL(t_config, config), // maybe private, since non-const?
+		DECL(HttpServer, _http), // should be private
+		DECL(unsigned int, _id) // should be private
+	)
 private:
 	static unsigned int _idCntr;
 };

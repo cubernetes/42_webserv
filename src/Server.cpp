@@ -52,8 +52,7 @@ void Server::swap(Server& other) /* noexcept */ {
 	// TRACE_SWAP_END;
 }
 
-// Server::operator string() const { return ::repr(*this); }
-Server::operator string() const { return "Server"; }
+Server::operator string() const { return ::repr(*this); }
 
 void swap(Server& a, Server& b) /* noexcept */ { a.swap(b); }
 ostream& operator<<(ostream& os, const Server& other) { return os << static_cast<string>(other); }
