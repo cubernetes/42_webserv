@@ -116,11 +116,9 @@ repr(const T* value, unsigned int size, bool json = false) {
 INT_REPR(int);
 INT_REPR(short);
 INT_REPR(long);
-INT_REPR(long long);
 INT_REPR(unsigned int);
 INT_REPR(unsigned short);
 INT_REPR(unsigned long);
-INT_REPR(unsigned long long);
 INT_REPR(float);
 INT_REPR(double);
 INT_REPR(long double);
