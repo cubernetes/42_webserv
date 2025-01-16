@@ -5,12 +5,12 @@
 #include <string>
 #include <sys/poll.h>
 
-// #include "Reflection.hpp"
+#include "Reflection.hpp"
 #include "conf.hpp"
 
 using std::string;
 
-class HttpServer /* : public Reflection */ {
+class HttpServer : public Reflection {
 public:
 	// Orthodox Canonical Form requirements
 	~HttpServer();
@@ -22,19 +22,25 @@ public:
 	bool setup(const t_config& config);
 	void run();
 
-	// Required for repr
 	void swap(HttpServer&);
-	string repr() const;
 	operator string() const;
-
 private:
-	int server_fd;
-	std::vector<struct pollfd> poll_fds;
-	bool running;
-	t_config config;
-	
-	// Instance tracking
-	unsigned int _id;
+	// int server_fd;
+	// std::vector<struct pollfd> poll_fds;
+	// bool running;
+	// t_config config;
+	// 
+	// // Instance tracking
+	// unsigned int _id;
+
+	REFLECT(
+		HttpServer,
+		DECL(int, server_fd),
+		DECL(std::vector<struct pollfd>, poll_fds),
+		DECL(bool, running),
+		DECL(t_config, config),
+		DECL(unsigned int, _id)
+	)
 	static unsigned int _idCntr;
 
 	// Helper methods
