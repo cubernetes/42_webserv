@@ -20,7 +20,7 @@ using std::stringstream;
 unsigned int HttpServer::_idCntr = 0;
 
 HttpServer::~HttpServer() {
-	// TODO: TRACE_DTOR;
+	TRACE_DTOR;
 		
 	if (server_fd >= 0)
 		close(server_fd);
@@ -37,7 +37,7 @@ HttpServer::HttpServer() :
 	running(false),
 	config(),
 	_id(_idCntr++) {
-	// TODO: reflect(); TRACE_DEFAULT_CTOR;
+	reflect(); TRACE_DEFAULT_CTOR;
 }
 
 HttpServer::HttpServer(const HttpServer& other) :
@@ -46,27 +46,26 @@ HttpServer::HttpServer(const HttpServer& other) :
 	running(other.running),
 	config(other.config),
 	_id(_idCntr++) {
-	// TODO: reflect(); TRACE_COPY_CTOR;
+	reflect(); TRACE_COPY_CTOR;
 }
 
 HttpServer& HttpServer::operator=(HttpServer other) {
-	// TODO: TRACE_COPY_ASSIGN_OP;
+	TRACE_COPY_ASSIGN_OP;
 	swap(other);
 	return *this;
 }
 
 void HttpServer::swap(HttpServer& other) {
-	// TODO: TRACE_SWAP_BEGIN;
+	TRACE_SWAP_BEGIN;
 	std::swap(server_fd, other.server_fd);
 	std::swap(poll_fds, other.poll_fds);
 	std::swap(running, other.running);
 	std::swap(config, other.config);
 	std::swap(_id, other._id);
-	// TODO: TRACE_SWAP_END;
+	TRACE_SWAP_END;
 }
 
-// HttpServer::operator string() const { return repr(); }
-HttpServer::operator string() const { return "HttpServer"; }
+HttpServer::operator string() const { return ::repr(*this); }
 
 bool HttpServer::setup(const t_config& conf) {
 	//config = conf;
