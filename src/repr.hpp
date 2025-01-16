@@ -9,7 +9,6 @@
 #include <utility> /* std::make_pair */
 
 #include "Logger.hpp" /* Logger::debug() */
-#define LOGGER_DEBUG Logger::debug()
 
 #include "Constants.hpp" /* Constants::{no_color,repr_json} */
 #include "ansi.hpp"
@@ -81,7 +80,7 @@ repr(const T* value, unsigned int size, bool json = false) {
 	std::ostringstream oss;
 	if (json)
 		oss << "[";
-	else if (LOGGER_DEBUG)
+	else if (Logger::debug())
 		oss << punct("{");
 	else
 		oss << punct("[");
@@ -96,7 +95,7 @@ repr(const T* value, unsigned int size, bool json = false) {
 	}
 	if (json)
 		oss << "]";
-	else if (LOGGER_DEBUG)
+	else if (Logger::debug())
 		oss << punct("}");
 	else
 		oss << punct("]");
@@ -145,7 +144,7 @@ struct repr_wrapper<string> {
 		if (json)
 			return "\"" + value + "\"";
 		else
-			return str("\"" + value + "\"") + (LOGGER_DEBUG ? punct("s") : "");
+			return str("\"" + value + "\"") + (Logger::debug() ? punct("s") : "");
 	}
 };
 
@@ -210,7 +209,7 @@ struct repr_wrapper<vector<T> > {
 		std::ostringstream oss;
 		if (json)
 			oss << "[";
-		else if (LOGGER_DEBUG)
+		else if (Logger::debug())
 			oss << kwrd("std") + punct("::") + kwrd("vector") + punct("({");
 		else
 			oss << punct("[");
@@ -225,7 +224,7 @@ struct repr_wrapper<vector<T> > {
 		}
 		if (json)
 			oss << "]";
-		else if (LOGGER_DEBUG)
+		else if (Logger::debug())
 			oss << punct("})");
 		else
 			oss << punct("]");
@@ -241,7 +240,7 @@ struct repr_wrapper<map<K, V> > {
 		std::ostringstream oss;
 		if (json)
 			oss << "{";
-		else if (LOGGER_DEBUG)
+		else if (Logger::debug())
 			oss << kwrd("std") + punct("::") + kwrd("map") + punct("({");
 		else
 			oss << punct("{");
@@ -263,7 +262,7 @@ struct repr_wrapper<map<K, V> > {
 		}
 		if (json)
 			oss << "}";
-		else if (LOGGER_DEBUG)
+		else if (Logger::debug())
 			oss << punct("})");
 		else
 			oss << punct("}");
@@ -279,7 +278,7 @@ struct repr_wrapper<pair<F, S> > {
 		std::ostringstream oss;
 		if (json)
 			oss << "[";
-		else if (LOGGER_DEBUG)
+		else if (Logger::debug())
 			oss << kwrd("std") + punct("::") + kwrd("pair") + punct("(");
 		else
 			oss << punct("(");
