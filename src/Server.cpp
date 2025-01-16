@@ -33,7 +33,7 @@ Server::Server(const string& confPath) : exitStatus(), rawConfig(readConfig(conf
 	// }
 }
 
-Server::Server(const Server& other) : exitStatus(other.exitStatus), rawConfig(other.rawConfig), config(other.config), _http(other._http), _id(_idCntr++) {
+Server::Server(const Server& other) : Reflection(other), exitStatus(other.exitStatus), rawConfig(other.rawConfig), config(other.config), _http(other._http), _id(_idCntr++) {
 	// reflect(); TRACE_COPY_CTOR;
 }
 

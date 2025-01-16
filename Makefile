@@ -8,8 +8,8 @@ NAME := webserv
 EXT := cpp
 
 # tools
-CXX := clang++ # TODO change to c++
-#CXX := g++ # TODO change to c++
+#CXX := clang++ # TODO change to c++
+CXX := g++ # TODO change to c++
 RM := /bin/rm -f
 MKDIR := /bin/mkdir -p
 

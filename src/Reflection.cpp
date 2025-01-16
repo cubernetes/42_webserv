@@ -31,8 +31,8 @@ static string jsonEscape(string s) {
 	return _replace(_replace(s, "\\", "\\\\"), "\"", "\\\"");
 }
 
-Reflection::Reflection() : _class() {}
-Reflection::Reflection(const Reflection& other) : _class(other._class) {}
+Reflection::Reflection() : _class(), _members() {}
+Reflection::Reflection(const Reflection& other) : _class(other._class), _members(other._members) {}
 Reflection& Reflection::operator=(Reflection other) { ::swap(*this, other); return *this; }
 void Reflection::swap(Reflection& other) /* noexcept */ {
 	::swap(_class, other._class);

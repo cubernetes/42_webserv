@@ -41,6 +41,7 @@ HttpServer::HttpServer() :
 }
 
 HttpServer::HttpServer(const HttpServer& other) :
+	Reflection(other),
 	server_fd(-1),
 	poll_fds(other.poll_fds),
 	running(other.running),
