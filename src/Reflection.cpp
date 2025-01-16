@@ -15,6 +15,7 @@ using std::string;
 using std::map;
 using std::pair;
 using std::cout;
+using std::swap;
 
 static string _replace(string s, const string& search,
                           const string& replace) {
@@ -30,7 +31,15 @@ static string jsonEscape(string s) {
 	return _replace(_replace(s, "\\", "\\\\"), "\"", "\\\"");
 }
 
-string Reflection::repr(bool json) const {
+Reflection::Reflection() : _class() {}
+Reflection::Reflection(const Reflection& other) : _class(other._class) {}
+Reflection& Reflection::operator=(Reflection other) { ::swap(*this, other); return *this; }
+void Reflection::swap(Reflection& other) /* noexcept */ {
+	::swap(_class, other._class);
+}
+void swap(Reflection& a, Reflection& b) { a.swap(b); }
+
+string Reflection::repr_struct(string name, t_members members, bool json) const {
 	std::stringstream out;
 	if (json || Constants::jsonTrace) {
 		out << "{\"class\":\"" << jsonEscape(name) << "\"";
