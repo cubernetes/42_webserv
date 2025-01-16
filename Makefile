@@ -9,6 +9,7 @@ EXT := cpp
 
 # tools
 CXX := clang++ # TODO change to c++
+#CXX := g++ # TODO change to c++
 RM := /bin/rm -f
 MKDIR := /bin/mkdir -p
 
@@ -21,7 +22,7 @@ CFLAGS += -Wshadow
 #CFLAGS += -pedantic
 CFLAGS += -Wconversion
 CFLAGS += -Wunreachable-code
-# CFLAGS += -std=c++98
+CFLAGS += -std=c++98
 CFLAGS += -MMD
 CFLAGS += -fdiagnostics-color=always
 # CFLAGS += -Werror
