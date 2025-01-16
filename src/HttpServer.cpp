@@ -6,10 +6,9 @@
 #include <errno.h>
 #include <string.h>
 #include <sstream>
-#include <cstdint>
+#include <limits.h>
 
 #include "HttpServer.hpp"
-#include "repr.hpp"
 #include "conf.hpp"
 #include "Logger.hpp"
 
@@ -98,7 +97,7 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 	
 	struct sockaddr_in address;
 	address.sin_family = AF_INET;
-	if (port > 0 && port <= UINT16_MAX) {
+	if (port > 0 && port <= SHRT_MAX) {
 		address.sin_port = htons(static_cast<uint16_t>(port));
 	} else {
 		Logger::logerror("Invalid port number");
