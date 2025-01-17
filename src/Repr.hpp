@@ -324,4 +324,4 @@ static inline std::ostream& operator<<(std::ostream& os, const map<K, V>& val) {
 template<typename F, typename S>
 static inline std::ostream& operator<<(std::ostream& os, const pair<F, S>& val) { return os << repr(val, Constants::jsonTrace); }
 
-// TODO: @timo: add struct pollfd
+static inline std::ostream& operator<<(std::ostream& os, const struct pollfd& val) { return os << repr(val, Constants::jsonTrace); }
