@@ -29,6 +29,8 @@ void Logger::swap(Logger& other) /* noexcept */ {
 }
 
 void swap(Logger& a, Logger& b) /* noexcept */ { a.swap(b); }
+// end of boilerplate
+
 
 void Logger::logexception(const std::exception& exception) {
 	cerr << exception.what() << endl;

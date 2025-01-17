@@ -6,7 +6,6 @@
 
 using std::string;
 
-// Logger is used in repr, therefore, the Logger MUST not use Reflection
 class Logger {
 public:
 	~Logger();

@@ -3,21 +3,18 @@
 #include <string> /* std::string */
 #include <iostream> /* std::ostream */
 
-#include "Reflection.hpp"
-
 using std::string;
 using std::ostream;
 
-class CgiHandler : public Reflection {
+class CgiHandler {
 public:
 		~CgiHandler();
 		CgiHandler();
-		explicit CgiHandler(const string&); // TODO: do we need?
-		explicit CgiHandler(const char*); // TODO: do we need?
-		CgiHandler(const string& extension, const string& program);
 		CgiHandler(const CgiHandler& other);
 		CgiHandler& operator=(CgiHandler);
-		void swap(CgiHandler&);
+		void swap(CgiHandler&); // copy swap idiom
+
+		// string conversion
 		operator string() const;
 
 		const string& get_extension() const;

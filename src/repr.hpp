@@ -223,6 +223,9 @@ POST_REFLECT_GETTER(HttpServer, int, _server_fd, std::vector<struct pollfd>, _po
 #include "Server.hpp"
 POST_REFLECT_GETTER(Server, unsigned int, _exitStatus, string, _rawConfig, t_config, _config, HttpServer, _http, unsigned int, _id);
 
+#include "CgiHandler.hpp"
+POST_REFLECT_GETTER(CgiHandler, string, _extension, string, _program);
+
 // for vector
 template <typename T>
 struct repr_wrapper<vector<T> > {
