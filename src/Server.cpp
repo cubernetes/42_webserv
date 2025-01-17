@@ -37,7 +37,7 @@ Server::Server(const string& confPath) :
 		if (Constants::jsonTrace)
 			cout << "{\"event\":\"string confPath constructor\",\"this object\":" << ::repr(*this) << "}\n";
 		else
-			cout << kwrd(get_class(*this)) + punct("(") << ::repr(confPath) << punct(") -> ") << ::repr(*this) << '\n';
+			cout << kwrd(getClass(*this)) + punct("(") << ::repr(confPath) << punct(") -> ") << ::repr(*this) << '\n';
 	}
 }
 
@@ -63,7 +63,7 @@ Server& Server::operator=(Server other) /* noexcept */ {
 // Getters
 unsigned int Server::get_exitStatus() const { return _exitStatus; }
 const string& Server::get_rawConfig() const { return _rawConfig; }
-const t_config& Server::get_config() const { return _config; }
+const Config& Server::get_config() const { return _config; }
 const HttpServer& Server::get_http() const { return _http; }
 unsigned int Server::get_id() const { return _id; }
 

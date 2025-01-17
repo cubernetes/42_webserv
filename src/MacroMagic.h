@@ -141,11 +141,11 @@
 #define OP(i, n) DEC(i), DEC(DEC(INC(n)))
 #define PRED(i, n) i
 #define DEC_N(n, i) EVAL_(WHILE_RET_2ND(PRED, OP, i, n))
-//#define F(i, n) CAT(reflect_member_, DEC_N(n, INC(i)))();
-#define F(i, n) CAT(reflect_member_, i)();
-#define GEN_REFLECT(cls_id, n) \
+//#define F(i, n) CAT(reflectMember, DEC_N(n, INC(i)))();
+#define F(i, n) CAT(reflectMember, i)();
+#define GEN_REFLECT(clsId, n) \
 	void reflect() { \
-		_class = cls_id; EVAL(REPEAT(n, F, __LINE__)) \
+		_class = clsId; EVAL(REPEAT(n, F, __LINE__)) \
 	}
 #define CONCAT(x, ...) \
 	IF(DEC(NARG(__VA_ARGS__))) \
@@ -208,15 +208,15 @@
 #define FOR_EACH_IDX_INDIRECT() FOR_EACH_IDX_
 
 #define DECL_N(n, type, name, ...) \
-	void CAT(reflect_member_, n)() { \
-		reflect_member((t_repr_closure)&Self::CAT(repr_closure_, n), #name, &name); \
+	void CAT(reflectMember, n)() { \
+		reflectMember((ReprClosure)&Self::CAT(reprClosure, n), #name, &name); \
 	} \
-	string CAT(repr_closure_, n)(bool json) const { \
+	string CAT(reprClosure, n)(bool json) const { \
 		return ::repr(name, json); \
 	} \
 	type name DEFER(IF)(NOT_EMPTY(__VA_ARGS__))(= __VA_ARGS__,);
 
-#define REFLECT(cls_id, ...) \
-	typedef cls_id Self; \
+#define REFLECT(clsId, ...) \
+	typedef clsId Self; \
 	FOR_EACH_IDX(DECL_N, __VA_ARGS__) \
-	GEN_REFLECT(#cls_id, NARG(__VA_ARGS__))
+	GEN_REFLECT(#clsId, NARG(__VA_ARGS__))

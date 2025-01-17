@@ -11,7 +11,7 @@ using std::cout;
 
 int main(int ac, char **av) {
 	try {
-		HttpServer server; // TODO: consider initializing server with `const t_config&' (see Server.hpp), since a server without a config is impossible
+		HttpServer server; // TODO: consider initializing server with `const Config&' (see Server.hpp), since a server without a config is impossible
 		cout << server << '\n';
 
 		string configPath = Utils::parseArgs(ac, av);

@@ -6,46 +6,46 @@
 
 using std::string;
 using ansi::rgb;
-using ansi::rgb_bg;
+using ansi::rgbBg;
 
-void repr_init() {
-	if (!ansi::no_color())
+void reprInit() {
+	if (!ansi::noColor())
 		std::cout << ANSI_FG;
 }
 
-void repr_done() {
-	if (!ansi::no_color())
+void reprDone() {
+	if (!ansi::noColor())
 		std::cout << ANSI_RST << '\n';
 }
 
-string repr_clr::str(string s) {
-	return rgb_bg(rgb(s, ANSI_STR), ANSI_FG);
+string ReprClr::str(string s) {
+	return rgbBg(rgb(s, ANSI_STR), ANSI_FG);
 }
 
-string repr_clr::chr(string s) {
-	return rgb_bg(rgb(s, ANSI_CHR), ANSI_FG);
+string ReprClr::chr(string s) {
+	return rgbBg(rgb(s, ANSI_CHR), ANSI_FG);
 }
 
-string repr_clr::kwrd(string s) {
-	return rgb_bg(rgb(s, ANSI_KWRD), ANSI_FG);
+string ReprClr::kwrd(string s) {
+	return rgbBg(rgb(s, ANSI_KWRD), ANSI_FG);
 }
 
-string repr_clr::punct(string s) {
-	return rgb_bg(rgb(s, ANSI_PUNCT), ANSI_FG);
+string ReprClr::punct(string s) {
+	return rgbBg(rgb(s, ANSI_PUNCT), ANSI_FG);
 }
 
-string repr_clr::func(string s) {
-	return rgb_bg(rgb(s, ANSI_FUNC), ANSI_FG);
+string ReprClr::func(string s) {
+	return rgbBg(rgb(s, ANSI_FUNC), ANSI_FG);
 }
 
-string repr_clr::num(string s) {
-	return rgb_bg(rgb(s, ANSI_NUM), ANSI_FG);
+string ReprClr::num(string s) {
+	return rgbBg(rgb(s, ANSI_NUM), ANSI_FG);
 }
 
-string repr_clr::var(string s) {
-	return rgb_bg(rgb(s, ANSI_VAR), ANSI_FG);
+string ReprClr::var(string s) {
+	return rgbBg(rgb(s, ANSI_VAR), ANSI_FG);
 }
 
-string repr_clr::cmt(string s) {
-	return rgb_bg(rgb(s, ANSI_CMT), ANSI_FG);
+string ReprClr::cmt(string s) {
+	return rgbBg(rgb(s, ANSI_CMT), ANSI_FG);
 }

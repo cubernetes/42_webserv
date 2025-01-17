@@ -40,7 +40,7 @@ void swap(Logger&, Logger&) /* noexcept */;
 			if (Constants::jsonTrace) \
 				oss << "{\"event\":\"copy assignment operator\",\"other object\":" << ::repr(other) << "}\n"; \
 			else \
-				oss << kwrd(get_class(*this)) + punct("& ") + kwrd(get_class(*this)) + punct("::") + func("operator") + punct("=(") << ::repr(other) << punct(")") + '\n'; \
+				oss << kwrd(getClass(*this)) + punct("& ") + kwrd(getClass(*this)) + punct("::") + func("operator") + punct("=(") << ::repr(other) << punct(")") + '\n'; \
 			cout << oss.str() << std::flush; \
 		} \
 	} while (false)
@@ -51,7 +51,7 @@ void swap(Logger&, Logger&) /* noexcept */;
 			if (Constants::jsonTrace) \
 				oss << "{\"event\":\"copy constructor\",\"other object\":" << ::repr(other) << ",\"this object\":" << ::repr(*this) << "}\n"; \
 			else \
-				oss << kwrd(get_class(*this)) + punct("(") << ::repr(other) << punct(") -> ") << ::repr(*this) << '\n'; \
+				oss << kwrd(getClass(*this)) + punct("(") << ::repr(other) << punct(") -> ") << ::repr(*this) << '\n'; \
 			cout << oss.str() << std::flush; \
 		} \
 	} while (false)
@@ -62,7 +62,7 @@ void swap(Logger&, Logger&) /* noexcept */;
 			if (Constants::jsonTrace) \
 				oss << "{\"event\":\"default constructor\",\"this object\":" << ::repr(*this) << "}\n"; \
 			else \
-				oss << kwrd(get_class(*this)) + punct("() -> ") << ::repr(*this) << '\n'; \
+				oss << kwrd(getClass(*this)) + punct("() -> ") << ::repr(*this) << '\n'; \
 			cout << oss.str() << std::flush; \
 		} \
 	} while (false)
@@ -84,9 +84,9 @@ void swap(Logger&, Logger&) /* noexcept */;
 			if (Constants::jsonTrace) { \
 				oss << "{\"event\":\"object swap\",\"this object\":" << ::repr(*this) << ",\"other object\":" << ::repr(other) << "}\n"; \
 			} else { \
-				oss << cmt("<Swapping " + string(get_class(*this)) + " *this:") + '\n'; \
+				oss << cmt("<Swapping " + string(getClass(*this)) + " *this:") + '\n'; \
 				oss << ::repr(*this) << '\n'; \
-				oss << cmt("with the following" + string(get_class(*this)) + "object:") + '\n'; \
+				oss << cmt("with the following" + string(getClass(*this)) + "object:") + '\n'; \
 				oss << ::repr(other) << '\n'; \
 			} \
 			cout << oss.str() << std::flush; \
@@ -97,7 +97,7 @@ void swap(Logger&, Logger&) /* noexcept */;
 		if (Logger::trace()) { \
 			std::ostringstream oss; \
 			if (!Constants::jsonTrace) \
-				oss << cmt(string(get_class(*this)) + " swap done>") + '\n'; \
+				oss << cmt(string(getClass(*this)) + " swap done>") + '\n'; \
 			cout << oss.str() << std::flush; \
 		} \
 	} while (false)

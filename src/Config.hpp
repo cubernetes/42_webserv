@@ -6,16 +6,16 @@
 #include <vector>
 #include <deque>
 
-typedef std::vector<std::string> t_arguments;
-typedef std::pair<std::string, t_arguments> t_directive;
-typedef std::map<std::string, t_arguments> t_directives;
-typedef std::pair<std::string, t_directives> t_route;
-typedef std::vector<t_route> t_routes;
-typedef std::pair<t_directives, t_routes> t_server;
-typedef std::vector<t_server> t_servers;
-typedef std::pair<t_directives, t_servers> t_config;
+typedef std::vector<std::string> Arguments;
+typedef std::pair<std::string, Arguments> Directive;
+typedef std::map<std::string, Arguments> Directives;
+typedef std::pair<std::string, Directives> RouteCtx;
+typedef std::vector<RouteCtx> RouteCtxs;
+typedef std::pair<Directives, RouteCtxs> ServerCtx;
+typedef std::vector<ServerCtx> ServerCtxs;
+typedef std::pair<Directives, ServerCtxs> Config;
 
-enum e_token_type {
+enum TokenType {
 	TOK_SEMICOLON,
 	TOK_OPENING_BRACE,
 	TOK_CLOSING_BRACE,
@@ -23,10 +23,10 @@ enum e_token_type {
 	TOK_EOF,
 	TOK_UNKNOWN,
 };
-typedef enum e_token_type token_type;
+typedef enum TokenType TokenType;
 
-typedef std::pair<token_type, std::string> t_token;
-typedef std::deque<t_token> t_tokens;
+typedef std::pair<TokenType, std::string> Token;
+typedef std::deque<Token> Tokens;
 
 std::string readConfig(std::string configPath);
-t_config parseConfig(std::string rawConfig);
+Config parseConfig(std::string rawConfig);

@@ -26,13 +26,13 @@ public:
 	// Getters
 	unsigned int get_exitStatus() const;
 	const string& get_rawConfig() const;
-	const t_config& get_config() const;
+	const Config& get_config() const;
 	const HttpServer& get_http() const;
 	unsigned int get_id() const;
 private:
 	unsigned int _exitStatus;
 	string _rawConfig;
-	t_config _config;
+	Config _config;
 	HttpServer _http;
 
 	// Instance tracking

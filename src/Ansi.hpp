@@ -26,7 +26,7 @@ using std::string;
 #define ANSI_WHITE_BG ANSI_CSI   "47" "m"
 
 namespace ansi {
-	bool no_color();
+	bool noColor();
 	string black(string s);
 	string red(string s);
 	string green(string s);
@@ -35,16 +35,16 @@ namespace ansi {
 	string magenta(string s);
 	string cyan(string s);
 	string white(string s);
-	string black_bg(string s);
-	string red_bg(string s);
-	string green_bg(string s);
-	string yellow_bg(string s);
-	string blue_bg(string s);
-	string magenta_bg(string s);
-	string cyan_bg(string s);
-	string white_bg(string s);
-	string rgb_p(string s, int r, int g, int b);
-	string rgb_bg_p(string s, int r, int g, int b);
-	string rgb(string s, const string& rgb_semicolon);
-	string rgb_bg(string s, const string& rgb_semicolon);
+	string blackBg(string s);
+	string redBg(string s);
+	string greenBg(string s);
+	string yellowBg(string s);
+	string blueBg(string s);
+	string magentaBg(string s);
+	string cyanBg(string s);
+	string whiteBg(string s);
+	string rgbP(string s, int r, int g, int b);
+	string rgbBgP(string s, int r, int g, int b);
+	string rgb(string s, const string& rgbSemicolon);
+	string rgbBg(string s, const string& rgbSemicolon);
 }

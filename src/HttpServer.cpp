@@ -20,18 +20,18 @@ using std::stringstream;
 
 HttpServer::~HttpServer() {
 	TRACE_DTOR;
-	if (_server_fd >= 0)
-		close(_server_fd);
+	if (_serverFd >= 0)
+		close(_serverFd);
 	
-	for (std::vector<struct pollfd>::iterator it = _poll_fds.begin(); it != _poll_fds.end(); ++it) {
-		if (it->fd >= 0 && it->fd != _server_fd)
+	for (std::vector<struct pollfd>::iterator it = _pollFds.begin(); it != _pollFds.end(); ++it) {
+		if (it->fd >= 0 && it->fd != _serverFd)
 			close(it->fd);
 	}
 }
 
 HttpServer::HttpServer() : 
-	_server_fd(-1),
-	_poll_fds(),
+	_serverFd(-1),
+	_pollFds(),
 	_running(false),
 	_config(),
 	_id(_idCntr++) {
@@ -39,8 +39,8 @@ HttpServer::HttpServer() :
 }
 
 HttpServer::HttpServer(const HttpServer& other) :
-	_server_fd(-1),
-	_poll_fds(other._poll_fds),
+	_serverFd(-1),
+	_pollFds(other._pollFds),
 	_running(other._running),
 	_config(other._config),
 	_id(_idCntr++) {
@@ -58,16 +58,16 @@ HttpServer& HttpServer::operator=(HttpServer other) {
 }
 
 // Getters
-int HttpServer::get_server_fd() const { return _server_fd; }
-const std::vector<struct pollfd>& HttpServer::get_poll_fds() const { return _poll_fds; }
+int HttpServer::get_serverFd() const { return _serverFd; }
+const std::vector<struct pollfd>& HttpServer::get_pollFds() const { return _pollFds; }
 bool HttpServer::get_running() const { return _running; }
-const t_config& HttpServer::get_config() const { return _config; }
+const Config& HttpServer::get_config() const { return _config; }
 unsigned int HttpServer::get_id() const { return _id; }
 
 void HttpServer::swap(HttpServer& other) {
 	TRACE_SWAP_BEGIN;
-	::swap(_server_fd, other._server_fd);
-	::swap(_poll_fds, other._poll_fds);
+	::swap(_serverFd, other._serverFd);
+	::swap(_pollFds, other._pollFds);
 	::swap(_running, other._running);
 	::swap(_config, other._config);
 	TRACE_SWAP_END;
@@ -87,29 +87,29 @@ std::ostream& operator<<(std::ostream& os, const HttpServer& server) {
 // end of boilerplate
 
 
-bool HttpServer::setup(const t_config& conf) {
+bool HttpServer::setup(const Config& conf) {
 	_config = conf;
 	return setupSocket("127.0.0.1", 8080);  // Hardcoded for now
 }
 
 bool HttpServer::setupSocket(const std::string& ip, int port) {
 	(void)ip;
-	_server_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (_server_fd < 0) {
+	_serverFd = socket(AF_INET, SOCK_STREAM, 0);
+	if (_serverFd < 0) {
 		Logger::logerror("Failed to create socket");
 		return false;
 	}
 	
 	int opt = 1;
-	if (setsockopt(_server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(_serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
 		Logger::logerror("Failed to set socket options");
-		close(_server_fd);
+		close(_serverFd);
 		return false;
 	}
 	
-	if (fcntl(_server_fd, F_SETFL, O_NONBLOCK) < 0) {
+	if (fcntl(_serverFd, F_SETFL, O_NONBLOCK) < 0) {
 		Logger::logerror("Failed to set non-blocking socket");
-		close(_server_fd);
+		close(_serverFd);
 		return false;
 	}
 	
@@ -123,22 +123,22 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 	}
 	address.sin_addr.s_addr = INADDR_ANY;
 	
-	if (bind(_server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+	if (bind(_serverFd, (struct sockaddr*)&address, sizeof(address)) < 0) {
 		Logger::logerror("Failed to bind socket");
-		close(_server_fd);
+		close(_serverFd);
 		return false;
 	}
 	
-	if (listen(_server_fd, SOMAXCONN) < 0) {
+	if (listen(_serverFd, SOMAXCONN) < 0) {
 		Logger::logerror("Failed to listen on socket");
-		close(_server_fd);
+		close(_serverFd);
 		return false;
 	}
 	
 	struct pollfd pfd;
-	pfd.fd = _server_fd;
+	pfd.fd = _serverFd;
 	pfd.events = POLLIN;
-	_poll_fds.push_back(pfd);
+	_pollFds.push_back(pfd);
 	
 	cout << "Server is listening on port " << port << std::endl;
 	return true;
@@ -149,7 +149,7 @@ void HttpServer::run() {
 	int j = 8;
 
 	while (j--) {
-		int ready = poll(_poll_fds.data(), _poll_fds.size(), -1);
+		int ready = poll(_pollFds.data(), _pollFds.size(), -1);
 		if (ready < 0) {
 			if (errno == EINTR)
 				continue;
@@ -157,62 +157,62 @@ void HttpServer::run() {
 			break;
 		}
 		
-		for (size_t i = 0; i < _poll_fds.size(); i++) {
-			if (_poll_fds[i].revents == 0)
+		for (size_t i = 0; i < _pollFds.size(); i++) {
+			if (_pollFds[i].revents == 0)
 				continue;
 				
-			if (_poll_fds[i].revents & POLLIN) {
-				if (_poll_fds[i].fd == _server_fd)
+			if (_pollFds[i].revents & POLLIN) {
+				if (_pollFds[i].fd == _serverFd)
 					handleNewConnection();
 				else
-					handleClientData(_poll_fds[i].fd);
+					handleClientData(_pollFds[i].fd);
 			}
 			
-			if (_poll_fds[i].revents & (POLLHUP | POLLERR))
-				closeConnection(_poll_fds[i].fd);
+			if (_pollFds[i].revents & (POLLHUP | POLLERR))
+				closeConnection(_pollFds[i].fd);
 		}
 	}
 }
 
 void HttpServer::handleNewConnection() {
-	struct sockaddr_in client_addr;
-	socklen_t client_len = sizeof(client_addr);
+	struct sockaddr_in clientAddr;
+	socklen_t clientLen = sizeof(clientAddr);
 	
-	int client_fd = accept(_server_fd, (struct sockaddr*)&client_addr, &client_len);
-	if (client_fd < 0) {
+	int clientFd = accept(_serverFd, (struct sockaddr*)&clientAddr, &clientLen);
+	if (clientFd < 0) {
 		if (errno != EWOULDBLOCK && errno != EAGAIN)
 			Logger::logerror("Accept failed");
 		return;
 	}
 	
-	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0) {
+	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0) {
 		Logger::logerror("Failed to set client socket non-blocking");
-		close(client_fd);
+		close(clientFd);
 		return;
 	}
 	
 	struct pollfd pfd;
-	pfd.fd = client_fd;
+	pfd.fd = clientFd;
 	pfd.events = POLLIN;
 	pfd.revents = 0;
-	_poll_fds.push_back(pfd);
+	_pollFds.push_back(pfd);
 	
-	cout << "New client connected. FD: " << client_fd << std::endl;
+	cout << "New client connected. FD: " << clientFd << std::endl;
 	cout << *this << '\n';
 }
 
-void HttpServer::handleClientData(int client_fd) {
+void HttpServer::handleClientData(int clientFd) {
 	char buffer[4096];
-	ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer), 0);
+	ssize_t bytesRead = recv(clientFd, buffer, sizeof(buffer), 0);
 	
-	if (bytes_read < 0) {
+	if (bytesRead < 0) {
 		if (errno != EWOULDBLOCK && errno != EAGAIN)
-			closeConnection(client_fd);
+			closeConnection(clientFd);
 		return;
 	}
 	
-	if (bytes_read == 0) {
-		closeConnection(client_fd);
+	if (bytesRead == 0) {
+		closeConnection(clientFd);
 		return;
 	}
 	
@@ -223,19 +223,19 @@ void HttpServer::handleClientData(int client_fd) {
 					"\r\n"
 					"Hello World!\n";
 
-	send(client_fd, response.c_str(), response.length(), 0);
-	closeConnection(client_fd);
+	send(clientFd, response.c_str(), response.length(), 0);
+	closeConnection(clientFd);
 }
 
-void HttpServer::closeConnection(int client_fd) {
-	close(client_fd);
-	removePollFd(client_fd);
+void HttpServer::closeConnection(int clientFd) {
+	close(clientFd);
+	removePollFd(clientFd);
 }
 
 void HttpServer::removePollFd(int fd) {
-	for (std::vector<struct pollfd>::iterator it = _poll_fds.begin(); it != _poll_fds.end(); ++it) {
+	for (std::vector<struct pollfd>::iterator it = _pollFds.begin(); it != _pollFds.end(); ++it) {
 		if (it->fd == fd) {
-			_poll_fds.erase(it);
+			_pollFds.erase(it);
 			break;
 		}
 	}

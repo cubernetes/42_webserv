@@ -22,20 +22,20 @@ public:
 	operator string() const;
 	
 	// Core functionality
-	bool setup(const t_config& config);
+	bool setup(const Config& config);
 	void run();
 
 	// Getters
-	int get_server_fd() const;
-	const std::vector<struct pollfd>& get_poll_fds() const;
+	int get_serverFd() const;
+	const std::vector<struct pollfd>& get_pollFds() const;
 	bool get_running() const;
-	const t_config& get_config() const;
+	const Config& get_config() const;
 	unsigned int get_id() const;
 private:
-	int _server_fd;
-	std::vector<struct pollfd> _poll_fds;
+	int _serverFd;
+	std::vector<struct pollfd> _pollFds;
 	bool _running;
-	t_config _config;
+	Config _config;
 
 	// Instance tracking
 	unsigned int _id;
@@ -44,8 +44,8 @@ private:
 	// Helper methods
 	bool setupSocket(const std::string& ip, int port);
 	void handleNewConnection();
-	void handleClientData(int client_fd);
-	void closeConnection(int client_fd);
+	void handleClientData(int clientFd);
+	void closeConnection(int clientFd);
 	void removePollFd(int fd);
 };
 

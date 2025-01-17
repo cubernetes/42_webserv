@@ -39,18 +39,18 @@ void Reflection::swap(Reflection& other) /* noexcept */ {
 }
 void swap(Reflection& a, Reflection& b) { a.swap(b); }
 
-string Reflection::repr_struct(string name, t_members members, bool json) const {
+string Reflection::reprStruct(string name, Members members, bool json) const {
 	std::stringstream out;
 	if (json || Constants::jsonTrace) {
 		out << "{\"class\":\"" << jsonEscape(name) << "\"";
-		for (t_members::const_iterator it = members.begin(); it != members.end(); ++it)
+		for (Members::const_iterator it = members.begin(); it != members.end(); ++it)
 			out << ",\"" << it->first << "\":" << (this->*it->second.first)(true);
 		out << "}";
 	}
 	else {
 		out << kwrd(name) + punct("(");
 		int i = 0;
-		for (t_members::const_iterator it = members.begin(); it != members.end(); ++it) {
+		for (Members::const_iterator it = members.begin(); it != members.end(); ++it) {
 			if (i++ != 0)
 				out << punct(", ");
 			if (Constants::kwargLogs)
@@ -62,10 +62,10 @@ string Reflection::repr_struct(string name, t_members members, bool json) const 
 	return out.str();
 }
 
-void Reflection::reflect_member(t_repr_closure repr_closure, const char *memberId, const void *memberPtr) {
-	_members[memberId] = std::make_pair(repr_closure, memberPtr);
+void Reflection::reflectMember(ReprClosure reprClosure, const char *memberId, const void *memberPtr) {
+	_members[memberId] = std::make_pair(reprClosure, memberPtr);
 }
 
 string Reflection::repr(bool json) const {
-	return repr_struct(_class, _members, json);
+	return reprStruct(_class, _members, json);
 }
