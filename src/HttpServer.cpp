@@ -88,8 +88,7 @@ std::ostream& operator<<(std::ostream& os, const HttpServer& server) {
 
 
 bool HttpServer::setup(const t_config& conf) {
-	//_config = conf;
-	(void)conf;
+	_config = conf;
 	return setupSocket("127.0.0.1", 8080);  // Hardcoded for now
 }
 

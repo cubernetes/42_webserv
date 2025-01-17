@@ -6,7 +6,7 @@
 using std::string;
 
 namespace Constants {
-	const string defaultConfPath = "default.conf";
+	const string defaultConfPath = "conf/default.conf";
 	const int logLevel = Logger::logLevelInfo; // doesn't NEED to be const tho
 	const bool kwargLogs = true; // doesn't NEED to be const tho
 	const bool verboseLogs = false; // doesn't NEED to be const tho
