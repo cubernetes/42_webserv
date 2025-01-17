@@ -8,8 +8,8 @@ NAME := webserv
 EXT := cpp
 
 # tools
-CXX := clang++ # TODO change to c++
-#CXX := g++ # TODO change to c++
+CXX := clang++ # TODO: @all change to c++
+#CXX := g++ # TODO: @all: change to c++
 RM := /bin/rm -f
 MKDIR := /bin/mkdir -p
 
@@ -19,14 +19,14 @@ CFLAGS += -O2
 CFLAGS += -Wall
 CFLAGS += -Wextra
 CFLAGS += -Wshadow
-#CFLAGS += -pedantic # Mhhhh maybe don't put this flag, see `-Wno-...' flag below :) # TODO: Remove this and comment to the left
+#CFLAGS += -pedantic # Mhhhh maybe don't put this flag, see `-Wno-...' flag below :) # TODO: @all: Remove this and comment to the left
 #CFLAGS += -Wno-variadic-macros # C++98 doesn't have variadic macros. Also, emtpy macro argument are UB. But yeahhhh we don't have to be pedantic :))
 CFLAGS += -Wconversion
 CFLAGS += -Wunreachable-code
 CFLAGS += -std=c++98
 CFLAGS += -MMD
 CFLAGS += -fdiagnostics-color=always
-# CFLAGS += -Werror
+# CFLAGS += -Werror # TODO: @all: Add back
 
 CXXFLAGS :=
 CXXFLAGS += -Weffc++

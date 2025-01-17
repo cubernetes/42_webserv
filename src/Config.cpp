@@ -76,7 +76,7 @@ static Directive parseDirective(Tokens& tokens) {
 	tokens.pop_front();
 	directive.second = parseArguments(tokens);
 	if (tokens.empty() || tokens.front().first != TOK_SEMICOLON)
-		throw runtime_error(Errors::Config::ParseError); // TODO make ParseError a function that takes tokens and says EOF or that token as an err msg
+		throw runtime_error(Errors::Config::ParseError); // TODO: @timo: make ParseError a function that takes tokens and says EOF or that token as an err msg
 	tokens.pop_front();
 	return directive;
 }
@@ -226,7 +226,7 @@ void updateDefaults(Config& config) {
 }
 
 void postProcess(Config& config) {
-	// TODO: update some directives, like e.g.
+	// TODO: @timo: update some directives, like e.g.
 	// - the listen directive is more useful when the ip and port are split up (make two arguments from one argument), thankfully we only have to handle ipv4 i guess (actually not sure about that)
 	// - yeah that's almost it, can't think of anything else.
 	(void)config;
@@ -323,10 +323,8 @@ string readConfig(string configPath) {
 	ss << is.rdbuf();
 	return ss.str();
 }
-// TODO: Semantics to check:
+// TODO: @timo: Semantics to check:
 // - conf must be non-empty
 // - there must be at least one server
 // - all directives must exist and make sense in the context
 // - arguments per directive must make sense
-
-// TODO make everything snake case or camelcase

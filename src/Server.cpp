@@ -31,7 +31,7 @@ Server::Server(const string& confPath) :
 	_config(parseConfig(_rawConfig)),
 	_http(),
 	_id(_idCntr++) {
-	if (Logger::trace()) { // TODO: abstract away
+	if (Logger::trace()) { // TODO: @timo: abstract away
 		if (Constants::jsonTrace)
 			cout << "{\"event\":\"string confPath constructor\",\"this object\":" << ::repr(*this) << "}\n";
 		else

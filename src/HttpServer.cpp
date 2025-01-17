@@ -1,6 +1,6 @@
 #include <iostream>
 #include <ostream>
-#include <sys/socket.h> // TODO: unnecessary header?
+#include <sys/socket.h> // TODO: @sonia: unnecessary header?
 #include <netinet/in.h>
 #include <fcntl.h>
 #include <unistd.h>
