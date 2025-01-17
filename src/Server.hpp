@@ -16,11 +16,14 @@ public:
 	Server(const string& confPath);
 	Server(const Server& other);
 	Server& operator=(Server);
-	void swap(Server& other);
+	void swap(Server& other); // copy swap idiom
+
+	// string conversion
 	operator string() const;
 
 	void serve();
 
+	// Getters
 	unsigned int get_exitStatus() const;
 	const string& get_rawConfig() const;
 	const t_config& get_config() const;
@@ -31,9 +34,12 @@ private:
 	string _rawConfig;
 	t_config _config;
 	HttpServer _http;
+
+	// Instance tracking
 	unsigned int _id;
 	static unsigned int _idCntr;
 };
 
+// global scope swap (aka ::swap), needed since friend keyword is forbidden :(
 void swap(Server&, Server&) /* noexcept */;
 ostream& operator<<(ostream&, const Server&);

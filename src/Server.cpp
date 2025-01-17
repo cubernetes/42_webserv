@@ -18,11 +18,21 @@ Server::~Server() {
 	TRACE_DTOR;
 }
 
-Server::Server() : _exitStatus(), _rawConfig(readConfig(Constants::defaultConfPath)), _config(parseConfig(_rawConfig)), _http(), _id(_idCntr++) {
+Server::Server() :
+	_exitStatus(),
+	_rawConfig(readConfig(Constants::defaultConfPath)),
+	_config(parseConfig(_rawConfig)),
+	_http(),
+	_id(_idCntr++) {
 	TRACE_DEFAULT_CTOR;
 }
 
-Server::Server(const string& confPath) : _exitStatus(), _rawConfig(readConfig(confPath)), _config(parseConfig(_rawConfig)), _http(), _id(_idCntr++) {
+Server::Server(const string& confPath) :
+	_exitStatus(),
+	_rawConfig(readConfig(confPath)),
+	_config(parseConfig(_rawConfig)),
+	_http(),
+	_id(_idCntr++) {
 	if (Logger::trace()) { // TODO: abstract away
 		if (Constants::jsonTrace)
 			cout << "{\"event\":\"string confPath constructor\",\"this object\":" << ::repr(*this) << "}\n";
@@ -31,20 +41,26 @@ Server::Server(const string& confPath) : _exitStatus(), _rawConfig(readConfig(co
 	}
 }
 
-Server::Server(const Server& other) : _exitStatus(other._exitStatus), _rawConfig(other._rawConfig), _config(other._config), _http(other._http), _id(_idCntr++) {
+Server::Server(const Server& other) :
+	_exitStatus(other._exitStatus),
+	_rawConfig(other._rawConfig),
+	_config(other._config),
+	_http(other._http),
+	_id(_idCntr++) {
 	TRACE_COPY_CTOR;
 }
 
 // Instance tracking
 unsigned int Server::_idCntr = 0;
 
-// Copy-assignment operator (using copy-swap idiom)
+// copy swap idiom
 Server& Server::operator=(Server other) /* noexcept */ {
 	TRACE_COPY_ASSIGN_OP;
 	::swap(*this, other);
 	return *this;
 }
 
+// Getters
 unsigned int Server::get_exitStatus() const { return _exitStatus; }
 const string& Server::get_rawConfig() const { return _rawConfig; }
 const t_config& Server::get_config() const { return _config; }
@@ -63,8 +79,15 @@ void Server::swap(Server& other) /* noexcept */ {
 
 Server::operator string() const { return ::repr(*this); }
 
-void swap(Server& a, Server& b) /* noexcept */ { a.swap(b); }
-ostream& operator<<(ostream& os, const Server& other) { return os << static_cast<string>(other); }
+void swap(Server& a, Server& b) /* noexcept */ {
+	a.swap(b);
+}
+
+ostream& operator<<(ostream& os, const Server& other) {
+	return os << static_cast<string>(other);
+}
+// end of boilerplate
+
 
 void Server::serve() {
 	cout << "SERVING...\n";

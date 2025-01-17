@@ -16,14 +16,16 @@ public:
 	HttpServer();
 	HttpServer(const HttpServer&);
 	HttpServer& operator=(HttpServer);
+	void swap(HttpServer&); // copy swap idiom
+
+	// string conversion
+	operator string() const;
 	
 	// Core functionality
 	bool setup(const t_config& config);
 	void run();
 
-	void swap(HttpServer&);
-	operator string() const;
-
+	// Getters
 	int get_server_fd() const;
 	const std::vector<struct pollfd>& get_poll_fds() const;
 	bool get_running() const;
@@ -34,6 +36,8 @@ private:
 	std::vector<struct pollfd> _poll_fds;
 	bool _running;
 	t_config _config;
+
+	// Instance tracking
 	unsigned int _id;
 	static unsigned int _idCntr;
 	
@@ -45,5 +49,6 @@ private:
 	void removePollFd(int fd);
 };
 
-void swap(HttpServer&, HttpServer&);
+// global scope swap (aka ::swap), needed since friend keyword is forbidden :(
+void swap(HttpServer&, HttpServer&) /* noexcept */;
 std::ostream& operator<<(std::ostream&, const HttpServer&);
