@@ -231,6 +231,7 @@ void postProcess(t_config& config) {
 	// TODO: update some directives, like e.g.
 	// - the listen directive is more useful when the ip and port are split up (make two arguments from one argument), thankfully we only have to handle ipv4 i guess (actually not sure about that)
 	// - yeah that's almost it, can't think of anything else.
+	(void)config;
 }
 
 t_config parseConfig(string rawConfig) {

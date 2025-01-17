@@ -16,12 +16,12 @@ public:
 	
 	static void logexception(const std::exception& exception);
 	static void logerror(const char* error);
-	static const int logLevelTrace = 0;
-	static const int logLevelDebug = 1;
-	static const int logLevelInfo  = 2;
-	static const int logLevelWarn  = 3;
-	static const int logLevelError = 4;
-	static const int logLevelFatal = 5;
+	static const int TRACE = 0;
+	static const int DEBUG = 1;
+	static const int INFO  = 2;
+	static const int WARN  = 3;
+	static const int ERROR = 4;
+	static const int FATAL = 5;
 	static bool trace();
 	static bool debug();
 	static bool info();

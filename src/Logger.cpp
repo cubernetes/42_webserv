@@ -41,25 +41,25 @@ void Logger::logerror(const char* error) {
 }
 
 bool Logger::trace() {
-	return Constants::logLevel <= logLevelTrace;
+	return Constants::logLevel <= TRACE;
 }
 
 bool Logger::debug() {
-	return Constants::logLevel <= logLevelDebug;
+	return Constants::logLevel <= DEBUG;
 }
 
 bool Logger::info() {
-	return Constants::logLevel <= logLevelInfo;
+	return Constants::logLevel <= INFO;
 }
 
 bool Logger::warn() {
-	return Constants::logLevel <= logLevelWarn;
+	return Constants::logLevel <= WARN;
 }
 
 bool Logger::error() {
-	return Constants::logLevel <= logLevelError;
+	return Constants::logLevel <= ERROR;
 }
 
 bool Logger::fatal() {
-	return Constants::logLevel <= logLevelFatal;
+	return Constants::logLevel <= FATAL;
 }
