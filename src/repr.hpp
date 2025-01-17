@@ -74,7 +74,7 @@ repr(const T& value, bool json = false) {
 // convenience wrapper for arrays with size
 template <typename T>
 static inline string
-repr(const T* value, unsigned int size, bool json = false) {
+repr_arr(const T* value, unsigned int size, bool json = false) {
 	std::ostringstream oss;
 	if (json)
 		oss << "[";
