@@ -25,6 +25,7 @@ public:
 
 	// set by the REFLECT macro
 	const char *_class;
+	string get_class(const Reflection& v) { return v._class; }
 
 	// populated by the REFELECT macro
 	t_members _members;

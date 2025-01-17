@@ -3,14 +3,13 @@
 #include <string>
 #include <iostream>
 
-#include "Reflection.hpp"
 #include "HttpServer.hpp"
 #include "conf.hpp"
 
 using std::string;
 using std::ostream;
 
-class Server : public Reflection {
+class Server {
 public:
 	~Server();
 	Server();
@@ -21,17 +20,16 @@ public:
 	operator string() const;
 
 	void serve();
-public:
-	REFLECT(
-		Server,
-		(unsigned int, exitStatus),
-		(const string, rawConfig),
-		(t_config, config), // maybe private, since non-const?
-		(HttpServer, _http), // should be private
-		(unsigned int, _id) // should be private
-	)
+
+	unsigned int get_exitStatus() const;
+	const string& get_rawConfig() const;
+	const t_config& get_config() const;
+	const HttpServer& get_http() const;
 private:
-	static unsigned int _idCntr;
+	unsigned int _exitStatus;
+	string _rawConfig;
+	t_config _config;
+	HttpServer _http;
 };
 
 void swap(Server&, Server&) /* noexcept */;

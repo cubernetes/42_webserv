@@ -63,6 +63,9 @@ struct repr_wrapper {
 	}
 };
 
+template <class T>
+static inline string get_class(const T& v) { (void)v; return "(unknown)"; }
+
 // convenience wrapper
 template <typename T>
 static inline string
@@ -173,10 +176,12 @@ CHAR_REPR(signed char);
 
 #define MAKE_MEMBER_INIT_LIST(_, name) , name()
 #define MAKE_DECL(type, name) type name;
-#define MAKE_REPR_FN(_, name) string CAT(repr_, name)(bool json) { return ::repr(name, json); }
-#define MAKE_ASSIGN(_, name) singleton.name = value.name;
+#define MAKE_REPR_FN(_, name) string CAT(repr_, name)(bool json) const { return ::repr(name, json); }
+#define MAKE_ASSIGN_GETTER(_, name) singleton.name = value.CAT(get, name)();
+#define MAKE_ASSIGN_MEMBER(_, name) singleton.name = value.name;
 #define MAKE_REFLECT(_, name) members[#name] = std::make_pair((t_repr_closure)&repr_wrapper::CAT(repr_, name), &singleton.name);
-#define POST_REFLECT(cls_id, ...) \
+#define POST_REFLECT_GETTER(cls_id, ...) \
+	static inline string get_class(const cls_id& v) { (void)v; return #cls_id; } \
 	template <> \
 	struct repr_wrapper<cls_id> : public Reflection { \
 		void reflect() {} \
@@ -187,14 +192,38 @@ CHAR_REPR(signed char);
 		static inline string \
 		repr(const cls_id& value, bool json = false) { \
 			static repr_wrapper<cls_id> singleton; \
-			FOR_EACH_PAIR(MAKE_ASSIGN, __VA_ARGS__) \
+			FOR_EACH_PAIR(MAKE_ASSIGN_GETTER, __VA_ARGS__) \
+			t_members members; \
+			FOR_EACH_PAIR(MAKE_REFLECT, __VA_ARGS__) \
+			return singleton.repr_struct(#cls_id, members, json); \
+		} \
+	}
+#define POST_REFLECT_MEMBER(cls_id, ...) \
+	static inline string get_class(const cls_id& v) { (void)v; return #cls_id; } \
+	template <> \
+	struct repr_wrapper<cls_id> : public Reflection { \
+		void reflect() {} \
+		repr_wrapper() : __nop___unique() FOR_EACH_PAIR(MAKE_MEMBER_INIT_LIST, __VA_ARGS__) {} \
+		int __nop___unique; \
+		FOR_EACH_PAIR(MAKE_DECL, __VA_ARGS__) \
+		FOR_EACH_PAIR(MAKE_REPR_FN, __VA_ARGS__) \
+		static inline string \
+		repr(const cls_id& value, bool json = false) { \
+			static repr_wrapper<cls_id> singleton; \
+			FOR_EACH_PAIR(MAKE_ASSIGN_MEMBER, __VA_ARGS__) \
 			t_members members; \
 			FOR_EACH_PAIR(MAKE_REFLECT, __VA_ARGS__) \
 			return singleton.repr_struct(#cls_id, members, json); \
 		} \
 	}
 
-POST_REFLECT(struct pollfd, int, fd, short, events, short, revents);
+POST_REFLECT_MEMBER(struct pollfd, int, fd, short, events, short, revents);
+
+#include "HttpServer.hpp"
+POST_REFLECT_GETTER(HttpServer, int, _server_fd, std::vector<struct pollfd>, _poll_fds, bool, _running, t_config, _config);
+
+#include "Server.hpp"
+POST_REFLECT_GETTER(Server, unsigned int, _exitStatus, string, _rawConfig, t_config, _config, HttpServer, _http);
 
 // for vector
 template <typename T>

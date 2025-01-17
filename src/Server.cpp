@@ -16,40 +16,45 @@ using std::stringstream;
 
 // De- & Constructors
 Server::~Server() {
-	// TRACE_DTOR;
+	TRACE_DTOR;
 }
 
-Server::Server() : exitStatus(), rawConfig(readConfig(Constants::defaultConfPath)), config(parseConfig(rawConfig)), _http(), _id(_idCntr++) {
-	// reflect(); TRACE_DEFAULT_CTOR;
+Server::Server() : _exitStatus(), _rawConfig(readConfig(Constants::defaultConfPath)), _config(parseConfig(_rawConfig)), _http() {
+	TRACE_DEFAULT_CTOR;
 }
 
-Server::Server(const string& confPath) : exitStatus(), rawConfig(readConfig(confPath)), config(parseConfig(rawConfig)), _http(), _id(_idCntr++) {
-	// reflect();
-	// if (Logger::trace()) { // TODO: abstract away
-	// 	if (Constants::jsonTrace)
-	// 		cout << "{\"event\":\"string confPath constructor\",\"this object\":" << ::repr(*this) << "}\n";
-	// 	else
-	// 		cout << kwrd(_class) + punct("(") << ::repr(confPath) << punct(") -> ") << ::repr(*this) << '\n';
-	// }
+Server::Server(const string& confPath) : _exitStatus(), _rawConfig(readConfig(confPath)), _config(parseConfig(_rawConfig)), _http() {
+	if (Logger::trace()) { // TODO: abstract away
+		if (Constants::jsonTrace)
+			cout << "{\"event\":\"string confPath constructor\",\"this object\":" << ::repr(*this) << "}\n";
+		else
+			cout << kwrd(get_class(*this)) + punct("(") << ::repr(confPath) << punct(") -> ") << ::repr(*this) << '\n';
+	}
 }
 
-Server::Server(const Server& other) : Reflection(other), exitStatus(other.exitStatus), rawConfig(other.rawConfig), config(other.config), _http(other._http), _id(_idCntr++) {
-	// reflect(); TRACE_COPY_CTOR;
+Server::Server(const Server& other) : _exitStatus(other._exitStatus), _rawConfig(other._rawConfig), _config(other._config), _http(other._http) {
+	TRACE_COPY_CTOR;
 }
 
 // Copy-assignment operator (using copy-swap idiom)
 Server& Server::operator=(Server other) /* noexcept */ {
-	// TRACE_COPY_ASSIGN_OP;
+	TRACE_COPY_ASSIGN_OP;
 	::swap(*this, other);
 	return *this;
 }
 
+unsigned int Server::get_exitStatus() const { return _exitStatus; }
+const string& Server::get_rawConfig() const { return _rawConfig; }
+const t_config& Server::get_config() const { return _config; }
+const HttpServer& Server::get_http() const { return _http; }
+
 void Server::swap(Server& other) /* noexcept */ {
-	// TRACE_SWAP_BEGIN;
-	::swap(exitStatus, other.exitStatus);
-	::swap(config, other.config);
-	::swap(_id, other._id);
-	// TRACE_SWAP_END;
+	TRACE_SWAP_BEGIN;
+	::swap(_exitStatus, other._exitStatus);
+	::swap(_rawConfig, other._rawConfig);
+	::swap(_config, other._config);
+	::swap(_http, other._http);
+	TRACE_SWAP_END;
 }
 
 Server::operator string() const { return ::repr(*this); }

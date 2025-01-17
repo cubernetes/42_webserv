@@ -9,86 +9,99 @@
 #include <limits.h>
 
 #include "HttpServer.hpp"
-#include "conf.hpp"
 #include "Logger.hpp"
+#include "conf.hpp"
+#include "repr.hpp"
 
+using std::swap;
 using std::cout;
 using std::string;
 using std::stringstream;
 
 HttpServer::~HttpServer() {
 	TRACE_DTOR;
-		
-	if (server_fd >= 0)
-		close(server_fd);
+	if (_server_fd >= 0)
+		close(_server_fd);
 	
-	for (std::vector<struct pollfd>::iterator it = poll_fds.begin(); it != poll_fds.end(); ++it) {
-		if (it->fd >= 0 && it->fd != server_fd)
+	for (std::vector<struct pollfd>::iterator it = _poll_fds.begin(); it != _poll_fds.end(); ++it) {
+		if (it->fd >= 0 && it->fd != _server_fd)
 			close(it->fd);
 	}
 }
 
 HttpServer::HttpServer() : 
-	server_fd(-1),
-	poll_fds(),
-	running(false),
-	config(),
-	_id(_idCntr++) {
-	reflect(); TRACE_DEFAULT_CTOR;
+	_server_fd(-1),
+	_poll_fds(),
+	_running(false),
+	_config() {
+	TRACE_DEFAULT_CTOR;
 }
 
 HttpServer::HttpServer(const HttpServer& other) :
-	Reflection(other),
-	server_fd(-1),
-	poll_fds(other.poll_fds),
-	running(other.running),
-	config(other.config),
-	_id(_idCntr++) {
-	reflect(); TRACE_COPY_CTOR;
+	_server_fd(-1),
+	_poll_fds(other._poll_fds),
+	_running(other._running),
+	_config(other._config) {
+	TRACE_COPY_CTOR;
 }
 
+/* copy swap idiom */
 HttpServer& HttpServer::operator=(HttpServer other) {
 	TRACE_COPY_ASSIGN_OP;
 	swap(other);
 	return *this;
 }
 
+int HttpServer::get_server_fd() const { return _server_fd; }
+const std::vector<struct pollfd>& HttpServer::get_poll_fds() const { return _poll_fds; }
+bool HttpServer::get_running() const { return _running; }
+const t_config& HttpServer::get_config() const { return _config; }
+
 void HttpServer::swap(HttpServer& other) {
 	TRACE_SWAP_BEGIN;
-	std::swap(server_fd, other.server_fd);
-	std::swap(poll_fds, other.poll_fds);
-	std::swap(running, other.running);
-	std::swap(config, other.config);
-	std::swap(_id, other._id);
+	::swap(_server_fd, other._server_fd);
+	::swap(_poll_fds, other._poll_fds);
+	::swap(_running, other._running);
+	::swap(_config, other._config);
 	TRACE_SWAP_END;
 }
 
-HttpServer::operator string() const { return ::repr(*this); }
+HttpServer::operator string() const {
+	return ::repr(*this);
+}
+
+void swap(HttpServer& a, HttpServer& b) {
+	a.swap(b);
+}
+
+std::ostream& operator<<(std::ostream& os, const HttpServer& server) {
+	return os << static_cast<string>(server);
+}
 
 bool HttpServer::setup(const t_config& conf) {
-	//config = conf;
+	//_config = conf;
 	(void)conf;
 	return setupSocket("127.0.0.1", 8080);  // Hardcoded for now
 }
 
 bool HttpServer::setupSocket(const std::string& ip, int port) {
 	(void)ip;
-	server_fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (server_fd < 0) {
+	_server_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (_server_fd < 0) {
 		Logger::logerror("Failed to create socket");
 		return false;
 	}
 	
 	int opt = 1;
-	if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+	if (setsockopt(_server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
 		Logger::logerror("Failed to set socket options");
-		close(server_fd);
+		close(_server_fd);
 		return false;
 	}
 	
-	if (fcntl(server_fd, F_SETFL, O_NONBLOCK) < 0) {
+	if (fcntl(_server_fd, F_SETFL, O_NONBLOCK) < 0) {
 		Logger::logerror("Failed to set non-blocking socket");
-		close(server_fd);
+		close(_server_fd);
 		return false;
 	}
 	
@@ -102,33 +115,33 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 	}
 	address.sin_addr.s_addr = INADDR_ANY;
 	
-	if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+	if (bind(_server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
 		Logger::logerror("Failed to bind socket");
-		close(server_fd);
+		close(_server_fd);
 		return false;
 	}
 	
-	if (listen(server_fd, SOMAXCONN) < 0) {
+	if (listen(_server_fd, SOMAXCONN) < 0) {
 		Logger::logerror("Failed to listen on socket");
-		close(server_fd);
+		close(_server_fd);
 		return false;
 	}
 	
 	struct pollfd pfd;
-	pfd.fd = server_fd;
+	pfd.fd = _server_fd;
 	pfd.events = POLLIN;
-	poll_fds.push_back(pfd);
+	_poll_fds.push_back(pfd);
 	
 	cout << "Server is listening on port " << port << std::endl;
 	return true;
 }
 
 void HttpServer::run() {
-	running = true;
+	_running = true;
 	int j = 8;
 
 	while (j--) {
-		int ready = poll(poll_fds.data(), poll_fds.size(), -1);
+		int ready = poll(_poll_fds.data(), _poll_fds.size(), -1);
 		if (ready < 0) {
 			if (errno == EINTR)
 				continue;
@@ -136,19 +149,19 @@ void HttpServer::run() {
 			break;
 		}
 		
-		for (size_t i = 0; i < poll_fds.size(); i++) {
-			if (poll_fds[i].revents == 0)
+		for (size_t i = 0; i < _poll_fds.size(); i++) {
+			if (_poll_fds[i].revents == 0)
 				continue;
 				
-			if (poll_fds[i].revents & POLLIN) {
-				if (poll_fds[i].fd == server_fd)
+			if (_poll_fds[i].revents & POLLIN) {
+				if (_poll_fds[i].fd == _server_fd)
 					handleNewConnection();
 				else
-					handleClientData(poll_fds[i].fd);
+					handleClientData(_poll_fds[i].fd);
 			}
 			
-			if (poll_fds[i].revents & (POLLHUP | POLLERR))
-				closeConnection(poll_fds[i].fd);
+			if (_poll_fds[i].revents & (POLLHUP | POLLERR))
+				closeConnection(_poll_fds[i].fd);
 		}
 	}
 }
@@ -157,7 +170,7 @@ void HttpServer::handleNewConnection() {
 	struct sockaddr_in client_addr;
 	socklen_t client_len = sizeof(client_addr);
 	
-	int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+	int client_fd = accept(_server_fd, (struct sockaddr*)&client_addr, &client_len);
 	if (client_fd < 0) {
 		if (errno != EWOULDBLOCK && errno != EAGAIN)
 			Logger::logerror("Accept failed");
@@ -174,7 +187,7 @@ void HttpServer::handleNewConnection() {
 	pfd.fd = client_fd;
 	pfd.events = POLLIN;
 	pfd.revents = 0;
-	poll_fds.push_back(pfd);
+	_poll_fds.push_back(pfd);
 	
 	cout << "New client connected. FD: " << client_fd << std::endl;
 	cout << *this << '\n';
@@ -212,18 +225,10 @@ void HttpServer::closeConnection(int client_fd) {
 }
 
 void HttpServer::removePollFd(int fd) {
-	for (std::vector<struct pollfd>::iterator it = poll_fds.begin(); it != poll_fds.end(); ++it) {
+	for (std::vector<struct pollfd>::iterator it = _poll_fds.begin(); it != _poll_fds.end(); ++it) {
 		if (it->fd == fd) {
-			poll_fds.erase(it);
+			_poll_fds.erase(it);
 			break;
 		}
 	}
-}
-
-void swap(HttpServer& a, HttpServer& b) {
-	a.swap(b);
-}
-
-std::ostream& operator<<(std::ostream& os, const HttpServer& server) {
-	return os << static_cast<string>(server);
 }

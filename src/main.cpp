@@ -6,16 +6,14 @@
 #include "Logger.hpp"
 #include "Utils.hpp"
 #include "conf.hpp"
-#include "repr.hpp"
-
-#include <sys/poll.h>
-#include <vector>
 
 using std::cout;
 
 int main(int ac, char **av) {
+	Server s;
 	try {
 		HttpServer server;
+		cout << server << '\n';
 
 		string configPath = Utils::parseArgs(ac, av);
 		if (!server.setup(parseConfig(readConfig(configPath)))) {

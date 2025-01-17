@@ -20,19 +20,11 @@ public:
 		void swap(CgiHandler&);
 		operator string() const;
 
-		const string& get_extension() const; // TODO: can't we just make them public?
-		const string& get_program() const; // TODO: can't we just make them public?
-
-		void set_extension(const string&); // TODO: can't we just make them public?
-		void set_program(const string&); // TODO: can't we just make them public?
+		const string& get_extension() const;
+		const string& get_program() const;
 private:
-	REFLECT(
-		CgiHandler,
-		(string, _extension),
-		(string, _program),
-		(unsigned int, _id)
-	)
-	static unsigned int _idCntr;
+	string _extension;
+	string _program;
 };
 
 void swap(CgiHandler&, CgiHandler&) /* noexcept */;

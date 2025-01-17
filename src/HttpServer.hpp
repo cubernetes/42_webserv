@@ -5,12 +5,11 @@
 #include <string>
 #include <sys/poll.h>
 
-#include "Reflection.hpp"
 #include "conf.hpp"
 
 using std::string;
 
-class HttpServer : public Reflection {
+class HttpServer {
 public:
 	// Orthodox Canonical Form requirements
 	~HttpServer();
@@ -24,25 +23,17 @@ public:
 
 	void swap(HttpServer&);
 	operator string() const;
+
+	int get_server_fd() const;
+	const std::vector<struct pollfd>& get_poll_fds() const;
+	bool get_running() const;
+	const t_config& get_config() const;
 private:
-	// int server_fd;
-	// std::vector<struct pollfd> poll_fds;
-	// bool running;
-	// t_config config;
-	// 
-	// // Instance tracking
-	// unsigned int _id;
-
-	REFLECT(
-		HttpServer,
-		(int, server_fd),
-		(std::vector<struct pollfd>, poll_fds),
-		(bool, running),
-		(t_config, config),
-		(unsigned int, _id)
-	)
-	static unsigned int _idCntr;
-
+	int _server_fd;
+	std::vector<struct pollfd> _poll_fds;
+	bool _running;
+	t_config _config;
+	
 	// Helper methods
 	bool setupSocket(const std::string& ip, int port);
 	void handleNewConnection();

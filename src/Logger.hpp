@@ -6,13 +6,6 @@
 
 using std::string;
 
-#define TRACE_DTOR if (Logger::trace()) print_dtor(::repr(*this))
-#define TRACE_DEFAULT_CTOR if (Logger::trace()) print_default_ctor(::repr(*this))
-#define TRACE_COPY_CTOR if (Logger::trace()) print_copy_ctor(::repr(other), ::repr(*this))
-#define TRACE_COPY_ASSIGN_OP if (Logger::trace()) print_copy_assign_op(::repr(other))
-#define TRACE_SWAP_BEGIN if (Logger::trace()) print_swap_begin(::repr(*this), ::repr(other))
-#define TRACE_SWAP_END if (Logger::trace()) print_swap_end()
-
 // Logger is used in repr, therefore, the Logger MUST not use Reflection
 class Logger {
 public:
@@ -36,9 +29,47 @@ public:
 	static bool warn();
 	static bool error();
 	static bool fatal();
-private:
-	unsigned int _id;
-	static unsigned int _idCntr;
 };
 
 void swap(Logger&, Logger&) /* noexcept */;
+
+#include "repr.hpp"
+
+#define TRACE_COPY_ASSIGN_OP do { \
+	if (Constants::jsonTrace) \
+		cout << "{\"event\":\"copy assignment operator\",\"other object\":" << ::repr(other) << "}\n"; \
+	else \
+		cout << kwrd(get_class(*this)) + punct("& ") + kwrd(get_class(*this)) + punct("::") + func("operator") + punct("=(") << ::repr(other) << punct(")") + '\n'; \
+	} while (false)
+
+#define TRACE_COPY_CTOR do { \
+	if (Constants::jsonTrace) \
+		cout << "{\"event\":\"copy constructor\",\"other object\":" << ::repr(other) << ",\"this object\":" << ::repr(*this) << "}\n"; \
+	else \
+		cout << kwrd(get_class(*this)) + punct("(") << ::repr(other) << punct(") -> ") << ::repr(*this) << '\n'; \
+	} while (false)
+
+#define TRACE_DEFAULT_CTOR do { \
+	if (Constants::jsonTrace) \
+		cout << "{\"event\":\"default constructor\",\"this object\":" << ::repr(*this) << "}\n"; \
+	else \
+		cout << kwrd(get_class(*this)) + punct("() -> ") << ::repr(*this) << '\n'; \
+	} while (false)
+
+#define TRACE_DTOR do { \
+	if (Constants::jsonTrace) \
+		cout << "{\"event\":\"destructor\",\"this object\":" << ::repr(*this) << "}\n"; \
+	else \
+		cout << punct("~") << ::repr(*this) << '\n'; \
+	} while (false)
+
+#define TRACE_SWAP_BEGIN do { \
+	cout << cmt("<Swapping " + string(get_class(*this)) + " *this:") + '\n'; \
+	cout << ::repr(*this) << '\n'; \
+	cout << cmt("with the following" + string(get_class(*this)) + "object:") + '\n'; \
+	cout << ::repr(other) << '\n'; \
+	} while (false)
+
+#define TRACE_SWAP_END do { \
+	cout << cmt(string(get_class(*this)) + " swap done>") + '\n'; \
+	} while (false)
