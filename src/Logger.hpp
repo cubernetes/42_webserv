@@ -36,40 +36,69 @@ void swap(Logger&, Logger&) /* noexcept */;
 #include "repr.hpp"
 
 #define TRACE_COPY_ASSIGN_OP do { \
-	if (Constants::jsonTrace) \
-		cout << "{\"event\":\"copy assignment operator\",\"other object\":" << ::repr(other) << "}\n"; \
-	else \
-		cout << kwrd(get_class(*this)) + punct("& ") + kwrd(get_class(*this)) + punct("::") + func("operator") + punct("=(") << ::repr(other) << punct(")") + '\n'; \
+		if (Logger::trace()) { \
+			std::ostringstream oss; \
+			if (Constants::jsonTrace) \
+				oss << "{\"event\":\"copy assignment operator\",\"other object\":" << ::repr(other) << "}\n"; \
+			else \
+				oss << kwrd(get_class(*this)) + punct("& ") + kwrd(get_class(*this)) + punct("::") + func("operator") + punct("=(") << ::repr(other) << punct(")") + '\n'; \
+			cout << oss.str() << std::flush; \
+		} \
 	} while (false)
 
 #define TRACE_COPY_CTOR do { \
-	if (Constants::jsonTrace) \
-		cout << "{\"event\":\"copy constructor\",\"other object\":" << ::repr(other) << ",\"this object\":" << ::repr(*this) << "}\n"; \
-	else \
-		cout << kwrd(get_class(*this)) + punct("(") << ::repr(other) << punct(") -> ") << ::repr(*this) << '\n'; \
+		if (Logger::trace()) { \
+			std::ostringstream oss; \
+			if (Constants::jsonTrace) \
+				oss << "{\"event\":\"copy constructor\",\"other object\":" << ::repr(other) << ",\"this object\":" << ::repr(*this) << "}\n"; \
+			else \
+				oss << kwrd(get_class(*this)) + punct("(") << ::repr(other) << punct(") -> ") << ::repr(*this) << '\n'; \
+			cout << oss.str() << std::flush; \
+		} \
 	} while (false)
 
 #define TRACE_DEFAULT_CTOR do { \
-	if (Constants::jsonTrace) \
-		cout << "{\"event\":\"default constructor\",\"this object\":" << ::repr(*this) << "}\n"; \
-	else \
-		cout << kwrd(get_class(*this)) + punct("() -> ") << ::repr(*this) << '\n'; \
+		if (Logger::trace()) { \
+			std::ostringstream oss; \
+			if (Constants::jsonTrace) \
+				oss << "{\"event\":\"default constructor\",\"this object\":" << ::repr(*this) << "}\n"; \
+			else \
+				oss << kwrd(get_class(*this)) + punct("() -> ") << ::repr(*this) << '\n'; \
+			cout << oss.str() << std::flush; \
+		} \
 	} while (false)
 
 #define TRACE_DTOR do { \
-	if (Constants::jsonTrace) \
-		cout << "{\"event\":\"destructor\",\"this object\":" << ::repr(*this) << "}\n"; \
-	else \
-		cout << punct("~") << ::repr(*this) << '\n'; \
+		if (Logger::trace()) { \
+			std::ostringstream oss; \
+			if (Constants::jsonTrace) \
+				oss << "{\"event\":\"destructor\",\"this object\":" << ::repr(*this) << "}\n"; \
+			else \
+				oss << punct("~") << ::repr(*this) << '\n'; \
+			cout << oss.str() << std::flush; \
+		} \
 	} while (false)
 
 #define TRACE_SWAP_BEGIN do { \
-	cout << cmt("<Swapping " + string(get_class(*this)) + " *this:") + '\n'; \
-	cout << ::repr(*this) << '\n'; \
-	cout << cmt("with the following" + string(get_class(*this)) + "object:") + '\n'; \
-	cout << ::repr(other) << '\n'; \
+		if (Logger::trace()) { \
+			std::ostringstream oss; \
+			if (Constants::jsonTrace) { \
+				oss << "{\"event\":\"object swap\",\"this object\":" << ::repr(*this) << ",\"other object\":" << ::repr(other) << "}\n"; \
+			} else { \
+				oss << cmt("<Swapping " + string(get_class(*this)) + " *this:") + '\n'; \
+				oss << ::repr(*this) << '\n'; \
+				oss << cmt("with the following" + string(get_class(*this)) + "object:") + '\n'; \
+				oss << ::repr(other) << '\n'; \
+			} \
+			cout << oss.str() << std::flush; \
+		} \
 	} while (false)
 
 #define TRACE_SWAP_END do { \
-	cout << cmt(string(get_class(*this)) + " swap done>") + '\n'; \
+		if (Logger::trace()) { \
+			std::ostringstream oss; \
+			if (!Constants::jsonTrace) \
+				oss << cmt(string(get_class(*this)) + " swap done>") + '\n'; \
+			cout << oss.str() << std::flush; \
+		} \
 	} while (false)

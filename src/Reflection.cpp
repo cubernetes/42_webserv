@@ -53,7 +53,7 @@ string Reflection::repr_struct(string name, t_members members, bool json) const 
 		for (t_members::const_iterator it = members.begin(); it != members.end(); ++it) {
 			if (i++ != 0)
 				out << punct(", ");
-			if (Constants::keywordTrace)
+			if (Constants::kwargLogs)
 				out << cmt(it->first) << cmt("=");
 			out << (this->*it->second.first)(false);
 		}

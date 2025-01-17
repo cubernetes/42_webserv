@@ -54,6 +54,7 @@ HttpServer& HttpServer::operator=(HttpServer other) {
 
 int HttpServer::get_server_fd() const { return _server_fd; }
 const std::vector<struct pollfd>& HttpServer::get_poll_fds() const { return _poll_fds; }
+
 bool HttpServer::get_running() const { return _running; }
 const t_config& HttpServer::get_config() const { return _config; }
 
