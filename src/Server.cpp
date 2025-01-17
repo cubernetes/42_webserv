@@ -57,9 +57,6 @@ Server::operator string() const { return ::repr(*this); }
 void swap(Server& a, Server& b) /* noexcept */ { a.swap(b); }
 ostream& operator<<(ostream& os, const Server& other) { return os << static_cast<string>(other); }
 
-// Keeping track of the instances
-unsigned int Server::_idCntr = 0;
-
 void Server::serve() {
 	cout << "SERVING...\n";
 }

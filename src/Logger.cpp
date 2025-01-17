@@ -15,8 +15,8 @@ using std::stringstream;
 
 // De- & Constructors
 Logger::~Logger() { }
-Logger::Logger() : _id(_idCntr++) { }
-Logger::Logger(const Logger& other) : _id(_idCntr++) { (void)other; }
+Logger::Logger() { }
+Logger::Logger(const Logger& other) { (void)other; }
 
 // Copy-assignment operator (using copy-swap idiom)
 Logger& Logger::operator=(Logger other) /* noexcept */ {
@@ -25,13 +25,10 @@ Logger& Logger::operator=(Logger other) /* noexcept */ {
 }
 
 void Logger::swap(Logger& other) /* noexcept */ {
-	::swap(_id, other._id);
+	(void)other;
 }
 
 void swap(Logger& a, Logger& b) /* noexcept */ { a.swap(b); }
-
-// Keeping track of the instances
-unsigned int Logger::_idCntr = 0;
 
 void Logger::logexception(const std::exception& exception) {
 	cerr << exception.what() << endl;

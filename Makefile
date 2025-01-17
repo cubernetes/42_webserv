@@ -63,14 +63,14 @@ SRC += main.cpp
 SRC += conf.cpp
 SRC += repr.cpp
 SRC += ansi.cpp
+SRC += Logger.cpp
 SRC += Reflection.cpp
 SRC += Server.cpp
+SRC += HttpServer.cpp
+SRC += CgiHandler.cpp
 SRC += Constants.cpp
 SRC += Errors.cpp
-SRC += Logger.cpp
 SRC += Utils.cpp
-SRC += HttpServer.cpp
-#SRC += CgiHandler.cpp
 
 # object vars
 OBJ := $(SRC:.$(EXT)=.o)

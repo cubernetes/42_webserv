@@ -16,9 +16,6 @@ using std::cout;
 using std::string;
 using std::stringstream;
 
-// Initialize static counter
-unsigned int HttpServer::_idCntr = 0;
-
 HttpServer::~HttpServer() {
 	TRACE_DTOR;
 		
