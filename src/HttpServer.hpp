@@ -28,11 +28,14 @@ public:
 	const std::vector<struct pollfd>& get_poll_fds() const;
 	bool get_running() const;
 	const t_config& get_config() const;
+	unsigned int get_id() const;
 private:
 	int _server_fd;
 	std::vector<struct pollfd> _poll_fds;
 	bool _running;
 	t_config _config;
+	unsigned int _id;
+	static unsigned int _idCntr;
 	
 	// Helper methods
 	bool setupSocket(const std::string& ip, int port);

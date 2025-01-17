@@ -10,7 +10,6 @@
 using std::cout;
 
 int main(int ac, char **av) {
-	Server s;
 	try {
 		HttpServer server;
 		cout << server << '\n';

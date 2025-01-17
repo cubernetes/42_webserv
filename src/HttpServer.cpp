@@ -33,7 +33,7 @@ HttpServer::HttpServer() :
 	_server_fd(-1),
 	_poll_fds(),
 	_running(false),
-	_config() {
+	_config(), _id(_idCntr++) {
 	TRACE_DEFAULT_CTOR;
 }
 
@@ -41,9 +41,12 @@ HttpServer::HttpServer(const HttpServer& other) :
 	_server_fd(-1),
 	_poll_fds(other._poll_fds),
 	_running(other._running),
-	_config(other._config) {
+	_config(other._config), _id(_idCntr++) {
 	TRACE_COPY_CTOR;
 }
+
+// Instance tracking
+unsigned int HttpServer::_idCntr = 0;
 
 /* copy swap idiom */
 HttpServer& HttpServer::operator=(HttpServer other) {
@@ -54,9 +57,9 @@ HttpServer& HttpServer::operator=(HttpServer other) {
 
 int HttpServer::get_server_fd() const { return _server_fd; }
 const std::vector<struct pollfd>& HttpServer::get_poll_fds() const { return _poll_fds; }
-
 bool HttpServer::get_running() const { return _running; }
 const t_config& HttpServer::get_config() const { return _config; }
+unsigned int HttpServer::get_id() const { return _id; }
 
 void HttpServer::swap(HttpServer& other) {
 	TRACE_SWAP_BEGIN;

@@ -218,10 +218,10 @@ CHAR_REPR(signed char);
 POST_REFLECT_MEMBER(struct pollfd, int, fd, short, events, short, revents);
 
 #include "HttpServer.hpp"
-POST_REFLECT_GETTER(HttpServer, int, _server_fd, std::vector<struct pollfd>, _poll_fds, bool, _running, t_config, _config);
+POST_REFLECT_GETTER(HttpServer, int, _server_fd, std::vector<struct pollfd>, _poll_fds, bool, _running, t_config, _config, unsigned int, _id);
 
 #include "Server.hpp"
-POST_REFLECT_GETTER(Server, unsigned int, _exitStatus, string, _rawConfig, t_config, _config, HttpServer, _http);
+POST_REFLECT_GETTER(Server, unsigned int, _exitStatus, string, _rawConfig, t_config, _config, HttpServer, _http, unsigned int, _id);
 
 // for vector
 template <typename T>

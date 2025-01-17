@@ -25,11 +25,14 @@ public:
 	const string& get_rawConfig() const;
 	const t_config& get_config() const;
 	const HttpServer& get_http() const;
+	unsigned int get_id() const;
 private:
 	unsigned int _exitStatus;
 	string _rawConfig;
 	t_config _config;
 	HttpServer _http;
+	unsigned int _id;
+	static unsigned int _idCntr;
 };
 
 void swap(Server&, Server&) /* noexcept */;
