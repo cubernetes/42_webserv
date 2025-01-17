@@ -239,6 +239,8 @@ t_config parseConfig(string rawConfig) {
 
 	t_directives directives = parseDirectives(tokens);
 	t_servers httpBlock = parseHttpBlock(tokens);
+	if (!tokens.empty())
+		throw runtime_error(Errors::Config::ParseError);
 	t_config config = std::make_pair(directives, httpBlock);
 
 	updateDefaults(config);
