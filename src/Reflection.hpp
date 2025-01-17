@@ -1,18 +1,16 @@
-#pragma once
+#pragma once /* Reflection.hpp */
 
-#include <string>
 #include <utility>
 #include <map>
+#include <string>
 
 using std::string;
-using std::map;
-using std::pair;
 
 class Reflection;
 
 typedef string (Reflection::*ReprClosure)(bool json) const;
-typedef pair<ReprClosure, const void*> Member;
-typedef map<const char*, Member> Members;
+typedef std::pair<ReprClosure, const void*> Member;
+typedef std::map<const char*, Member> Members;
 
 class Reflection {
 public:

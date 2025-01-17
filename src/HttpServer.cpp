@@ -1,11 +1,10 @@
 #include <iostream>
-#include <sys/socket.h>
+#include <ostream>
+#include <sys/socket.h> // TODO: unnecessary header?
 #include <netinet/in.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <string.h>
-#include <sstream>
 #include <limits.h>
 
 #include "HttpServer.hpp"
@@ -16,7 +15,6 @@
 using std::swap;
 using std::cout;
 using std::string;
-using std::stringstream;
 
 HttpServer::~HttpServer() {
 	TRACE_DTOR;

@@ -1,11 +1,9 @@
-#include <iostream>
-#include <map>
-#include <string>
 #include <utility>
 #include <vector>
 #include <fstream>
 #include <sstream>
-#include <stdexcept> /* std::runtime_error */
+#include <string>
+#include <stdexcept>
 
 #include "Config.hpp"
 #include "Errors.hpp"

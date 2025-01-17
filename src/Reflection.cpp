@@ -1,24 +1,16 @@
 #include <sstream>
-#include <iostream>
-#include <string>
-#include <map>
 #include <utility>
+#include <string>
 #include <cstddef>
-#include <algorithm>
 
-#include "Repr.hpp"
 #include "Reflection.hpp"
 #include "Logger.hpp"
-#include "HttpServer.hpp"
+#include "Repr.hpp"
 
 using std::string;
-using std::map;
-using std::pair;
-using std::cout;
 using std::swap;
 
-static string _replace(string s, const string& search,
-                          const string& replace) {
+static string _replace(string s, const string& search, const string& replace) {
 	std::size_t pos = 0;
     while ((pos = s.find(search, pos)) != string::npos) {
          s.replace(pos, search.length(), replace);

@@ -1,6 +1,6 @@
-#include <iostream> /* std::cout, std::swap, std::ostream */
-#include <string> /* std::string */
-#include <sstream> /* std::stringstream */
+#include <iostream>
+#include <ostream>
+#include <string>
 
 #include "Server.hpp"
 #include "Logger.hpp"
@@ -10,8 +10,6 @@
 using std::cout;
 using std::swap;
 using std::string;
-using std::ostream;
-using std::stringstream;
 
 // De- & Constructors
 Server::~Server() {
@@ -83,7 +81,7 @@ void swap(Server& a, Server& b) /* noexcept */ {
 	a.swap(b);
 }
 
-ostream& operator<<(ostream& os, const Server& other) {
+std::ostream& operator<<(std::ostream& os, const Server& other) {
 	return os << static_cast<string>(other);
 }
 // end of boilerplate

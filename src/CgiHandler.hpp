@@ -1,10 +1,9 @@
 #pragma once /* CgiHandler.hpp */
 
-#include <string> /* std::string */
-#include <iostream> /* std::ostream */
+#include <ostream>
+#include <string>
 
 using std::string;
-using std::ostream;
 
 class CgiHandler {
 public:
@@ -25,4 +24,4 @@ private:
 };
 
 void swap(CgiHandler&, CgiHandler&) /* noexcept */;
-ostream& operator<<(ostream&, const CgiHandler&);
+std::ostream& operator<<(std::ostream&, const CgiHandler&);

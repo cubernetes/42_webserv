@@ -2,10 +2,8 @@
 #include <stdexcept>
 
 #include "HttpServer.hpp"
-#include "Server.hpp"
 #include "Logger.hpp"
 #include "Utils.hpp"
-#include "Config.hpp"
 
 using std::cout;
 

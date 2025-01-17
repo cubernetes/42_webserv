@@ -7,14 +7,15 @@
 using std::string;
 using ansi::rgb;
 using ansi::rgbBg;
+using ansi::noColor;
 
 void reprInit() {
-	if (!ansi::noColor())
+	if (!noColor())
 		std::cout << ANSI_FG;
 }
 
 void reprDone() {
-	if (!ansi::noColor())
+	if (!noColor())
 		std::cout << ANSI_RST << '\n';
 }
 

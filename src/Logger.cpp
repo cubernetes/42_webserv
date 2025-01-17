@@ -1,17 +1,11 @@
-#include <iostream> /* std::cout, std::swap, std::ostream */
-#include <string> /* std::string */
-#include <sstream> /* std::stringstream */
+#include <iostream>
 
 #include "Logger.hpp"
 #include "Constants.hpp"
 
-using std::cout;
 using std::cerr;
 using std::endl;
 using std::swap;
-using std::string;
-using std::ostream;
-using std::stringstream;
 
 // De- & Constructors
 Logger::~Logger() { }

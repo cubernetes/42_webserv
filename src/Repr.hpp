@@ -1,14 +1,13 @@
 #pragma once /* Repr.hpp */
 
-#include <sstream> /* std::ostringstream */
-#include <string> /* std::string */
-#include <vector> /* std::vector */
-#include <map> /* std::map */
-#include <utility> /* std::pair */
-#include <sys/poll.h> /* struct pollfd */
-#include <utility> /* std::make_pair */
+#include <sstream>
+#include <string>
+#include <vector>
+#include <map>
+#include <utility>
+#include <sys/poll.h>
 
-#include "Constants.hpp" /* Constants::{noColor,reprJson,...} */
+#include "Constants.hpp"
 #include "Ansi.hpp"
 #include "Reflection.hpp"
 
@@ -28,10 +27,6 @@ using std::map;
 using std::pair;
 using ansi::rgb;
 using ansi::rgbBg;
-using std::ostream;
-
-void reprInit();
-void reprDone();
 
 namespace ReprClr {
 	string str(string s);
@@ -52,6 +47,9 @@ using ReprClr::func;
 using ReprClr::num;
 using ReprClr::var;
 using ReprClr::cmt;
+
+void reprInit();
+void reprDone();
 
 template <typename T>
 struct ReprWrapper {
@@ -218,7 +216,7 @@ CHAR_REPR(signed char);
 POST_REFLECT_MEMBER(struct pollfd, int, fd, short, events, short, revents);
 
 #include "HttpServer.hpp"
-POST_REFLECT_GETTER(HttpServer, int, _serverFd, std::vector<struct pollfd>, _pollFds, bool, _running, Config, _config, unsigned int, _id);
+POST_REFLECT_GETTER(HttpServer, int, _serverFd, vector<struct pollfd>, _pollFds, bool, _running, Config, _config, unsigned int, _id);
 
 #include "Server.hpp"
 POST_REFLECT_GETTER(Server, unsigned int, _exitStatus, string, _rawConfig, Config, _config, HttpServer, _http, unsigned int, _id);
@@ -318,12 +316,12 @@ struct ReprWrapper<pair<F, S> > {
 
 // to print using `std::cout << ...'
 template<typename T>
-static inline ostream& operator<<(ostream& os, const vector<T>& val) { return os << repr(val, Constants::jsonTrace); }
+static inline std::ostream& operator<<(std::ostream& os, const vector<T>& val) { return os << repr(val, Constants::jsonTrace); }
 
 template<typename K, typename V>
-static inline ostream& operator<<(ostream& os, const map<K, V>& val) { return os << repr(val, Constants::jsonTrace); }
+static inline std::ostream& operator<<(std::ostream& os, const map<K, V>& val) { return os << repr(val, Constants::jsonTrace); }
 
 template<typename F, typename S>
-static inline ostream& operator<<(ostream& os, const pair<F, S>& val) { return os << repr(val, Constants::jsonTrace); }
+static inline std::ostream& operator<<(std::ostream& os, const pair<F, S>& val) { return os << repr(val, Constants::jsonTrace); }
 
 // TODO: add struct pollfd

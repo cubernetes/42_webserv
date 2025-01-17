@@ -1,4 +1,4 @@
-#pragma once
+#pragma once /* Constants.hpp */
 
 #include <string>
 

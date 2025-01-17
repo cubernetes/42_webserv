@@ -1,4 +1,4 @@
-#pragma once
+#pragma once /* Errors.hpp */
 
 #include <string>
 

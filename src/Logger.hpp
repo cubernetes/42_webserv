@@ -1,10 +1,6 @@
-#pragma once
+#pragma once /* Logger.hpp */
 
 #include <exception>
-#include <string>
-#include <iostream>
-
-using std::string;
 
 class Logger {
 public:
@@ -32,7 +28,14 @@ public:
 
 void swap(Logger&, Logger&) /* noexcept */;
 
+#include <iostream>
+#include <ostream>
+#include <sstream>
+#include <string>
+
 #include "Repr.hpp"
+
+using std::cout;
 
 #define TRACE_COPY_ASSIGN_OP do { \
 		if (Logger::trace()) { \
@@ -84,9 +87,9 @@ void swap(Logger&, Logger&) /* noexcept */;
 			if (Constants::jsonTrace) { \
 				oss << "{\"event\":\"object swap\",\"this object\":" << ::repr(*this) << ",\"other object\":" << ::repr(other) << "}\n"; \
 			} else { \
-				oss << cmt("<Swapping " + string(getClass(*this)) + " *this:") + '\n'; \
+				oss << cmt("<Swapping " + std::string(getClass(*this)) + " *this:") + '\n'; \
 				oss << ::repr(*this) << '\n'; \
-				oss << cmt("with the following" + string(getClass(*this)) + "object:") + '\n'; \
+				oss << cmt("with the following" + std::string(getClass(*this)) + "object:") + '\n'; \
 				oss << ::repr(other) << '\n'; \
 			} \
 			cout << oss.str() << std::flush; \
@@ -97,7 +100,7 @@ void swap(Logger&, Logger&) /* noexcept */;
 		if (Logger::trace()) { \
 			std::ostringstream oss; \
 			if (!Constants::jsonTrace) \
-				oss << cmt(string(getClass(*this)) + " swap done>") + '\n'; \
+				oss << cmt(std::string(getClass(*this)) + " swap done>") + '\n'; \
 			cout << oss.str() << std::flush; \
 		} \
 	} while (false)

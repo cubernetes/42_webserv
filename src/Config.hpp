@@ -1,10 +1,10 @@
-#pragma once
+#pragma once /* Config.hpp */
 
 #include <map>
-#include <string>
 #include <utility>
 #include <vector>
 #include <deque>
+#include <string>
 
 typedef std::vector<std::string> Arguments;
 typedef std::pair<std::string, Arguments> Directive;

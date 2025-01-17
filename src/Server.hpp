@@ -1,13 +1,12 @@
 #pragma once /* Server.hpp */
 
+#include <ostream>
 #include <string>
-#include <iostream>
 
 #include "HttpServer.hpp"
 #include "Config.hpp"
 
 using std::string;
-using std::ostream;
 
 class Server {
 public:
@@ -42,4 +41,4 @@ private:
 
 // global scope swap (aka ::swap), needed since friend keyword is forbidden :(
 void swap(Server&, Server&) /* noexcept */;
-ostream& operator<<(ostream&, const Server&);
+std::ostream& operator<<(std::ostream&, const Server&);

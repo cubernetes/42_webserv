@@ -1,15 +1,11 @@
-#include <iostream> /* std::cout, std::swap, std::ostream */
-#include <string> /* std::string */
-#include <sstream> /* std::stringstream */
+#include <ostream>
+#include <string>
 
 #include "CgiHandler.hpp"
 #include "Logger.hpp"
 
-using std::cout;
 using std::swap;
 using std::string;
-using std::ostream;
-using std::stringstream;
 
 // De- & Constructors
 CgiHandler::~CgiHandler() {
@@ -52,6 +48,6 @@ void swap(CgiHandler& a, CgiHandler& b) /* noexcept */ {
 	a.swap(b);
 }
 
-ostream& operator<<(ostream& os, const CgiHandler& other) {
+std::ostream& operator<<(std::ostream& os, const CgiHandler& other) {
 	return os << static_cast<string>(other);
 }

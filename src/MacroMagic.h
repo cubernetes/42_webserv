@@ -1,4 +1,4 @@
-#pragma once
+#pragma once /* MacroMagic.h */
 // WARNING, Black Magic ahead.
 // Courtesy of https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms
 //  and this https://github.com/cormacc/va_args_iterators
