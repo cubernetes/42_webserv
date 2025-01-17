@@ -26,4 +26,4 @@ remove_todo_color () {
 
 grep --color=always \
 	--exclude-dir=.git/ \
-	-inR -- '[T]ODO' | grep -v 'src/\.gitignore' | remove_todo_color | grep -v -e '_TODO_' -e '/TODO/' | highlight_tags
+	-inR -- '[T]ODO' "$(git rev-parse --show-toplevel)" | grep -v 'src/\.gitignore' | remove_todo_color | grep -v -e '_TODO_' -e '/TODO/' | highlight_tags
