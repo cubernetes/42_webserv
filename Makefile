@@ -60,9 +60,9 @@ SRC :=
 
 vpath %.$(EXT) src
 SRC += main.cpp
-SRC += conf.cpp
-SRC += repr.cpp
-SRC += ansi.cpp
+SRC += Config.cpp
+SRC += Repr.cpp
+SRC += Ansi.cpp
 SRC += Logger.cpp
 SRC += Reflection.cpp
 SRC += Server.cpp

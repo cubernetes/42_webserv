@@ -32,7 +32,7 @@ public:
 
 void swap(Logger&, Logger&) /* noexcept */;
 
-#include "repr.hpp"
+#include "Repr.hpp"
 
 #define TRACE_COPY_ASSIGN_OP do { \
 		if (Logger::trace()) { \

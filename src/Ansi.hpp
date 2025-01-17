@@ -1,4 +1,4 @@
-#pragma once /* ansi.hpp */
+#pragma once /* Ansi.hpp */
 
 #include <string>
 

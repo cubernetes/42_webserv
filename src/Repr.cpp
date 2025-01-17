@@ -1,8 +1,8 @@
 #include <iostream>
 #include <string>
 
-#include "repr.hpp"
-#include "ansi.hpp"
+#include "Repr.hpp"
+#include "Ansi.hpp"
 
 using std::string;
 using ansi::rgb;

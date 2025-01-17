@@ -34,10 +34,10 @@ public:
 	// it and using _memberToString to serialize it member by member
 	string repr(bool json = false) const;
 protected:
-	// is implemented automatically in the derived class by the REFLECT macro from macro_magic.h
+	// is implemented automatically in the derived class by the REFLECT macro from MacroMagic.h
 	void reflect() {} // empty by default, in case you're inheritin from this class and do the reflection in another (often post-periori, i.e. for another class that does not have reflection) way
 
-	// Each DECL macro from macro_magic.h will generate 2 functions with deterministic names.
+	// Each DECL macro from MacroMagic.h will generate 2 functions with deterministic names.
 	// One of them is a closure that calls ::repr() for the specific member.
 	// The other one is also a closure that calls reflect_member() with the required parameters.
 	// The automatically implemented reflect() function (which is also a closure, in a way) in the derived class will call those closures
@@ -58,5 +58,5 @@ protected:
 };
 void swap(Reflection& a, Reflection& b) /* noexcept */;
 
-#include "macro_magic.h"
-#include "repr.hpp"
+#include "MacroMagic.h"
+#include "Repr.hpp"

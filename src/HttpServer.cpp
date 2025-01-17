@@ -10,8 +10,8 @@
 
 #include "HttpServer.hpp"
 #include "Logger.hpp"
-#include "conf.hpp"
-#include "repr.hpp"
+#include "Config.hpp"
+#include "Repr.hpp"
 
 using std::swap;
 using std::cout;

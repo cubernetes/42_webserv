@@ -5,7 +5,7 @@
 #include <string>
 #include <sys/poll.h>
 
-#include "conf.hpp"
+#include "Config.hpp"
 
 using std::string;
 

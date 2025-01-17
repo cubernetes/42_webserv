@@ -5,7 +5,7 @@
 #include "Server.hpp"
 #include "Logger.hpp"
 #include "Constants.hpp"
-#include "conf.hpp"
+#include "Config.hpp"
 
 using std::cout;
 using std::swap;

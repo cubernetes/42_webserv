@@ -7,7 +7,7 @@
 #include <sstream>
 #include <stdexcept> /* std::runtime_error */
 
-#include "conf.hpp"
+#include "Config.hpp"
 #include "Errors.hpp"
 
 using std::string;

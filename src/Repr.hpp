@@ -1,4 +1,4 @@
-#pragma once /* repr.hpp */
+#pragma once /* Repr.hpp */
 
 #include <sstream> /* std::ostringstream */
 #include <string> /* std::string */
@@ -9,7 +9,7 @@
 #include <utility> /* std::make_pair */
 
 #include "Constants.hpp" /* Constants::{no_color,repr_json} */
-#include "ansi.hpp"
+#include "Ansi.hpp"
 #include "Reflection.hpp"
 
 # define ANSI_FG     "41;41;41"

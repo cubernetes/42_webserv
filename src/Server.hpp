@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "HttpServer.hpp"
-#include "conf.hpp"
+#include "Config.hpp"
 
 using std::string;
 using std::ostream;
