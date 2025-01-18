@@ -84,7 +84,7 @@ static Directive parseDirective(Tokens& tokens) {
 	tokens.pop_front();
 	directive.second = parseArguments(tokens);
 	if (tokens.empty() || tokens.front().first != TOK_SEMICOLON)
-		throw runtime_error(Errors::Config::ParseError(tokens)); // TODO: @timo: make ParseError a function that takes tokens and says EOF or that token as an err msg
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 	return directive;
 }
@@ -293,9 +293,6 @@ static Arguments processIPv4Address(const Arguments& arguments) {
 }
 
 void postProcess(Config& config) {
-	// TODO: @timo: update some directives, like e.g.
-	// - the listen directive is more useful when the ip and port are split up (make two arguments from one argument), thankfully we only have to handle ipv4 i guess (actually not sure about that)
-	// - yeah that's almost it, can't think of anything else.
 	config.first["listen"] = processIPv4Address(config.first["listen"]);
 	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
 		server->first["listen"] = processIPv4Address(server->first["listen"]);
