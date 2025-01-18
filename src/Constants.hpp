@@ -10,4 +10,5 @@ namespace Constants {
 	extern const bool kwargLogs;
 	extern const bool verboseLogs;
 	extern const bool jsonTrace;
+	extern const int highestPort;
 }

@@ -11,4 +11,5 @@ namespace Constants {
 	const bool kwargLogs = true; // doesn't NEED to be const tho
 	const bool verboseLogs = false; // doesn't NEED to be const tho
 	const bool jsonTrace = false; // doesn't NEED to be const tho
+	const int highestPort = 65535;
 }

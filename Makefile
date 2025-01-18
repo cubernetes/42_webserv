@@ -61,6 +61,7 @@ endif
 SRC :=
 
 vpath %.$(EXT) src
+SRC += AllowedDirectives.cpp
 SRC += Ansi.cpp
 SRC += CgiHandler.cpp
 SRC += Config.cpp

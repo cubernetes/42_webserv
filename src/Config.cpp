@@ -7,6 +7,8 @@
 
 #include "Config.hpp"
 #include "Errors.hpp"
+#include "Utils.hpp"
+#include "AllowedDirectives.hpp"
 
 using std::string;
 using std::runtime_error;
@@ -23,10 +25,13 @@ static void updateIfNotExistsVec(Directives& directives, const string& directive
 
 static void populateDefaultGlobalDirectives(Directives& directives) {
 	updateIfNotExists(directives, "pid", "run/webserv.pid");
-	updateIfNotExists(directives, "index", "index.html");
 	updateIfNotExists(directives, "worker_processes", "auto");
-	updateIfNotExists(directives, "root", "www/html");
+
+	updateIfNotExists(directives, "index", "index.html");
+	updateIfNotExists(directives, "root", "html");
 	updateIfNotExists(directives, "listen", "127.0.0.1:80");
+	updateIfNotExists(directives, "access_log", "log/access.log");
+	updateIfNotExists(directives, "error_log", "log/error.log");
 }
 
 static void takeFromDefault(Directives& directives, Directives& globalDirectives, const string& directive, const string& value) {
@@ -38,19 +43,21 @@ static void takeFromDefault(Directives& directives, Directives& globalDirectives
 
 static void populateDefaultServerDirectives(Directives& directives, Directives& globalDirectives) {
 	takeFromDefault(directives, globalDirectives, "index", "index.html");
-	takeFromDefault(directives, globalDirectives, "worker_processes", "auto");
-	takeFromDefault(directives, globalDirectives, "root", "www/html");
+	takeFromDefault(directives, globalDirectives, "root", "html");
 	takeFromDefault(directives, globalDirectives, "listen", "127.0.0.1:80");
+	takeFromDefault(directives, globalDirectives, "access_log", "log/access.log");
+	takeFromDefault(directives, globalDirectives, "error_log", "log/error.log");
+
 	updateIfNotExists(directives, "server_name", "");
-	updateIfNotExists(directives, "access_log", "log/access.log");
-	updateIfNotExists(directives, "error_log", "log/error.log");
 }
 
 static void populateDefaultRouteDirectives(Directives& directives, Directives& serverDirectives) {
 	takeFromDefault(directives, serverDirectives, "index", "index.html");
-	takeFromDefault(directives, serverDirectives, "root", "www/html");
-	updateIfNotExists(directives, "methods", "GET");
-	updateIfNotExists(directives, "return", "");
+	takeFromDefault(directives, serverDirectives, "root", "html");
+
+	updateIfNotExists(directives, "allowed_methods", "GET");
+	// updateIfNotExists(directives, "alias", "GET"); // has no default
+	// updateIfNotExistsVec(directives, "return", VEC(string, "", "")); // has no default
 }
 
 static Arguments parseArguments(Tokens& tokens) {
@@ -217,10 +224,20 @@ static Tokens lexConfig(string rawConfig) {
 
 void updateDefaults(Config& config) {
 	populateDefaultGlobalDirectives(config.first);
-	for (ServerCtxs::iterator it = config.second.begin(); it != config.second.end(); ++it) {
-		populateDefaultServerDirectives(it->first, config.first);
-		for (RouteCtxs::iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
-			populateDefaultRouteDirectives(it2->second, it->first);
+	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
+		populateDefaultServerDirectives(server->first, config.first);
+		for (RouteCtxs::iterator route = server->second.begin(); route != server->second.end(); ++route) {
+			populateDefaultRouteDirectives(route->second, server->first);
+		}
+	}
+}
+
+void checkDirectives(Config& config) {
+	checkGlobalDirectives(config.first);
+	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
+		checkServerDirectives(server->first);
+		for (RouteCtxs::iterator route = server->second.begin(); route != server->second.end(); ++route) {
+			checkRouteDirectives(route->second);
 		}
 	}
 }
@@ -245,6 +262,8 @@ Config parseConfig(string rawConfig) {
 
 	postProcess(config);
 
+	checkDirectives(config);
+
 	return config;
 }
 /* How to access Config config:
@@ -264,8 +283,8 @@ config.second[0].second -> vector of routes for a server (order is important for
 config.second[0].second[0] -> first route (if there are any, check for empty!)
 config.second[0].second[0].first -> the actual route (a string), something like /web
 config.second[0].second[0].second -> again, Directives, so a map of directives similar to above
-config.second[0].second[0].second["methods"] -> which methods does this route support? mutliple arguments!
-config.second[0].second[0].second["methods"][0] == "GET" -> check if the first allowed method for this route is "GET"
+config.second[0].second[0].second["allowed_methods"] -> which methods does this route support? mutliple arguments!
+config.second[0].second[0].second["allowed_methods"][0] == "GET" -> check if the first allowed method for this route is "GET"
 
 
 # Example JSON (might want to add more keys, instead of just plain lists, but let's keep it MVP)
@@ -273,7 +292,7 @@ config.second[0].second[0].second["methods"][0] == "GET" -> check if the first a
     "index": [ "index.html" ],
     "listen": [ "127.0.0.1:80" ],
     "pid": [ "run/webserv.pid" ],
-    "root": [ "www/html" ],
+    "root": [ "html" ],
     "worker_processes": [ "auto" ]
   },
   [ [ {
@@ -281,16 +300,16 @@ config.second[0].second[0].second["methods"][0] == "GET" -> check if the first a
         "error_log": [ "log/server1_error.log" ],
         "index": [ "index.html" ],
         "listen": [ "127.0.0.1:8080" ],
-        "root": [ "www/server1" ],
+        "root": [ "html/server1" ],
         "server_name": [ "server1" ],
         "worker_processes": [ "auto" ]
       },
       [ [ "/",
           {
             "index": [ "index.html" ],
-            "methods": [ "GET" ],
+            "allowed_methods": [ "GET" ],
             "return": [ "" ],
-            "root": [ "www/server1" ]
+            "root": [ "html/server1" ]
           }
       ] ]
     ],
@@ -299,7 +318,7 @@ config.second[0].second[0].second["methods"][0] == "GET" -> check if the first a
         "error_log": [ "log/server2_error.log" ],
         "index": [ "index.html" ],
         "listen": [ "127.0.0.1:8081" ],
-        "root": [ "www/server2" ],
+        "root": [ "html/server2" ],
         "server_name": [ "server2" ],
         "worker_processes": [ "auto" ]
       },
@@ -307,9 +326,9 @@ config.second[0].second[0].second["methods"][0] == "GET" -> check if the first a
           "/",
           {
             "index": [ "index.html" ],
-            "methods": [ "GET" ],
+            "allowed_methods": [ "GET" ],
             "return": [ "" ],
-            "root": [ "www/server2" ],
+            "root": [ "html/server2" ],
             "try_files": [ "$uri", "$uri/", "=404" ]
           }
 ] ] ] ] ]
