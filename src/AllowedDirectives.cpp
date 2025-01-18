@@ -17,6 +17,9 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
+#define CHECKFN(checkFunction) \
+	if (checkFunction(directive, arguments) && ++counts[directive] <= 1) continue
+
 using std::map;
 using std::vector;
 using std::pair;
@@ -114,7 +117,7 @@ static inline void ensureValidPort(const string& directive, const string& argume
 }
 
 static inline void ensureGloballyUnique(const string& directive, const string& argument) {
-	static map<string, int> counts;
+	static map<string, unsigned int> counts;
 	++counts[argument];
 	if (counts[argument] > 1) {
 		throw runtime_error(Errors::Config::DirectiveArgumentNotUnique(directive, argument));
@@ -248,45 +251,54 @@ static inline bool checkAutoindex(const string& directive, const Arguments& argu
 }
 
 void checkGlobalDirectives(const Directives& directives) {
+	map<string, unsigned int> counts;
 	for (Directives::const_iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
 		const Arguments& arguments = kv->second;
-		if (checkPid(directive, arguments)) continue;
-		if (checkWorkerProcesses(directive, arguments)) continue;
-		if (checkIndex(directive, arguments)) continue;
-		if (checkRoot(directive, arguments)) continue;
-		if (checkAccessLog(directive, arguments)) continue;
-		if (checkErrorLog(directive, arguments)) continue;
-		if (checkListen(directive, arguments)) continue;
+		CHECKFN(checkPid);
+		CHECKFN(checkWorkerProcesses);
+		CHECKFN(checkIndex);
+		CHECKFN(checkRoot);
+		CHECKFN(checkAccessLog);
+		CHECKFN(checkErrorLog);
+		CHECKFN(checkListen);
+		if (counts[directive] > 1)
+			throw runtime_error(Errors::Config::DirectiveNotUnique(directive));
 		throw runtime_error(Errors::Config::UnknownDirective(directive));
 	}
 }
 
 void checkServerDirectives(const Directives& directives) {
+	map<string, unsigned int> counts;
 	for (Directives::const_iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
 		const Arguments& arguments = kv->second;
-		if (checkServerName(directive, arguments)) continue;
-		if (checkIndex(directive, arguments)) continue;
-		if (checkRoot(directive, arguments)) continue;
-		if (checkAccessLog(directive, arguments)) continue;
-		if (checkErrorLog(directive, arguments)) continue;
-		if (checkListen(directive, arguments)) continue;
-		if (checkClientMaxBodySize(directive, arguments)) continue;
+		CHECKFN(checkServerName);
+		CHECKFN(checkIndex);
+		CHECKFN(checkRoot);
+		CHECKFN(checkAccessLog);
+		CHECKFN(checkErrorLog);
+		CHECKFN(checkListen);
+		CHECKFN(checkClientMaxBodySize);
+		if (counts[directive] > 1)
+			throw runtime_error(Errors::Config::DirectiveNotUnique(directive));
 		throw runtime_error(Errors::Config::UnknownDirective(directive));
 	}
 }
 
 void checkRouteDirectives(const Directives& directives) {
+	map<string, unsigned int> counts;
 	for (Directives::const_iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
 		const Arguments& arguments = kv->second;
-		if (checkAllowMethods(directive, arguments)) continue;
-		if (checkIndex(directive, arguments)) continue;
-		if (checkRoot(directive, arguments)) continue;
-		if (checkAlias(directive, arguments)) continue;
-		if (checkReturn(directive, arguments)) continue;
-		if (checkAutoindex(directive, arguments)) continue;
+		CHECKFN(checkAllowMethods);
+		CHECKFN(checkIndex);
+		CHECKFN(checkRoot);
+		CHECKFN(checkAlias);
+		CHECKFN(checkReturn);
+		CHECKFN(checkAutoindex);
+		if (counts[directive] > 1)
+			throw runtime_error(Errors::Config::DirectiveNotUnique(directive));
 		throw runtime_error(Errors::Config::UnknownDirective(directive));
 	}
 }

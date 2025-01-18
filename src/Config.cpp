@@ -218,17 +218,19 @@ static Tokens lexConfig(string rawConfig) {
 	for (std::string::iterator it = rawConfig.begin(); it != rawConfig.end(); ++it) {
 		c = *it;
 		if (isspace(c) || c == ';' || c == '{' || c == '}' || prevC == ';' || prevC == '{' || prevC == '}') {
-			createNewToken = true;
-			if (tokens.back().second == ";")
-				tokens.back().first = TOK_SEMICOLON;
-			else if (tokens.back().second == "{")
-				tokens.back().first = TOK_OPENING_BRACE;
-			else if (tokens.back().second == "}")
-				tokens.back().first = TOK_CLOSING_BRACE;
-			else if (tokens.back().second == "")
-				tokens.back().first = TOK_EOF;
-			else
-				tokens.back().first = TOK_WORD;
+			if (!tokens.empty()) {
+				createNewToken = true;
+				if (tokens.back().second == ";")
+					tokens.back().first = TOK_SEMICOLON;
+				else if (tokens.back().second == "{")
+					tokens.back().first = TOK_OPENING_BRACE;
+				else if (tokens.back().second == "}")
+					tokens.back().first = TOK_CLOSING_BRACE;
+				else if (tokens.back().second == "")
+					tokens.back().first = TOK_EOF;
+				else
+					tokens.back().first = TOK_WORD;
+			}
 			prevC = c;
 			if (isspace(c))
 				continue;
@@ -303,6 +305,9 @@ void postProcess(Config& config) {
 Config parseConfig(string rawConfig) {
 	Tokens tokens = lexConfig(rawConfig);
 
+	if (tokens.empty())
+		throw runtime_error(Errors::Config::EmptyConfig());
+
 	Directives directives = parseDirectives(tokens);
 	ServerCtxs httpBlock = parseHttpBlock(tokens);
 	if (!tokens.empty())
@@ -314,6 +319,9 @@ Config parseConfig(string rawConfig) {
 	postProcess(config);
 
 	checkDirectives(config);
+
+	if (config.second.empty())
+		throw runtime_error(Errors::Config::ZeroServers());
 
 	return config;
 }
@@ -393,8 +401,3 @@ string readConfig(string configPath) {
 	ss << is.rdbuf();
 	return ss.str();
 }
-// TODO: @timo: Semantics to check:
-// - conf must be non-empty
-// - there must be at least one server
-// - all directives must exist and make sense in the context
-// - arguments per directive must make sense

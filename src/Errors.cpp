@@ -37,6 +37,11 @@ const string Errors::Config::DirectiveArgumentNotUnique(const string& directive,
 	return cmt("Argument ") + repr(argument) + cmt(" for directive ") + repr(directive) + cmt(" is not unique");
 }
 
+// Note: This case actually cannot happen, because Directives is a map so keys are always unique already
+const string Errors::Config::DirectiveNotUnique(const string& directive) {
+	return cmt("Directive ") + repr(directive) + cmt(" is not unique");
+}
+
 const string Errors::Config::DirectiveArgumentPortNumberTooHigh(const string& directive, const string& argument) {
 	return cmt("Port argument ") + repr(argument) + cmt(" for directive ") + repr(directive) + cmt(" is too high");
 }
@@ -75,4 +80,12 @@ const string Errors::Config::InvalidDirectiveArgumentCount(const string& directi
 
 const string Errors::Config::UnknownDirective(const string& directive) {
 	return cmt("Unknown directive: ") + repr(directive);
+}
+
+const string Errors::Config::ZeroServers() {
+	return cmt("There must be at least one server in the config");
+}
+
+const string Errors::Config::EmptyConfig() {
+	return cmt("The config file is empty");
 }
