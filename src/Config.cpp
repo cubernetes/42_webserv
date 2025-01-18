@@ -7,6 +7,7 @@
 
 #include "Config.hpp"
 #include "Errors.hpp"
+#include "Constants.hpp"
 #include "Utils.hpp"
 #include "AllowedDirectives.hpp"
 
@@ -187,12 +188,32 @@ static Token newToken(TokenType t, const string& s) {
 	return Token(t, s);
 }
 
+static string removeComments(const string& rawConfig) {
+	std::istringstream iss(rawConfig);
+	string line;
+	string cleanedConfig;
+
+	while (std::getline(iss, line)) {
+		string newLine;
+		for (string::iterator c = line.begin(); c != line.end(); ++c) {
+			if (*c != Constants::commentSymbol) {
+				newLine += *c;
+				continue;
+			}
+			break;
+		}
+		cleanedConfig += newLine + '\n';
+	}
+	return cleanedConfig;
+}
+
 static Tokens lexConfig(string rawConfig) {
 	Tokens tokens;
 	char c;
 	char prevC;
 	bool createNewToken = true;
 	
+	rawConfig = removeComments(rawConfig);
 	prevC = '\0';
 	for (std::string::iterator it = rawConfig.begin(); it != rawConfig.end(); ++it) {
 		c = *it;
