@@ -78,12 +78,12 @@ static Directive parseDirective(Tokens& tokens) {
 	if (tokens.empty() || tokens.front().second == "http")
 		return directive;
 	if (tokens.front().first != TOK_WORD)
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	directive.first = tokens.front().second;
 	tokens.pop_front();
 	directive.second = parseArguments(tokens);
 	if (tokens.empty() || tokens.front().first != TOK_SEMICOLON)
-		throw runtime_error(Errors::Config::ParseError); // TODO: @timo: make ParseError a function that takes tokens and says EOF or that token as an err msg
+		throw runtime_error(Errors::Config::ParseError(tokens)); // TODO: @timo: make ParseError a function that takes tokens and says EOF or that token as an err msg
 	tokens.pop_front();
 	return directive;
 }
@@ -105,23 +105,23 @@ static RouteCtx parseRoute(Tokens& tokens) {
 	RouteCtx route;
 
 	if (tokens.empty() || tokens.front().second != "location")
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 
 	if (tokens.empty() || tokens.front().first != TOK_WORD)
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 
 	route.first = tokens.front().second;
 	tokens.pop_front();
 
 	if (tokens.empty() || tokens.front().first != TOK_OPENING_BRACE)
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 
 	route.second = parseDirectives(tokens);
 
 	if (tokens.empty() || tokens.front().first != TOK_CLOSING_BRACE)
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 
 	return route;
@@ -142,10 +142,10 @@ static ServerCtx parseServer(Tokens& tokens) {
 	ServerCtx server;
 
 	if (tokens.empty() || tokens.front().second != "server")
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 	if (tokens.empty() || tokens.front().first != TOK_OPENING_BRACE)
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 
 	Directives directives = parseDirectives(tokens);
@@ -153,7 +153,7 @@ static ServerCtx parseServer(Tokens& tokens) {
 	server = std::make_pair(directives, routes);
 
 	if (tokens.empty() || tokens.front().first != TOK_CLOSING_BRACE)
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 
 	return server;
@@ -163,10 +163,10 @@ static ServerCtxs parseHttpBlock(Tokens& tokens) {
 	ServerCtxs servers;
 
 	if (tokens.empty() || tokens.front().second != "http")
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 	if (tokens.empty() || tokens.front().first != TOK_OPENING_BRACE)
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 
 	while (true) {
@@ -177,7 +177,7 @@ static ServerCtxs parseHttpBlock(Tokens& tokens) {
 	}
 
 	if (tokens.empty() || tokens.front().first != TOK_CLOSING_BRACE)
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 
 	return servers;
@@ -255,7 +255,7 @@ Config parseConfig(string rawConfig) {
 	Directives directives = parseDirectives(tokens);
 	ServerCtxs httpBlock = parseHttpBlock(tokens);
 	if (!tokens.empty())
-		throw runtime_error(Errors::Config::ParseError);
+		throw runtime_error(Errors::Config::ParseError(tokens));
 	Config config = std::make_pair(directives, httpBlock);
 
 	updateDefaults(config);

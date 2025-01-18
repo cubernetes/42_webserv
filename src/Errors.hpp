@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "Config.hpp"
+
 using std::string;
 
 namespace Errors {
@@ -9,20 +11,21 @@ namespace Errors {
 
 	namespace Config {
 		extern const string OpeningError;
-		extern const string ParseError;
-		extern const string DirectiveArgumentEmpty;
-		extern const string DirectiveArgumentInvalidPort;
-		extern const string DirectiveArgumentNotNumeric;
-		extern const string DirectiveArgumentNotUnique;
-		extern const string DirectiveArgumentPortNumberTooHigh;
-		extern const string DirectiveArgumentPortNumberTooLow;
-		extern const string DirectiveIPv6NotSupported;
-		extern const string DirectiveInvalidBooleanArgument;
-		extern const string DirectiveInvalidIpAddressArgument;
-		extern const string DirectiveInvalidSizeArgument;
-		extern const string DirectiveInvalidStatusCodeArgument;
-		extern const string InvalidDirectiveArgument;
-		extern const string InvalidDirectiveArgumentCount;
-		extern const string UnknownDirective;
+		const string ParseError(Tokens& tokens);
+		const string DirectiveArgumentEmpty(const string& directive);
+		const string DirectiveArgumentInvalidPort(const string& directive, const string& argument);
+		const string DirectiveArgumentNotNumeric(const string& directive, const string& argument);
+		const string DirectiveArgumentNotUnique(const string& directive, const string& argument);
+		const string DirectiveArgumentPortNumberTooHigh(const string& directive, const string& argument);
+		const string DirectiveArgumentPortNumberTooLow(const string& directive, const string& argument);
+		const string DirectiveIPv6NotSupported(const string& directive);
+		const string DirectiveInvalidBooleanArgument(const string& directive, const string& argument);
+		const string DirectiveInvalidIpAddressArgument(const string& directive, const string& argument);
+		const string DirectiveInvalidSizeArgument(const string& directive, const string& argument);
+		const string DirectiveInvalidStatusCodeArgument(const string& directive, const string& argument);
+		const string InvalidDirectiveArgument(const string& directive, const string& argument, const Arguments& options);
+		const string InvalidDirectiveArgumentCount(const string& directive, unsigned int count, unsigned int min, unsigned int max);
+		const string UnknownDirective(const string& directive);
 	}
 }
+
