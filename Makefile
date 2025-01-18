@@ -27,6 +27,7 @@ CFLAGS += -Wunreachable-code
 CFLAGS += -std=c++98
 CFLAGS += -MMD
 CFLAGS += -fdiagnostics-color=always
+CFLAGS += -fmax-errors=1
 # CFLAGS += -Werror # TODO: @all: Add back
 
 CXXFLAGS :=
