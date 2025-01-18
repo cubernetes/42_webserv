@@ -8,8 +8,9 @@ NAME := webserv
 EXT := cpp
 
 # tools
-CXX := clang++ # TODO: @all change to c++
-#CXX := g++ # TODO: @all: change to c++
+CXX := c++
+#CXX := clang++ # TODO: @all: make sure it compiles with this
+#CXX := g++     # TODO: @all: make sure it compiles with this as well, although not super necessary
 RM := /bin/rm -f
 MKDIR := /bin/mkdir -p
 
@@ -59,18 +60,18 @@ endif
 SRC :=
 
 vpath %.$(EXT) src
-SRC += main.cpp
-SRC += Config.cpp
-SRC += Repr.cpp
 SRC += Ansi.cpp
-SRC += Logger.cpp
-SRC += Reflection.cpp
-SRC += Server.cpp
-SRC += HttpServer.cpp
 SRC += CgiHandler.cpp
+SRC += Config.cpp
 SRC += Constants.cpp
 SRC += Errors.cpp
+SRC += HttpServer.cpp
+SRC += Logger.cpp
+SRC += Reflection.cpp
+SRC += Repr.cpp
+SRC += Server.cpp
 SRC += Utils.cpp
+SRC += main.cpp
 
 # object vars
 OBJ := $(SRC:.$(EXT)=.o)
