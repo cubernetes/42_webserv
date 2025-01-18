@@ -13,4 +13,6 @@ namespace Constants {
 	const bool verboseLogs = false; // doesn't NEED to be const tho
 	const bool jsonTrace = false; // doesn't NEED to be const tho
 	const int highestPort = 65535;
+	const string defaultPort = "8000";
+	const string defaultAddress = "*";
 }

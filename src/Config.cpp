@@ -263,11 +263,41 @@ void checkDirectives(Config& config) {
 	}
 }
 
+static Arguments processIPv4Address(const Arguments& arguments) {
+	if (arguments.size() >= 2)
+		return arguments;
+	else if (arguments.size() == 1 && arguments[0].empty())
+		return arguments;
+	else if (arguments.size() <= 0)
+		return arguments;
+	string host = arguments[0];
+	string ipAddress;
+	string port;
+	Arguments newArgs;
+	string::size_type pos;
+	if ((pos = host.find(':')) != string::npos) {
+		ipAddress = host.substr(0, pos);
+		port = host.substr(pos + 1);
+	} else if ((pos = host.find('.')) != string::npos) {
+		ipAddress = host;
+		port = Constants::defaultPort;
+	} else {
+		ipAddress = Constants::defaultAddress;
+		port = host;
+	}
+	newArgs.push_back(ipAddress);
+	newArgs.push_back(port);
+	return newArgs;
+}
+
 void postProcess(Config& config) {
 	// TODO: @timo: update some directives, like e.g.
 	// - the listen directive is more useful when the ip and port are split up (make two arguments from one argument), thankfully we only have to handle ipv4 i guess (actually not sure about that)
 	// - yeah that's almost it, can't think of anything else.
-	(void)config;
+	config.first["listen"] = processIPv4Address(config.first["listen"]);
+	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
+		server->first["listen"] = processIPv4Address(server->first["listen"]);
+	}
 }
 
 Config parseConfig(string rawConfig) {

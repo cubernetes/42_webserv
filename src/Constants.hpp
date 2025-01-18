@@ -12,4 +12,6 @@ namespace Constants {
 	extern const bool verboseLogs;
 	extern const bool jsonTrace;
 	extern const int highestPort;
+	extern const string defaultPort;
+	extern const string defaultAddress;
 }
