@@ -9,7 +9,7 @@
 #include "Errors.hpp"
 #include "Constants.hpp"
 #include "Utils.hpp"
-#include "AllowedDirectives.hpp"
+#include "DirectiveValidation.hpp"
 
 using std::string;
 using std::runtime_error;
