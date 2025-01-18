@@ -1,27 +1,26 @@
 #include <iostream>
+#include <stdexcept>
 
-#include "Config.hpp"
 #include "HttpServer.hpp"
-#include "Server.hpp"
 #include "Logger.hpp"
 #include "Utils.hpp"
-#include <stdexcept>
 
 using std::cout;
 
 int main(int ac, char **av) {
 	try {
+		HttpServer server; // TODO: @discuss: consider initializing server with `const Config&' (see Server.hpp), since a server without a config is impossible
+		cout << server << '\n';
+
 		string configPath = Utils::parseArgs(ac, av);
-		Config config(configPath);
-		cout << "Config is:\n";
-		cout << config << '\n';
-		HttpServer server;
-		if (!server.setup(config)) {
+		if (!server.setup(parseConfig(readConfig(configPath)))) { // TODO: @discuss: when initializing using constructor instead, we would throw a runtime exception instead which would be caught below
             Logger::logerror("Failed to setup server");
             return 1;
         }
+
 		server.run();
-        return 0;
+		// return (int)server.exitStatus;
+		return 0;
 	} catch (const std::runtime_error& error) {
 		Logger::logexception(error);
 		return 1;

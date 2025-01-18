@@ -1,50 +1,44 @@
-// <GENERATED>
 #pragma once /* Server.hpp */
 
-#include <string> /* std::string */
-#include <iostream> /* std::ostream */
+#include <ostream>
+#include <string>
 
-#include "repr.hpp" /* repr<T> */
-#include "helper.hpp"
-#include "Config.hpp"
 #include "HttpServer.hpp"
+#include "Config.hpp"
 
 using std::string;
-using std::ostream;
 
 class Server {
 public:
-	// <generated>
-		~Server(); // destructor; consider virtual if it's a base class
-		Server(); // default constructor
-		Server(unsigned int, const Config&); // serializing constructor
-		Server(const Server&); // copy constructor
-		Server& operator=(Server); // copy-assignment operator
-		void swap(Server&); // copy-swap idiom
-		string repr() const; // return string-serialized version of the object
-		operator string() const; // convert object to string
+	~Server();
+	Server();
+	Server(const string& confPath);
+	Server(const Server& other);
+	Server& operator=(Server);
+	void swap(Server& other); // copy swap idiom
 
-		int getExitStatus() const;
-		const Config& get_config() const;
-
-		void setExitStatus(int);
-		void set_config(const Config&);
-
-		template <typename T>
-		Server(const T& type, DeleteOverload = 0); // disallow accidental casting/conversion
-	// </generated>
+	// string conversion
+	operator string() const;
 
 	void serve();
 
-	unsigned int exitStatus;
+	// Getters
+	unsigned int get_exitStatus() const;
+	const string& get_rawConfig() const;
+	const Config& get_config() const;
+	const HttpServer& get_http() const;
+	unsigned int get_id() const;
 private:
-	HttpServer _http;
+	unsigned int _exitStatus;
+	string _rawConfig;
 	Config _config;
+	HttpServer _http;
+
+	// Instance tracking
 	unsigned int _id;
 	static unsigned int _idCntr;
 };
 
-template <> inline string repr(const Server& value) { return value.repr(); }
+// global scope swap (aka ::swap), needed since friend keyword is forbidden :(
 void swap(Server&, Server&) /* noexcept */;
-ostream& operator<<(ostream&, const Server&);
-// </GENERATED>
+std::ostream& operator<<(std::ostream&, const Server&);

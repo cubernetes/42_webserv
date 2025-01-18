@@ -1,11 +1,13 @@
-#pragma once
+#pragma once /* HttpServer.hpp */
 
 #include <vector>
 #include <map>
 #include <string>
 #include <sys/poll.h>
+
 #include "Config.hpp"
-#include "Logger.hpp"
+
+using std::string;
 
 class HttpServer {
 public:
@@ -14,33 +16,39 @@ public:
 	HttpServer();
 	HttpServer(const HttpServer&);
 	HttpServer& operator=(HttpServer);
+	void swap(HttpServer&); // copy swap idiom
+
+	// string conversion
+	operator string() const;
 	
 	// Core functionality
 	bool setup(const Config& config);
 	void run();
 
-	// Required for repr
-	void swap(HttpServer&);
-	string repr() const;
-	operator string() const;
-
+	// Getters
+	int get_serverFd() const;
+	const std::vector<struct pollfd>& get_pollFds() const;
+	bool get_running() const;
+	const Config& get_config() const;
+	unsigned int get_id() const;
 private:
-	int server_fd;
-	std::vector<struct pollfd> poll_fds;
-	bool running;
-	Config config;
-	
+	int _serverFd;
+	std::vector<struct pollfd> _pollFds;
+	bool _running;
+	Config _config;
+
 	// Instance tracking
 	unsigned int _id;
 	static unsigned int _idCntr;
-
+	
 	// Helper methods
 	bool setupSocket(const std::string& ip, int port);
 	void handleNewConnection();
-	void handleClientData(int client_fd);
-	void closeConnection(int client_fd);
+	void handleClientData(int clientFd);
+	void closeConnection(int clientFd);
 	void removePollFd(int fd);
 };
 
-void swap(HttpServer&, HttpServer&);
+// global scope swap (aka ::swap), needed since friend keyword is forbidden :(
+void swap(HttpServer&, HttpServer&) /* noexcept */;
 std::ostream& operator<<(std::ostream&, const HttpServer&);

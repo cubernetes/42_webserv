@@ -1,324 +1,330 @@
-// <GENERATED>
-#include <cctype> /* isspace */
-#include <deque> /* std::deque */
-#include <fstream> /* std::ifstream */
-#include <iostream> /* std::cout, std::swap, std::ostream */
-#include <stdexcept> /* std::runtime_error */
-#include <string> /* std::string */
-#include <sstream> /* std::stringstream */
-#include <map> /* std::map */
+#include <utility>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <stdexcept>
 
-#include "repr.hpp"
-#include "BaseConfig.hpp"
 #include "Config.hpp"
-#include "ServerConfig.hpp"
-#include "CgiHandler.hpp"
 #include "Errors.hpp"
-#include "Logger.hpp"
 
-using std::cout;
-using std::map;
-using std::ifstream;
-using std::swap;
 using std::string;
-using std::ostream;
-using std::stringstream;
 using std::runtime_error;
-using std::deque;
-using std::vector;
 
-// De- & Constructors
-Config::~Config() {
-	if (Logger::trace())
-		cout << ANSI_PUNCT "~" << *this << '\n';
+static void updateIfNotExists(Directives& directives, const string& directive, const string& value) {
+	if (directives.find(directive) == directives.end())
+		directives[directive] = Arguments(1, value);
 }
 
-Config::Config() :
-		BaseConfig(),
-		_configPath(),
-		_serverConfigs(),
-		_maxWorkers(),
-		_id(_idCntr++) {
-	if (Logger::trace())
-		cout << ANSI_KWRD "Config" ANSI_PUNCT "() -> " << *this << '\n';
+static void updateIfNotExistsVec(Directives& directives, const string& directive, const Arguments& value) {
+	if (directives.find(directive) == directives.end())
+		directives[directive] = value;
 }
 
-Config::Config(const string& configPath) :
-		BaseConfig(),
-		_configPath(configPath),
-		_serverConfigs(),
-		_maxWorkers(),
-		_id(_idCntr++) {
-	//parse();
-	if (Logger::trace())
-		cout << ANSI_KWRD "Config" ANSI_PUNCT "(" << ::repr(configPath) << ANSI_PUNCT ") -> " << *this << '\n';
+static void populateDefaultGlobalDirectives(Directives& directives) {
+	updateIfNotExists(directives, "pid", "run/webserv.pid");
+	updateIfNotExists(directives, "index", "index.html");
+	updateIfNotExists(directives, "worker_processes", "auto");
+	updateIfNotExists(directives, "root", "www/html");
+	updateIfNotExists(directives, "listen", "127.0.0.1:80");
 }
 
-Config::Config(
-	const string& accessLog,
-	const string& errorLog,
-	unsigned int maxBodySize,
-	const string& root,
-	const string& errorPage,
-	bool enableDirListing,
-	const vector<string>& indexFiles,
-	const map<string, CgiHandler>& cgiHandlers,
-	const string& configPath,
-	const vector<ServerConfig>& serverConfigs,
-	unsigned int maxWorkers
-	) :
-		BaseConfig(accessLog, errorLog, maxBodySize, root, errorPage, enableDirListing, indexFiles, cgiHandlers),
-		_configPath(configPath),
-		_serverConfigs(serverConfigs),
-		_maxWorkers(maxWorkers),
-		_id(_idCntr++) {
-	if (Logger::trace())
-		cout << *this << ANSI_PUNCT " -> " << *this << '\n';
-}
-
-Config::Config(const Config& other) :
-		BaseConfig(other),
-		_configPath(other._configPath),
-		_serverConfigs(other._serverConfigs),
-		_maxWorkers(other._maxWorkers),
-		_id(_idCntr++) {
-	if (Logger::trace())
-		cout << ANSI_KWRD "Config" ANSI_PUNCT "(" << ::repr(other) << ANSI_PUNCT ") -> " << *this << '\n';
-}
-
-// Copy-assignment operator (using copy-swap idiom)
-Config& Config::operator=(Config other) /* noexcept */ {
-	if (Logger::trace())
-		cout << ANSI_KWRD "Config" ANSI_PUNCT "& " ANSI_KWRD "Config" ANSI_PUNCT "::" ANSI_FUNC "operator" ANSI_PUNCT "=(" << ::repr(other) << ANSI_PUNCT ")" ANSI_RST "\n";
-	::swap(*this, other);
-	return *this;
-}
-
-// Generated getters
-const string& Config::getConfigPath() const { return _configPath; }
-const vector<ServerConfig>& Config::getServerConfigs() const { return _serverConfigs; }
-unsigned int Config::getMaxWorkers() const { return _maxWorkers; }
-
-// Generated setters
-void Config::setConfigPath(const string& value) { _configPath = value; }
-void Config::setServerConfigs(const vector<ServerConfig>& value) { _serverConfigs = value; }
-void Config::setMaxWorkers(unsigned int value) { _maxWorkers = value; }
-
-// Generated member functions
-string Config::repr() const {
-	stringstream out;
-	out << ANSI_KWRD "Config" ANSI_PUNCT "("
-		<< ::repr(_accessLog) << ANSI_PUNCT ", "
-		<< ::repr(_errorLog) << ANSI_PUNCT ", "
-		<< ::repr(_maxBodySize) << ANSI_PUNCT ", "
-		<< ::repr(_root) << ANSI_PUNCT ", "
-		<< ::repr(_errorPage) << ANSI_PUNCT ", "
-		<< ::repr(_enableDirListing) << ANSI_PUNCT ", "
-		<< ::repr(_indexFiles) << ANSI_PUNCT ", "
-		<< ::repr(_cgiHandlers) << ANSI_PUNCT ", "
-
-		<< ::repr(_configPath) << ANSI_PUNCT ", "
-		<< ::repr(_serverConfigs) << ANSI_PUNCT ", "
-		<< ::repr(_maxWorkers) << ANSI_PUNCT ", "
-
-		<< ::repr(_id) << ANSI_PUNCT ")" ANSI_RST;
-	return out.str();
-}
-
-void Config::swap(Config& other) /* noexcept */ {
-	if (Logger::trace()) {
-		cout << ANSI_CMT "<Swapping Config *this:" ANSI_RST "\n";
-		cout << *this << '\n';
-		cout << ANSI_CMT "with the following Config object:" ANSI_RST "\n";
-		cout << other << '\n';
-	}
-	::swap(*dynamic_cast<BaseConfig*>(this), *dynamic_cast<BaseConfig*>(&other)),
-	::swap(_configPath, other._configPath);
-	::swap(_serverConfigs, other._serverConfigs);
-	::swap(_maxWorkers, other._maxWorkers);
-	::swap(_id, other._id);
-	if (Logger::trace())
-		cout << ANSI_CMT "Config swap done>" ANSI_RST "\n";
-}
-
-Config::operator string() const { return ::repr(*this); }
-
-// Generated free functions
-void swap(Config& a, Config& b) /* noexcept */ { a.swap(b); }
-ostream& operator<<(ostream& os, const Config& other) { return os << static_cast<string>(other); }
-
-// Keeping track of the instances
-unsigned int Config::_idCntr = 0;
-// </GENERATED>
-
-
-/*
-
-config ::= directives? http_block
-directives ::= directive directives?
-directive ::= directive_name arguments ';'
-directive_name ::= LEX_TOKEN
-arguments ::= argument arguments?
-argument ::= LEX_TOKEN
-http_block ::= '{' server_list '}'
-server_list ::= server server_list?
-server ::= '{' server_configs '}'
-server_configs ::= [ directive | route ] server_configs?
-route ::= 'location' route_pattern '{' directives '}'
-route_pattern ::= LEX_TOKEN
-
-*/
-
-bool Config::accept(t_tokens& tokens, token_type tok_type) {
-	if (tokens.empty())
-		return false;
-	if (tokens.front().first != tok_type)
-		return false;
-	tokens.pop_front();
-	return true;
-}
-
-bool Config::expect(t_tokens& tokens, token_type tok_type) {
-	if (accept(tokens, tok_type))
-		return true;
-	unexpected(tokens);
-	return false;
-}
-
-void Config::unexpected(t_tokens& tokens) {
-	// TODO: use logger
-	if (tokens.empty())
-		cout << "Unexpected end of file\n";
+static void takeFromDefault(Directives& directives, Directives& globalDirectives, const string& directive, const string& value) {
+	if (globalDirectives.find(directive) == globalDirectives.end())
+		updateIfNotExists(directives, directive, value);
 	else
-		cout << "Unexpected token: '" << tokens.front().second << "'\n";
+		updateIfNotExistsVec(directives, directive, globalDirectives[directive]);
 }
 
-t_token Config::new_token(token_type t, const string& s) {
-	return t_token(t, s);
+static void populateDefaultServerDirectives(Directives& directives, Directives& globalDirectives) {
+	takeFromDefault(directives, globalDirectives, "index", "index.html");
+	takeFromDefault(directives, globalDirectives, "worker_processes", "auto");
+	takeFromDefault(directives, globalDirectives, "root", "www/html");
+	takeFromDefault(directives, globalDirectives, "listen", "127.0.0.1:80");
+	updateIfNotExists(directives, "server_name", "");
+	updateIfNotExists(directives, "access_log", "log/access.log");
+	updateIfNotExists(directives, "error_log", "log/error.log");
 }
 
-// not sure yet, but I guess:
-// route_pattern ::= LEX_TOKEN
-// bool Config::parse_route_pattern(t_tokens& tokens) {
-// }
+static void populateDefaultRouteDirectives(Directives& directives, Directives& serverDirectives) {
+	takeFromDefault(directives, serverDirectives, "index", "index.html");
+	takeFromDefault(directives, serverDirectives, "root", "www/html");
+	updateIfNotExists(directives, "methods", "GET");
+	updateIfNotExists(directives, "return", "");
+}
 
-// route ::= 'location' route_pattern '{' directives '}'
-// bool Config::parse_route(t_tokens& tokens) {
-// 	return parse_route_pattern(tokens);
-// }
-
-// server_configs ::= [ directive | route ] server_configs?
-// bool Config::parse_server_configs(t_tokens& tokens) {
-// 	parse_directive(tokens);
-// 	parse_route(tokens);
-// 	return parse_server_configs(tokens);
-// }
-
-// server ::= '{' server_configs '}'
-// bool Config::parse_server(t_tokens& tokens) {
-// 	return parse_server_configs(tokens);
-// }
-
-// server_list ::= server server_list?
-// bool Config::parse_server_list(t_tokens& tokens) {
-// 	parse_server(tokens);
-// 	return parse_server_list(tokens);
-// }
-
-// arguments ::= argument arguments?
-// argument ::= LEX_TOKEN
-// bool Config::parse_arguments(t_tokens& tokens) {
-// 	if (accept(tokens, ""))
-// 		return true;
-// 	string argument = tokens.front();
-// 	if (argument == ";")
-// 		return true;
-// 	else if (argument == "}")
-// 		return true;
-// 	tokens.pop_front();
-
-// 	parse_arguments(tokens);
-// }
-
-// directive ::= directive_name arguments ';'
-// directive_name ::= LEX_TOKEN
-// bool Config::parse_directive(t_tokens& tokens) {
-// 	if (!accept(tokens, WORD))
-// 		return false;
-
-// 	if (!parse_arguments(tokens))
-// 		return false;
-
-// 	if (!accept(tokens, SEMICOLON))
-// 		return false;
-// 	return true;
-// }
-
-// http_block ::= '{' server_list '}'
-// bool Config::parse_http_block(t_tokens& tokens) {
-// 	return parse_server_list(tokens);
-// }
-
-// directives ::= directive directives?
-// bool Config::parse_directives(t_tokens& tokens) {
-// 	if (tokens.front().second == "http")
-// 		return true;
-// 	return parse_directive(tokens) && parse_directives(tokens);
-// }
-
-// // config ::= directives? http_block
-// bool Config::parse_config(t_tokens& tokens) {
-// 	return parse_directives(tokens) && parse_http_block(tokens);
-// }
-
-t_tokens Config::lex_config(std::ifstream& config) {
-	t_tokens tokens;
-	char c;
-	bool create_new_token = true;
-	
-	while (config.get(c)) {
-		if (isspace(c)) {
-			create_new_token = true;
-			if (tokens.back().second == ";")
-				tokens.back().first = SEMICOLON;
-			else if (tokens.back().second == "{")
-				tokens.back().first = OPENING_BRACE;
-			else if (tokens.back().second == "}")
-				tokens.back().first = CLOSING_BRACE;
-			else if (tokens.back().second == "")
-				tokens.back().first = EOF_TOK;
-			else
-				tokens.back().first = WORD;
-			continue;
+static Arguments parseArguments(Tokens& tokens) {
+	Arguments arguments;
+	while (!tokens.empty()) {
+		if (tokens.front().first == TOK_WORD) {
+			arguments.push_back(tokens.front().second);
+			tokens.pop_front();
 		}
-		if (create_new_token) {
-			tokens.push_back(new_token(UNKNOWN, ""));
-			create_new_token = false;
+		else
+			break;
+	}
+	return arguments;
+}
+
+static Directive parseDirective(Tokens& tokens) {
+	Directive directive;
+	if (tokens.empty() || tokens.front().second == "http")
+		return directive;
+	if (tokens.front().first != TOK_WORD)
+		throw runtime_error(Errors::Config::ParseError);
+	directive.first = tokens.front().second;
+	tokens.pop_front();
+	directive.second = parseArguments(tokens);
+	if (tokens.empty() || tokens.front().first != TOK_SEMICOLON)
+		throw runtime_error(Errors::Config::ParseError); // TODO: @timo: make ParseError a function that takes tokens and says EOF or that token as an err msg
+	tokens.pop_front();
+	return directive;
+}
+
+static Directives parseDirectives(Tokens& tokens) {
+	Directives directives;
+	while (true) {
+		if (tokens.empty() || tokens.front().second == "location" || tokens.front().second == "}")
+			break;
+		Directive directive = parseDirective(tokens);
+		if (directive.first.empty())
+			break;
+		directives[directive.first] = directive.second;
+	}
+	return directives;
+}
+
+static RouteCtx parseRoute(Tokens& tokens) {
+	RouteCtx route;
+
+	if (tokens.empty() || tokens.front().second != "location")
+		throw runtime_error(Errors::Config::ParseError);
+	tokens.pop_front();
+
+	if (tokens.empty() || tokens.front().first != TOK_WORD)
+		throw runtime_error(Errors::Config::ParseError);
+
+	route.first = tokens.front().second;
+	tokens.pop_front();
+
+	if (tokens.empty() || tokens.front().first != TOK_OPENING_BRACE)
+		throw runtime_error(Errors::Config::ParseError);
+	tokens.pop_front();
+
+	route.second = parseDirectives(tokens);
+
+	if (tokens.empty() || tokens.front().first != TOK_CLOSING_BRACE)
+		throw runtime_error(Errors::Config::ParseError);
+	tokens.pop_front();
+
+	return route;
+}
+
+static RouteCtxs parseRoutes(Tokens& tokens) {
+	std::vector<RouteCtx> routes;
+	while (true) {
+		if (tokens.empty() || tokens.front().second != "location")
+			break;
+		RouteCtx route = parseRoute(tokens);
+		routes.push_back(route);
+	}
+	return routes;
+}
+
+static ServerCtx parseServer(Tokens& tokens) {
+	ServerCtx server;
+
+	if (tokens.empty() || tokens.front().second != "server")
+		throw runtime_error(Errors::Config::ParseError);
+	tokens.pop_front();
+	if (tokens.empty() || tokens.front().first != TOK_OPENING_BRACE)
+		throw runtime_error(Errors::Config::ParseError);
+	tokens.pop_front();
+
+	Directives directives = parseDirectives(tokens);
+	RouteCtxs routes = parseRoutes(tokens);
+	server = std::make_pair(directives, routes);
+
+	if (tokens.empty() || tokens.front().first != TOK_CLOSING_BRACE)
+		throw runtime_error(Errors::Config::ParseError);
+	tokens.pop_front();
+
+	return server;
+}
+
+static ServerCtxs parseHttpBlock(Tokens& tokens) {
+	ServerCtxs servers;
+
+	if (tokens.empty() || tokens.front().second != "http")
+		throw runtime_error(Errors::Config::ParseError);
+	tokens.pop_front();
+	if (tokens.empty() || tokens.front().first != TOK_OPENING_BRACE)
+		throw runtime_error(Errors::Config::ParseError);
+	tokens.pop_front();
+
+	while (true) {
+		if (tokens.empty() || tokens.front().second != "server")
+			break;
+		ServerCtx server = parseServer(tokens);
+		servers.push_back(server);
+	}
+
+	if (tokens.empty() || tokens.front().first != TOK_CLOSING_BRACE)
+		throw runtime_error(Errors::Config::ParseError);
+	tokens.pop_front();
+
+	return servers;
+}
+
+static Token newToken(TokenType t, const string& s) {
+	return Token(t, s);
+}
+
+static Tokens lexConfig(string rawConfig) {
+	Tokens tokens;
+	char c;
+	char prevC;
+	bool createNewToken = true;
+	
+	prevC = '\0';
+	for (std::string::iterator it = rawConfig.begin(); it != rawConfig.end(); ++it) {
+		c = *it;
+		if (isspace(c) || c == ';' || c == '{' || c == '}' || prevC == ';' || prevC == '{' || prevC == '}') {
+			createNewToken = true;
+			if (tokens.back().second == ";")
+				tokens.back().first = TOK_SEMICOLON;
+			else if (tokens.back().second == "{")
+				tokens.back().first = TOK_OPENING_BRACE;
+			else if (tokens.back().second == "}")
+				tokens.back().first = TOK_CLOSING_BRACE;
+			else if (tokens.back().second == "")
+				tokens.back().first = TOK_EOF;
+			else
+				tokens.back().first = TOK_WORD;
+			prevC = c;
+			if (isspace(c))
+				continue;
+		}
+		prevC = c;
+		if (createNewToken) {
+			tokens.push_back(newToken(TOK_UNKNOWN, ""));
+			createNewToken = false;
 		}
 		tokens.back().second += c;
 	}
 	return tokens;
 }
 
-// void Config::parse() {
-// 	std::ifstream config(_configPath.c_str());
-// 	if (!config.good())
-// 		throw runtime_error(Errors::Config::OpeningError);
-// 	// _accessLog = "log/server1-acc.log";
-// 	// _errorLog = "log/server1-err.log";
-// 	// _maxBodySize = 4096;
-// 	// _root = "www";
-// 	// _errorPage = "www/404.html";
-// 	// _enableDirListing = true;
-// 	// _indexFiles.push_back("index.html");
-// 	// _indexFiles.push_back("index.htm");
-// 	// _indexFiles.push_back("webserv-index.html");
-// 	// _cgiHandlers["py"] = CgiHandler("py");
-// 	// _cgiHandlers["php"] = CgiHandler("php");
-// 	// _serverConfigs.push_back(ServerConfig(this->_accessLog, this->_errorLog, this->_maxBodySize, this->_root, this->_errorPage, this->_enableDirListing, this->_indexFiles, this->_cgiHandlers, "Server1", "127.0.0.1", 8080));
-// 	// _maxWorkers = 8;
+void updateDefaults(Config& config) {
+	populateDefaultGlobalDirectives(config.first);
+	for (ServerCtxs::iterator it = config.second.begin(); it != config.second.end(); ++it) {
+		populateDefaultServerDirectives(it->first, config.first);
+		for (RouteCtxs::iterator it2 = it->second.begin(); it2 != it->second.end(); ++it2) {
+			populateDefaultRouteDirectives(it2->second, it->first);
+		}
+	}
+}
 
-// 	t_tokens tokens = lex_config(config);
-// 	if (!parse_config(tokens))
-// 		throw runtime_error(Errors::Config::ParseError);
-// }
+void postProcess(Config& config) {
+	// TODO: @timo: update some directives, like e.g.
+	// - the listen directive is more useful when the ip and port are split up (make two arguments from one argument), thankfully we only have to handle ipv4 i guess (actually not sure about that)
+	// - yeah that's almost it, can't think of anything else.
+	(void)config;
+}
+
+Config parseConfig(string rawConfig) {
+	Tokens tokens = lexConfig(rawConfig);
+
+	Directives directives = parseDirectives(tokens);
+	ServerCtxs httpBlock = parseHttpBlock(tokens);
+	if (!tokens.empty())
+		throw runtime_error(Errors::Config::ParseError);
+	Config config = std::make_pair(directives, httpBlock);
+
+	updateDefaults(config);
+
+	postProcess(config);
+
+	return config;
+}
+/* How to access Config config:
+# Global directives:
+config.first["pid"] -> gives back vector of args
+config.first["pid"][0] -> most directives have only one argument, so you'll use this pattern quite often
+                          watch out that some directive _might_ have zero arguments, although I can't think of any, but the parser allows that
+
+# ServerCtxs configs
+config.second -> vector of ServerCtx
+config.second[0] -> pair of directives and routes
+config.second[0].first -> directives specific for a server (order is not important, which is why Directives is a map)
+config.second[0].first["server_name"] -> how you would access the server name for a given server
+
+## Routes
+config.second[0].second -> vector of routes for a server (order is important for the routers (top-bottom)!, that's why it's a vector)
+config.second[0].second[0] -> first route (if there are any, check for empty!)
+config.second[0].second[0].first -> the actual route (a string), something like /web
+config.second[0].second[0].second -> again, Directives, so a map of directives similar to above
+config.second[0].second[0].second["methods"] -> which methods does this route support? mutliple arguments!
+config.second[0].second[0].second["methods"][0] == "GET" -> check if the first allowed method for this route is "GET"
+
+
+# Example JSON (might want to add more keys, instead of just plain lists, but let's keep it MVP)
+[ {
+    "index": [ "index.html" ],
+    "listen": [ "127.0.0.1:80" ],
+    "pid": [ "run/webserv.pid" ],
+    "root": [ "www/html" ],
+    "worker_processes": [ "auto" ]
+  },
+  [ [ {
+        "access_log": [ "log/server1_access.log" ],
+        "error_log": [ "log/server1_error.log" ],
+        "index": [ "index.html" ],
+        "listen": [ "127.0.0.1:8080" ],
+        "root": [ "www/server1" ],
+        "server_name": [ "server1" ],
+        "worker_processes": [ "auto" ]
+      },
+      [ [ "/",
+          {
+            "index": [ "index.html" ],
+            "methods": [ "GET" ],
+            "return": [ "" ],
+            "root": [ "www/server1" ]
+          }
+      ] ]
+    ],
+    [ {
+        "access_log": [ "log/server2_access.log" ],
+        "error_log": [ "log/server2_error.log" ],
+        "index": [ "index.html" ],
+        "listen": [ "127.0.0.1:8081" ],
+        "root": [ "www/server2" ],
+        "server_name": [ "server2" ],
+        "worker_processes": [ "auto" ]
+      },
+      [ [
+          "/",
+          {
+            "index": [ "index.html" ],
+            "methods": [ "GET" ],
+            "return": [ "" ],
+            "root": [ "www/server2" ],
+            "try_files": [ "$uri", "$uri/", "=404" ]
+          }
+] ] ] ] ]
+*/
+
+string readConfig(string configPath) {
+	std::ifstream is(configPath.c_str());
+	if (!is.good())
+		throw runtime_error(Errors::Config::OpeningError);
+	std::stringstream ss;
+	ss << is.rdbuf();
+	return ss.str();
+}
+// TODO: @timo: Semantics to check:
+// - conf must be non-empty
+// - there must be at least one server
+// - all directives must exist and make sense in the context
+// - arguments per directive must make sense

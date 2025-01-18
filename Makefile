@@ -9,6 +9,8 @@ EXT := cpp
 
 # tools
 CXX := c++
+#CXX := clang++ # TODO: @all: make sure it compiles with this
+#CXX := g++     # TODO: @all: make sure it compiles with this as well, although not super necessary
 RM := /bin/rm -f
 MKDIR := /bin/mkdir -p
 
@@ -18,13 +20,14 @@ CFLAGS += -O2
 CFLAGS += -Wall
 CFLAGS += -Wextra
 CFLAGS += -Wshadow
-CFLAGS += -pedantic
+#CFLAGS += -pedantic # Mhhhh maybe don't put this flag, see `-Wno-...' flag below :) # TODO: @all: Remove this and comment to the left
+#CFLAGS += -Wno-variadic-macros # C++98 doesn't have variadic macros. Also, emtpy macro argument are UB. But yeahhhh we don't have to be pedantic :))
 CFLAGS += -Wconversion
 CFLAGS += -Wunreachable-code
-# CFLAGS += -std=c++98
+CFLAGS += -std=c++98
 CFLAGS += -MMD
 CFLAGS += -fdiagnostics-color=always
-# CFLAGS += -Werror
+# CFLAGS += -Werror # TODO: @all: Add back
 
 CXXFLAGS :=
 CXXFLAGS += -Weffc++
@@ -57,18 +60,18 @@ endif
 SRC :=
 
 vpath %.$(EXT) src
-SRC += repr.cpp
-SRC += main.cpp
-SRC += Server.cpp
-SRC += BaseConfig.cpp
-SRC += Config.cpp
-SRC += ServerConfig.cpp
+SRC += Ansi.cpp
 SRC += CgiHandler.cpp
+SRC += Config.cpp
 SRC += Constants.cpp
 SRC += Errors.cpp
-SRC += Logger.cpp
-SRC += Utils.cpp
 SRC += HttpServer.cpp
+SRC += Logger.cpp
+SRC += Reflection.cpp
+SRC += Repr.cpp
+SRC += Server.cpp
+SRC += Utils.cpp
+SRC += main.cpp
 
 # object vars
 OBJ := $(SRC:.$(EXT)=.o)
@@ -107,11 +110,13 @@ re:
 
 # This allows $(NAME) to be run using either an absolute, relative or no path.
 # You can pass arguments like this: make run ARGS="hello ' to this world ! ' ."
-run:
+run: 
+	make all
 	@echo
 	@PATH=".$${PATH:+:$${PATH}}" && $(NAME) $(ARGS)
 
 valrun:
+	make all
 	@echo
 	@PATH=".$${PATH:+:$${PATH}}" && valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --track-fds=yes $(NAME) $(ARGS)
 
