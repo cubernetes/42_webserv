@@ -7,10 +7,10 @@
 using std::string;
 
 namespace Errors {
-	extern const string WrongArgs;
+	const string WrongArgs(int ac);
 
 	namespace Config {
-		extern const string OpeningError;
+		const string OpeningError(const string& path);
 		const string ParseError(Tokens& tokens);
 		const string DirectiveArgumentEmpty(const string& directive);
 		const string DirectiveArgumentInvalidPort(const string& directive, const string& argument);

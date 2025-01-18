@@ -388,7 +388,7 @@ config.second[0].second[0].second["allowed_methods"][0] == "GET" -> check if the
 string readConfig(string configPath) {
 	std::ifstream is(configPath.c_str());
 	if (!is.good())
-		throw runtime_error(Errors::Config::OpeningError);
+		throw runtime_error(Errors::Config::OpeningError(configPath));
 	std::stringstream ss;
 	ss << is.rdbuf();
 	return ss.str();
