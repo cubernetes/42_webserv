@@ -5,7 +5,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <limits.h>
+#include <climits>
 
 #include "HttpServer.hpp"
 #include "Logger.hpp"
