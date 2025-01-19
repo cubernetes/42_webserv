@@ -279,7 +279,7 @@ HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer)
 	requestLine	>> request.method >> request.path >> request.httpVersion;
 
 	while (std::getline(requestStream, line) && line != "\r") {
-		size_t colonPos = line.find(';');
+		size_t colonPos = line.find(':');
 		if (colonPos != string::npos)
 		{
 			string key = line.substr(0, colonPos);
@@ -352,7 +352,7 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request)
 		}
 	}
 	std::ifstream file(filePath.c_str(), std::ios::binary);
-	if (file) {
+	if (!file) {
 		sendError(clientFd, 403, "Forbidden");
 			return ;
 	}
@@ -365,8 +365,7 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request)
 	headers << "HTTP/1.1 200 OK\r\n"
 			<< "Content-Length: " << fileSize << "\r\n"
 			<< "Content-Type: " << getMimeType(filePath) << "\r\n"
-			<< "Connection: close\r\n\r\n"
-			<< "\r\n";
+			<< "Connection: close\r\n\r\n";
 
 	string headerStr = headers.str();
 	send(clientFd, headerStr.c_str(), headerStr.length(), 0);
@@ -382,7 +381,7 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request)
 void HttpServer::sendError(int clientFd, int statusCode, const string& statusText)
 {
 	std::ostringstream response;
-	response << "HTTP/1.1" << statusCode << " " << statusText << "\r\n"
+	response << "HTTP/1.1 " << statusCode << " " << statusText << "\r\n"
 			<< "Content-Type: text/html\r\n"
 			<< "Connection: close\r\n\r\n"
 			<< "\r\n"
