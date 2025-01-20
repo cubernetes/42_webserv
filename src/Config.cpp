@@ -16,19 +16,43 @@ using std::runtime_error;
 
 static void updateIfNotExists(Directives& directives, const string& directive, const string& value) {
 	if (directives.find(directive) == directives.end())
-		directives[directive] = Arguments(1, value);
+		directives.insert(std::make_pair(directive, VEC(string, value)));
 }
 
 static void updateIfNotExistsVec(Directives& directives, const string& directive, const Arguments& value) {
 	if (directives.find(directive) == directives.end())
-		directives[directive] = value;
+		directives.insert(std::make_pair(directive, value));
+}
+
+bool directiveExists(const Directives& directives, const string& directive) {
+	Directives::const_iterator result_itr = directives.find(directive);
+	if (result_itr == directives.end())
+		return false;
+	return true;
+}
+
+const Arguments& getFirstDirective(const Directives& directives, const string& directive) {
+	Directives::const_iterator result_itr = directives.find(directive);
+	if (result_itr == directives.end())
+		throw runtime_error("Directives: Multimap Error: Tried to look up non-existing key '" + directive + "'");
+	return result_itr->second;
+}
+
+std::vector<Arguments> getAllDirectives(const Directives& directives, const string& directive) {
+	std::pair<Directives::const_iterator, Directives::const_iterator> result_itr = directives.equal_range(directive);
+	std::vector<Arguments> allArgs;
+
+	for (Directives::const_iterator it = result_itr.first; it != result_itr.second; ++it) {
+		allArgs.push_back(it->second);
+	}
+	return allArgs;
 }
 
 static void takeFromDefault(Directives& directives, Directives& httpDirectives, const string& directive, const string& value) {
 	if (httpDirectives.find(directive) == httpDirectives.end())
 		updateIfNotExists(directives, directive, value);
 	else
-		updateIfNotExistsVec(directives, directive, httpDirectives[directive]);
+		updateIfNotExistsVec(directives, directive, getFirstDirective(httpDirectives, directive));
 }
 
 static void populateDefaultHttpDirectives(Directives& directives) {
@@ -97,7 +121,7 @@ static Directives parseDirectives(Tokens& tokens) {
 		Directive directive = parseDirective(tokens);
 		if (directive.first.empty())
 			break;
-		directives[directive.first] = directive.second;
+		directives.insert(directive);
 	}
 	return directives;
 }
