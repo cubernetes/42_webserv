@@ -17,8 +17,17 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
-#define CHECKFN(checkFunction) \
-	if (checkFunction(directive, arguments) && ++counts[directive] <= 1) continue
+#define CHECKFN_MAIN(checkFunction) \
+	if (checkFunction("main", directive, arguments) && ++counts[directive] <= 1) \
+		continue
+
+#define CHECKFN_SERVER(checkFunction) \
+	if (checkFunction("server", directive, arguments) && ++counts[directive] <= 1) \
+		continue
+
+#define CHECKFN_LOCATION(checkFunction) \
+	if (checkFunction("location", directive, arguments) && ++counts[directive] <= 1) \
+		continue
 
 using std::map;
 using std::vector;
@@ -26,56 +35,57 @@ using std::pair;
 using std::string;
 using std::runtime_error;
 
-// max < 0 -> no maximum
-static inline void ensureArity(const string& directive, const Arguments& arguments, int min, int max) {
+// (max < 0 -> no maximum
+static inline void ensureArity(const string& ctx, const string& directive, const Arguments& arguments, int min, int max) {
 	int ac = static_cast<int>(arguments.size());
 	if (ac >= min && (ac <= max || max < 0))
-		return; // all good
-	throw runtime_error(Errors::Config::InvalidDirectiveArgumentCount(directive, ac, min, max));
+		return;
+	throw runtime_error(Errors::Config::InvalidDirectiveArgumentCount(ctx, directive, ac, min, max));
 }
 
-static inline void ensureOneOfStrings(const string& directive, const string& argument, const Arguments& possibilities) {
+static inline void ensureOneOfStrings(const string& ctx, const string& directive, const string& argument, const Arguments& possibilities) {
 	if (std::find(possibilities.begin(), possibilities.end(), argument) == possibilities.end()) {
-		throw runtime_error(Errors::Config::InvalidDirectiveArgument(directive, argument, possibilities));
+		throw runtime_error(Errors::Config::InvalidDirectiveArgument(ctx, directive, argument, possibilities));
 	}
 }
 
-static inline void ensureNotEmpty(const string& directive, const string& argument) {
+static inline void ensureNotEmpty(const string& ctx, const string& directive, const string& argument) {
 	if (argument.empty())
-		throw runtime_error(Errors::Config::DirectiveArgumentEmpty(directive));
+		throw runtime_error(Errors::Config::DirectiveArgumentEmpty(ctx, directive));
 }
 
-static inline void ensureInt(const string& directive, const string& argument) {
-	ensureNotEmpty(directive, argument);
+// was only needed for the int argument to the worker_processes directive, which is not needed anymore
+static inline void ensureInt(const string& ctx, const string& directive, const string& argument) {
+	ensureNotEmpty(ctx, directive, argument);
 	string::const_iterator c = argument.begin();
 	while (c != argument.end() && std::isdigit(*c)) ++c;
 	if (c == argument.end())
 		return;
-	throw runtime_error(Errors::Config::DirectiveArgumentNotNumeric(directive, argument));
+	throw runtime_error(Errors::Config::DirectiveArgumentNotNumeric(ctx, directive, argument));
 }
 
-static inline void ensureValidSize(const string& directive, const string& argument) {
-	ensureNotEmpty(directive, argument);
+static inline void ensureValidSize(const string& ctx, const string& directive, const string& argument) {
+	ensureNotEmpty(ctx, directive, argument);
 	string::const_iterator c = argument.begin();
 	while (c != argument.end() && std::isdigit(*c)) ++c;
 	if (c == argument.end())
 		return;
 	if (std::strchr("KMGT", std::toupper(*c)) && c + 1 == argument.end())
 		return;
-	throw runtime_error(Errors::Config::DirectiveInvalidSizeArgument(directive, argument));
+	throw runtime_error(Errors::Config::DirectiveInvalidSizeArgument(ctx, directive, argument));
 }
 
-static inline void ensureOnOff(const string& directive, const string& argument) {
+static inline void ensureOnOff(const string& ctx, const string& directive, const string& argument) {
 	if (argument == "on" || argument == "yes" || argument == "true")
 		return;
 	if (argument == "off" || argument == "no" || argument == "false")
 		return;
-	throw runtime_error(Errors::Config::DirectiveInvalidBooleanArgument(directive, argument));
+	throw runtime_error(Errors::Config::DirectiveInvalidBooleanArgument(ctx, directive, argument));
 }
 
 // only allow official status codes, might even prune this list even further
 // https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
-static inline void ensureStatusCode(const string& directive, const string& argument) {
+static inline void ensureStatusCode(const string& ctx, const string& directive, const string& argument) {
 	static const char *validCodesArr[] = {
 		"100", "101", "102", "103",
 		"200", "201", "202", "203", "204", "205", "206", "207", "208", "226",
@@ -88,217 +98,226 @@ static inline void ensureStatusCode(const string& directive, const string& argum
 	static const vector<string> validCodes(validCodesArr, validCodesArr + sizeof(validCodesArr) / sizeof(validCodesArr[0]));
 	if (std::find(validCodes.begin(), validCodes.end(), argument) != validCodes.end())
 		return;
-	throw runtime_error(Errors::Config::DirectiveInvalidStatusCodeArgument(directive, argument));
+	throw runtime_error(Errors::Config::DirectiveInvalidStatusCodeArgument(ctx, directive, argument));
 }
 
 static inline void ensureValidHost(const string& directive, const string& argument) {
 	if (argument == "*")
 		return;
+	}
 	char buf[16];
 	if (inet_pton(AF_INET, argument.c_str(), &buf) == 1)
 		return;
 	if (inet_pton(AF_INET6, argument.c_str(), &buf) == 1)
-		throw runtime_error(Errors::Config::DirectiveIPv6NotSupported(directive));
-	throw runtime_error(Errors::Config::DirectiveInvalidIpAddressArgument(directive, argument));
+		throw runtime_error(Errors::Config::DirectiveIPv6NotSupported(ctx, directive));
+	throw runtime_error(Errors::Config::DirectiveInvalidIpAddressArgument(ctx, directive, argument));
 }
 
-static inline void ensureValidPort(const string& directive, const string& argument) {
+static inline void ensureValidPort(const string& ctx, const string& directive, const string& argument) {
 	char *end;
 	long l;
 
 	errno = 0;
 	l = strtol(argument.c_str(), &end, 10);
 	if ((errno == ERANGE && l == LONG_MAX) || l > Constants::highestPort)
-		throw runtime_error(Errors::Config::DirectiveArgumentPortNumberTooHigh(directive, argument));
+		throw runtime_error(Errors::Config::DirectiveArgumentPortNumberTooHigh(ctx, directive, argument));
 	if ((errno == ERANGE && l == LONG_MIN) || l < 1)
-		throw runtime_error(Errors::Config::DirectiveArgumentPortNumberTooLow(directive, argument));
+		throw runtime_error(Errors::Config::DirectiveArgumentPortNumberTooLow(ctx, directive, argument));
 	if (argument.empty() || *end != '\0')
-		throw runtime_error(Errors::Config::DirectiveArgumentInvalidPort(directive, argument));
-}
-
-static inline void ensureGloballyUnique(const string& directive, const string& argument) {
-	static map<string, unsigned int> counts;
-	++counts[argument];
-	if (counts[argument] > 1) {
-		throw runtime_error(Errors::Config::DirectiveArgumentNotUnique(directive, argument));
-	}
+		throw runtime_error(Errors::Config::DirectiveArgumentInvalidPort(ctx, directive, argument));
 }
 
 
-static inline bool checkPid(const string& directive, const Arguments& arguments) {
-	if (directive == "pid") {
-		ensureArity(directive, arguments, 1, 1);
-		ensureNotEmpty(directive, arguments[0]);
-		return true;
-	}
-	return false;
-}
-
-static inline bool checkWorkerProcesses(const string& directive, const Arguments& arguments) {
-	if (directive == "worker_processes") {
-		ensureArity(directive, arguments, 1, 1);
-		ensureNotEmpty(directive, arguments[0]);
-		if (arguments[0] != "auto")
-			ensureInt(directive, arguments[0]);
-		return true;
-	}
-	return false;
-}
-
-static inline bool checkIndex(const string& directive, const Arguments& arguments) {
+static inline bool checkIndex(const string& ctx, const string& directive, const Arguments& arguments) {
 	if (directive == "index") {
-		ensureArity(directive, arguments, 1, -1);
+		ensureArity(ctx, directive, arguments, 1, -1);
 		for (Arguments::const_iterator argument = arguments.begin(); argument != arguments.end(); ++argument) {
-			ensureNotEmpty(directive, *argument);
+			ensureNotEmpty(ctx, directive, *argument);
 		}
 		return true;
 	}
 	return false;
 }
 
-static inline bool checkRoot(const string& directive, const Arguments& arguments) {
+static inline bool checkRoot(const string& ctx, const string& directive, const Arguments& arguments) {
 	if (directive == "root") {
-		ensureArity(directive, arguments, 1, 1);
-		ensureNotEmpty(directive, arguments[0]);
+		ensureArity(ctx, directive, arguments, 1, 1);
+		ensureNotEmpty(ctx, directive, arguments[0]);
 		return true;
 	}
 	return false;
 }
 
-static inline bool checkAccessLog(const string& directive, const Arguments& arguments) {
-	if (directive == "access_log") {
-		ensureArity(directive, arguments, 1, 1);
-		ensureNotEmpty(directive, arguments[0]);
-		return true;
-	}
-	return false;
-}
-
-static inline bool checkErrorLog(const string& directive, const Arguments& arguments) {
-	if (directive == "error_log") {
-		ensureArity(directive, arguments, 1, 1);
-		ensureNotEmpty(directive, arguments[0]);
-		return true;
-	}
-	return false;
-}
-
-static inline bool checkListen(const string& directive, const Arguments& arguments) {
+static inline bool checkListen(const string& ctx, const string& directive, Arguments& arguments) {
 	if (directive == "listen") {
-		ensureArity(directive, arguments, 2, 2);
-		ensureValidHost(directive, arguments[0]);
-		ensureValidPort(directive, arguments[1]);
+		ensureArity(ctx, directive, arguments, 2, 2);
+		ensureValidHost(ctx, directive, arguments[0]);
+		ensureValidPort(ctx, directive, arguments[1]);
 		return true;
 	}
 	return false;
 }
 
-static inline bool checkServerName(const string& directive, const Arguments& arguments) {
+static inline bool checkServerName(const string& ctx, const string& directive, const Arguments& arguments) {
 	if (directive == "server_name") {
-		ensureArity(directive, arguments, 1, 1);
-		ensureGloballyUnique(directive, arguments[0]);
+		ensureArity(ctx, directive, arguments, 1, -1);
 		return true;
 	}
 	return false;
 }
 
-static inline bool checkClientMaxBodySize(const string& directive, const Arguments& arguments) {
+static inline bool checkClientMaxBodySize(const string& ctx, const string& directive, const Arguments& arguments) {
 	if (directive == "client_max_body_size") {
-		ensureArity(directive, arguments, 1, 1);
-		ensureValidSize(directive, arguments[0]);
+		ensureArity(ctx, directive, arguments, 1, 1);
+		ensureValidSize(ctx, directive, arguments[0]);
 		return true;
 	}
 	return false;
 }
 
-static inline bool checkAllowMethods(const string& directive, const Arguments& arguments) {
-	if (directive == "allowed_methods") {
-		ensureArity(directive, arguments, 1, -1);
+static inline bool checkLimitExcept(const string& ctx, const string& directive, const Arguments& arguments) {
+	if (directive == "limit_except") {
+		ensureArity(ctx, directive, arguments, 1, -1);
 		for (Arguments::const_iterator argument = arguments.begin(); argument != arguments.end(); ++argument) {
-			ensureOneOfStrings(directive, *argument, VEC(string, "GET", "POST", "DELETE"));
+			ensureOneOfStrings(ctx, directive, *argument, VEC(string, "GET", "POST", "DELETE"));
 		}
 		return true;
 	}
 	return false;
 }
 
-static inline bool checkAlias(const string& directive, const Arguments& arguments) {
+static inline bool checkAlias(const string& ctx, const string& directive, const Arguments& arguments) {
 	if (directive == "alias") {
-		ensureArity(directive, arguments, 1, 1);
-		ensureNotEmpty(directive, arguments[0]);
+		ensureArity(ctx, directive, arguments, 1, 1);
+		ensureNotEmpty(ctx, directive, arguments[0]);
 		return true;
 	}
 	return false;
 }
 
-static inline bool checkReturn(const string& directive, const Arguments& arguments) {
+static inline bool checkReturn(const string& ctx, const string& directive, const Arguments& arguments) {
 	if (directive == "return") {
-		ensureArity(directive, arguments, 2, 2);
-		ensureStatusCode(directive, arguments[0]);
-		ensureNotEmpty(directive, arguments[1]);
+		ensureArity(ctx, directive, arguments, 2, 2);
+		ensureStatusCode(ctx, directive, arguments[0]);
+		ensureNotEmpty(ctx, directive, arguments[1]); // TODO: @timo: ensure it's a url starting with http or https or a location
 		return true;
 	}
 	return false;
 }
 
-static inline bool checkAutoindex(const string& directive, const Arguments& arguments) {
+static inline bool checkAutoindex(const string& ctx, const string& directive, const Arguments& arguments) {
 	if (directive == "autoindex") {
-		ensureArity(directive, arguments, 1, 1);
-		ensureOnOff(directive, arguments[0]);
+		ensureArity(ctx, directive, arguments, 1, 1);
+		ensureOnOff(ctx, directive, arguments[0]);
 		return true;
 	}
 	return false;
 }
 
-void checkGlobalDirectives(const Directives& directives) {
+static inline bool checkErrorPage(const string& ctx, const string& directive, const Arguments& arguments) {
+	if (directive == "error_page") {
+		ensureArity(ctx, directive, arguments, 1, -1);
+		Arguments::const_iterator argument = arguments.begin(), before = --arguments.end();
+		for (; argument != before; ++argument) {
+			ensureStatusCode(ctx, directive, *argument);
+		}
+		ensureNotEmpty(ctx, directive, *(++argument));
+		return true;
+	}
+	return false;
+}
+
+static inline bool checkCgiExt(const string& ctx, const string& directive, const Arguments& arguments) {
+	if (directive == "cgi_ext") {
+		ensureArity(ctx, directive, arguments, 1, 2);
+		if (arguments.size() == 2)
+			ensureNotEmpty(ctx, directive, arguments[1]);
+		return true;
+	}
+	return false;
+}
+
+static inline bool checkCgiDir(const string& ctx, const string& directive, const Arguments& arguments) {
+	if (directive == "cgi_dir") {
+		ensureArity(ctx, directive, arguments, 1, 1);
+		ensureNotEmpty(ctx, directive, arguments[0]);
+		return true;
+	}
+	return false;
+}
+
+static inline bool checkUploadDir(const string& ctx, const string& directive, const Arguments& arguments) {
+	if (directive == "upload_dir") {
+		ensureArity(ctx, directive, arguments, 1, 1);
+		// ensureNotEmpty(directive, arguments[0]); // actually it may be empty, signifying to the CGI application there's nothing to upload
+		return true;
+	}
+	return false;
+}
+
+void checkMainDirectives(Directives& directives) {
 	map<string, unsigned int> counts;
-	for (Directives::const_iterator kv = directives.begin(); kv != directives.end(); ++kv) {
+	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
-		const Arguments& arguments = kv->second;
-		CHECKFN(checkPid);
-		CHECKFN(checkWorkerProcesses);
-		CHECKFN(checkIndex);
-		CHECKFN(checkRoot);
-		CHECKFN(checkAccessLog);
-		CHECKFN(checkErrorLog);
-		CHECKFN(checkListen);
+		Arguments& arguments = kv->second;
+		CHECKFN_MAIN(checkAutoindex);
+		CHECKFN_MAIN(checkCgiDir);
+		CHECKFN_MAIN(checkCgiExt);
+		CHECKFN_MAIN(checkClientMaxBodySize);
+		CHECKFN_MAIN(checkErrorPage);
+		CHECKFN_MAIN(checkIndex);
+		CHECKFN_MAIN(checkRoot);
+		CHECKFN_MAIN(checkRoot);
+		CHECKFN_MAIN(checkUploadDir);
 		if (counts[directive] > 1)
-			throw runtime_error(Errors::Config::DirectiveNotUnique(directive));
-		throw runtime_error(Errors::Config::UnknownDirective(directive));
+			throw runtime_error(Errors::Config::DirectiveNotUnique("main", directive));
+		throw runtime_error(Errors::Config::UnknownDirective("main", directive));
 	}
 }
 
-void checkServerDirectives(const Directives& directives) {
+void checkServerDirectives(Directives& directives) {
 	map<string, unsigned int> counts;
-	for (Directives::const_iterator kv = directives.begin(); kv != directives.end(); ++kv) {
+	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
-		const Arguments& arguments = kv->second;
-		CHECKFN(checkServerName);
-		CHECKFN(checkIndex);
-		CHECKFN(checkRoot);
-		CHECKFN(checkAccessLog);
-		CHECKFN(checkErrorLog);
-		CHECKFN(checkListen);
-		CHECKFN(checkClientMaxBodySize);
+		Arguments& arguments = kv->second;
+		CHECKFN_SERVER(checkAutoindex);
+		CHECKFN_SERVER(checkCgiDir);
+		CHECKFN_SERVER(checkCgiExt);
+		CHECKFN_SERVER(checkClientMaxBodySize);
+		CHECKFN_SERVER(checkErrorPage);
+		CHECKFN_SERVER(checkIndex);
+		CHECKFN_SERVER(checkListen);
+		CHECKFN_SERVER(checkRoot);
+		CHECKFN_SERVER(checkServerName);
+		CHECKFN_SERVER(checkUploadDir);
 		if (counts[directive] > 1)
-			throw runtime_error(Errors::Config::DirectiveNotUnique(directive));
-		throw runtime_error(Errors::Config::UnknownDirective(directive));
+			throw runtime_error(Errors::Config::DirectiveNotUnique("server", directive));
+		throw runtime_error(Errors::Config::UnknownDirective("server", directive));
 	}
 }
 
-void checkRouteDirectives(const Directives& directives) {
+void checkLocationDirectives(Directives& directives) {
 	map<string, unsigned int> counts;
-	for (Directives::const_iterator kv = directives.begin(); kv != directives.end(); ++kv) {
+	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
-		const Arguments& arguments = kv->second;
-		CHECKFN(checkAllowMethods);
-		CHECKFN(checkIndex);
-		CHECKFN(checkRoot);
-		CHECKFN(checkAlias);
-		CHECKFN(checkReturn);
-		CHECKFN(checkAutoindex);
+		Arguments& arguments = kv->second;
+		CHECKFN_LOCATION(checkAlias);
+		CHECKFN_LOCATION(checkAutoindex);
+		CHECKFN_LOCATION(checkCgiDir);
+		CHECKFN_LOCATION(checkCgiExt);
+		CHECKFN_LOCATION(checkClientMaxBodySize);
+		CHECKFN_LOCATION(checkErrorPage);
+		CHECKFN_LOCATION(checkIndex);
+		CHECKFN_LOCATION(checkLimitExcept);
+		CHECKFN_LOCATION(checkReturn);
+		CHECKFN_LOCATION(checkRoot);
+		CHECKFN_LOCATION(checkUploadDir);
 		if (counts[directive] > 1)
-			throw runtime_error(Errors::Config::DirectiveNotUnique(directive));
-		throw runtime_error(Errors::Config::UnknownDirective(directive));
+			throw runtime_error(Errors::Config::DirectiveNotUnique("location", directive));
+		throw runtime_error(Errors::Config::UnknownDirective("location", directive));
 	}
 }
+
+// TODO: @timo: validate that server_name is unique among server with same host:port
+// TODO: @timo: validate that host:port is unique among servers
+// TODO: @timo: restructure config since some directives can be supplied multiple times (map is not good, rather use multimap)

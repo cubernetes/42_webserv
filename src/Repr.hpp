@@ -130,7 +130,7 @@ template <> struct ReprWrapper<bool> {
 	}
 };
 
-// not escaping string value atm
+// TODO: @timo: escape for string literal
 template <>
 struct ReprWrapper<string> {
 	static inline string
@@ -142,7 +142,7 @@ struct ReprWrapper<string> {
 	}
 };
 
-// not escaping string value atm
+// TODO: @timo: escape for string literal
 template <> 
 struct ReprWrapper<char*> {
 	static inline string
@@ -154,7 +154,7 @@ struct ReprWrapper<char*> {
 	}
 };
 
-// not escaping char value atm
+// TODO: @timo: escape for char literal
 #define CHAR_REPR(T) template <> \
 	struct ReprWrapper<T> { \
 		static inline string \

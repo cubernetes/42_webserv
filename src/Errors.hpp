@@ -12,21 +12,21 @@ namespace Errors {
 	namespace Config {
 		const string OpeningError(const string& path);
 		const string ParseError(Tokens& tokens);
-		const string DirectiveArgumentEmpty(const string& directive);
-		const string DirectiveArgumentInvalidPort(const string& directive, const string& argument);
-		const string DirectiveArgumentNotNumeric(const string& directive, const string& argument);
-		const string DirectiveArgumentNotUnique(const string& directive, const string& argument);
-		const string DirectiveNotUnique(const string& directive);
-		const string DirectiveArgumentPortNumberTooHigh(const string& directive, const string& argument);
-		const string DirectiveArgumentPortNumberTooLow(const string& directive, const string& argument);
-		const string DirectiveIPv6NotSupported(const string& directive);
-		const string DirectiveInvalidBooleanArgument(const string& directive, const string& argument);
-		const string DirectiveInvalidIpAddressArgument(const string& directive, const string& argument);
-		const string DirectiveInvalidSizeArgument(const string& directive, const string& argument);
-		const string DirectiveInvalidStatusCodeArgument(const string& directive, const string& argument);
-		const string InvalidDirectiveArgument(const string& directive, const string& argument, const Arguments& options);
-		const string InvalidDirectiveArgumentCount(const string& directive, unsigned int count, unsigned int min, unsigned int max);
-		const string UnknownDirective(const string& directive);
+		const string DirectiveArgumentEmpty(const string& ctx, const string& directive);
+		const string DirectiveArgumentInvalidPort(const string& ctx, const string& directive, const string& argument);
+		const string DirectiveArgumentNotNumeric(const string& ctx, const string& directive, const string& argument);
+		const string DirectiveArgumentNotUnique(const string& ctx, const string& directive, const string& argument);
+		const string DirectiveNotUnique(const string& ctx, const string& directive);
+		const string DirectiveArgumentPortNumberTooHigh(const string& ctx, const string& directive, const string& argument);
+		const string DirectiveArgumentPortNumberTooLow(const string& ctx, const string& directive, const string& argument);
+		const string DirectiveIPv6NotSupported(const string& ctx, const string& directive);
+		const string DirectiveInvalidBooleanArgument(const string& ctx, const string& directive, const string& argument);
+		const string DirectiveInvalidIpAddressArgument(const string& ctx, const string& directive, const string& argument);
+		const string DirectiveInvalidSizeArgument(const string& ctx, const string& directive, const string& argument);
+		const string DirectiveInvalidStatusCodeArgument(const string& ctx, const string& directive, const string& argument);
+		const string InvalidDirectiveArgument(const string& ctx, const string& directive, const string& argument, const Arguments& options);
+		const string InvalidDirectiveArgumentCount(const string& ctx, const string& directive, unsigned int count, int min, int max);
+		const string UnknownDirective(const string& ctx, const string& directive);
 		const string ZeroServers();
 		const string EmptyConfig();
 	}

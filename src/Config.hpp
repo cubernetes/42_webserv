@@ -9,9 +9,9 @@
 typedef std::vector<std::string> Arguments;
 typedef std::pair<std::string, Arguments> Directive;
 typedef std::map<std::string, Arguments> Directives;
-typedef std::pair<std::string, Directives> RouteCtx;
-typedef std::vector<RouteCtx> RouteCtxs;
-typedef std::pair<Directives, RouteCtxs> ServerCtx;
+typedef std::pair<std::string, Directives> LocationCtx;
+typedef std::vector<LocationCtx> LocationCtxs;
+typedef std::pair<Directives, LocationCtxs> ServerCtx;
 typedef std::vector<ServerCtx> ServerCtxs;
 typedef std::pair<Directives, ServerCtxs> Config;
 
