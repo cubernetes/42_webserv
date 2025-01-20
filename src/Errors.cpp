@@ -86,7 +86,3 @@ const string Errors::Config::UnknownDirective(const string& ctx, const string& d
 const string Errors::Config::ZeroServers() {
 	return CONFIG_ERROR_PREFIX((char*)"http") + cmt("There must be at least one ") + repr((char*)"server") + cmt(" directive");
 }
-
-const string Errors::Config::EmptyConfig() {
-	return CONFIG_ERROR_PREFIX((char*)"main") + cmt("The ") + repr((char*)"http") + cmt(" context is missing");
-}

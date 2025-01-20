@@ -92,7 +92,7 @@ static Directive parseDirective(Tokens& tokens) {
 static Directives parseDirectives(Tokens& tokens) {
 	Directives directives;
 	while (true) {
-		if (tokens.empty() || tokens.front().second == "location" || tokens.front().second == "}")
+		if (tokens.empty() || tokens.front().second == "location" || tokens.front().second == "server" || tokens.front().second == "}")
 			break;
 		Directive directive = parseDirective(tokens);
 		if (directive.first.empty())
@@ -160,15 +160,8 @@ static ServerCtx parseServer(Tokens& tokens) {
 	return server;
 }
 
-static ServerCtxs parseHttpBlock(Tokens& tokens) {
+static ServerCtxs parseServers(Tokens& tokens) {
 	ServerCtxs servers;
-
-	if (tokens.empty() || tokens.front().second != "http")
-		throw runtime_error(Errors::Config::ParseError(tokens));
-	tokens.pop_front();
-	if (tokens.empty() || tokens.front().first != TOK_OPENING_BRACE)
-		throw runtime_error(Errors::Config::ParseError(tokens));
-	tokens.pop_front();
 
 	while (true) {
 		if (tokens.empty() || tokens.front().second != "server")
@@ -176,10 +169,6 @@ static ServerCtxs parseHttpBlock(Tokens& tokens) {
 		ServerCtx server = parseServer(tokens);
 		servers.push_back(server);
 	}
-
-	if (tokens.empty() || tokens.front().first != TOK_CLOSING_BRACE)
-		throw runtime_error(Errors::Config::ParseError(tokens));
-	tokens.pop_front();
 
 	return servers;
 }
@@ -273,13 +262,13 @@ Config parseConfig(string rawConfig) {
 	Tokens tokens = lexConfig(rawConfig);
 
 	if (tokens.empty())
-		throw runtime_error(Errors::Config::EmptyConfig());
+		throw runtime_error(Errors::Config::ZeroServers());
 
 	Directives directives = parseDirectives(tokens);
-	ServerCtxs httpBlock = parseHttpBlock(tokens);
+	ServerCtxs servers = parseServers(tokens);
 	if (!tokens.empty())
 		throw runtime_error(Errors::Config::ParseError(tokens));
-	Config config = std::make_pair(directives, httpBlock);
+	Config config = std::make_pair(directives, servers);
 
 	updateDefaults(config);
 
