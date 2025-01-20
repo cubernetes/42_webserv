@@ -52,7 +52,7 @@ const string Errors::Config::DirectiveArgumentPortNumberTooLow(const string& ctx
 }
 
 const string Errors::Config::DirectiveIPv6NotSupported(const string& ctx, const string& directive) {
-	return CONFIG_ERROR_PREFIX(ctx) + cmt("IP address argument for directive ") + repr(directive) + cmt(" must not be IPv6");
+	return CONFIG_ERROR_PREFIX(ctx) + cmt("IP address for directive ") + repr(directive) + cmt(" must not be IPv6");
 }
 
 const string Errors::Config::DirectiveInvalidBooleanArgument(const string& ctx, const string& directive, const string& argument) {
@@ -60,7 +60,7 @@ const string Errors::Config::DirectiveInvalidBooleanArgument(const string& ctx, 
 }
 
 const string Errors::Config::DirectiveInvalidIpAddressArgument(const string& ctx, const string& directive, const string& argument) {
-	return CONFIG_ERROR_PREFIX(ctx) + cmt("IP address argument ") + repr(argument) + cmt(" for directive ") + repr(directive) + cmt(" is invalid");
+	return CONFIG_ERROR_PREFIX(ctx) + cmt("IP address ") + repr(argument) + cmt(" for directive ") + repr(directive) + cmt(" is invalid");
 }
 
 const string Errors::Config::DirectiveInvalidSizeArgument(const string& ctx, const string& directive, const string& argument) {
@@ -76,7 +76,7 @@ const string Errors::Config::InvalidDirectiveArgument(const string& ctx, const s
 }
 
 const string Errors::Config::InvalidDirectiveArgumentCount(const string& ctx, const string& directive, unsigned int count, int min, int max) {
-	return CONFIG_ERROR_PREFIX(ctx) + cmt("Argument count of ") + repr(count) + cmt(" for directive ") + repr(directive) + cmt(" is invalid. Must be at least ") + repr(min) + (max == -1 ? "" : cmt(" and at most ") + repr(max));
+	return CONFIG_ERROR_PREFIX(ctx) + cmt("Argument count of ") + repr(count) + cmt(" for directive ") + repr(directive) + cmt(" is invalid.") + (min == max ? cmt(" Must be exactly ") + repr(min) : cmt(" Must be at least ") + repr(min) + (max == -1 ? "" : cmt(" and at most ") + repr(max)));
 }
 
 const string Errors::Config::UnknownDirective(const string& ctx, const string& directive) {
