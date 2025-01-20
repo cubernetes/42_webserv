@@ -70,7 +70,7 @@ static inline void ensureValidSize(const string& ctx, const string& directive, c
 	while (c != argument.end() && std::isdigit(*c)) ++c;
 	if (c == argument.end())
 		return;
-	if (std::strchr("KMGT", std::toupper(*c)) && c + 1 == argument.end())
+	if (std::strchr("kmgt", std::tolower(*c)) && c + 1 == argument.end())
 		return;
 	throw runtime_error(Errors::Config::DirectiveInvalidSizeArgument(ctx, directive, argument));
 }
@@ -101,12 +101,13 @@ static inline void ensureStatusCode(const string& ctx, const string& directive, 
 	throw runtime_error(Errors::Config::DirectiveInvalidStatusCodeArgument(ctx, directive, argument));
 }
 
-static inline void ensureValidHost(const string& directive, const string& argument) {
-	if (argument == "*")
+static inline void ensureValidHost(const string& ctx, const string& directive, string& argument) {
+	if (argument == "*") {
+		argument = "0.0.0.0";
 		return;
 	}
 	char buf[16];
-	if (inet_pton(AF_INET, argument.c_str(), &buf) == 1)
+	if (inet_aton(argument.c_str(), NULL) == 1)
 		return;
 	if (inet_pton(AF_INET6, argument.c_str(), &buf) == 1)
 		throw runtime_error(Errors::Config::DirectiveIPv6NotSupported(ctx, directive));
