@@ -294,51 +294,37 @@ HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer)
 	return request;
 }
 
-void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request)
+bool HttpServer::validateServerConfig(int clientFd, const ServerCtx& serverConfig, string& rootDir, string& defaultIndex)
 {
-	//TODO: @sonia: multiple servers
-	if (_config.second.empty()) {
-		sendError(clientFd, 500, "Internal Server Error");
-		return ;
-	}
-
-	const ServerCtx& serverConfig = _config.second[0];
 	if (serverConfig.first.find("root") == serverConfig.first.end() ||
-		serverConfig.first.at("root").empty()) {
+			serverConfig.first.at("root").empty()) {
 			sendError(clientFd, 500, "Internal Server Error");
-			return ;
-	}
+			return false;
+		}
+		rootDir = serverConfig.first.at("root")[0];
 
-	string rootDir = serverConfig.first.at("root")[0];
-
-	if (serverConfig.first.find("index") == serverConfig.first.end() ||
-		serverConfig.first.at("index").empty()) {
+		if (serverConfig.first.find("index") == serverConfig.first.end() ||
+			serverConfig.first.at("index").empty()) {
 			sendError(clientFd, 500, "Internal Server Error");
-			return ;
-	}
+			return false;
+		}
+		defaultIndex = serverConfig.first.at("index")[0];
+		return true;
+}
 
-	if (request.path.find("..") != string::npos || 
-		request.path.find("//") != string::npos || 
-		request.path[0] != '/' || 
-		request.path.find(':') != string::npos) {  // catches attempts like /etc:/passwd
-		sendError(clientFd, 403, "Forbidden");
-		return;
-	}
+bool HttpServer::validatePath(int clientFd, const string& path) {
+		if (path.find("..") != string::npos || 
+			path.find("//") != string::npos || 
+			path[0] != '/' || 
+			path.find(':') != string::npos) {
+			sendError(clientFd, 403, "Forbidden");
+			return false;
+		}
+		return true;
+}
 
-	string filePath = rootDir + request.path;
-	string defaultIndex = serverConfig.first.at("index")[0];
-
-	if (filePath[filePath.length() - 1] == '/')
-		filePath += defaultIndex;
-	
-	struct stat fileStat;
-	if (stat(filePath.c_str(), &fileStat) == -1) {
-		sendError(clientFd, 404, "Not Found");
-			return ;
-	}
-
-	if (S_ISDIR(fileStat.st_mode))
-	{
+bool HttpServer::handleDirectoryRedirect(int clientFd, const HttpRequest& request, string& filePath, 
+							   const string& defaultIndex, struct stat& fileStat) {
 		if (request.path[request.path.length() - 1] != '/') {
 			string redirectUrl = request.path + "/";
 			std::ostringstream response;
@@ -348,39 +334,77 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request)
 			string responseStr = response.str();
 			send(clientFd, responseStr.c_str(), responseStr.length(), 0);
 			closeConnection(clientFd);
-			return ;
+			return false;
 		}
 		filePath += defaultIndex;
 		if (stat(filePath.c_str(), &fileStat) == -1) {
-		sendError(clientFd, 404, "Not Found");
-			return ;
+			sendError(clientFd, 404, "Not Found");
+			return false;
 		}
+		return true;
+}
+
+void HttpServer::sendFileContent(int clientFd, const string& filePath)
+{
+		std::ifstream file(filePath.c_str(), std::ios::binary);
+		if (!file) {
+			sendError(clientFd, 403, "Forbidden");
+			return;
+		}
+
+		file.seekg(0, std::ios::end);
+		size_t fileSize = file.tellg();
+		file.seekg(0, std::ios::beg);
+
+		std::ostringstream headers;
+		headers << "HTTP/1.1 200 OK\r\n"
+				<< "Content-Length: " << fileSize << "\r\n"
+				<< "Content-Type: " << getMimeType(filePath) << "\r\n"
+				<< "Connection: close\r\n\r\n";
+
+		string headerStr = headers.str();
+		send(clientFd, headerStr.c_str(), headerStr.length(), 0);
+
+		char buffer[4096];
+		while(file.read(buffer, sizeof(buffer)))
+			send(clientFd, buffer, file.gcount(), 0);
+		if (file.gcount() > 0)
+			send(clientFd, buffer, file.gcount(), 0);
+		closeConnection(clientFd);
+}
+
+void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request)
+{
+
+	//TODO: @sonia: multiple servers
+	if (_config.second.empty()) {
+		sendError(clientFd, 500, "Internal Server Error");
+		return;
 	}
-	std::ifstream file(filePath.c_str(), std::ios::binary);
-	if (!file) {
-		sendError(clientFd, 403, "Forbidden");
-			return ;
+
+	const ServerCtx& serverConfig = _config.second[0];
+	string rootDir, defaultIndex;
+	if (!validateServerConfig(clientFd, serverConfig, rootDir, defaultIndex))
+		return;
+	if (!validatePath(clientFd, request.path))
+		return;
+
+	string filePath = rootDir + request.path;
+	if (filePath[filePath.length() - 1] == '/')
+		filePath += defaultIndex;
+
+	struct stat fileStat;
+	if (stat(filePath.c_str(), &fileStat) == -1) {
+		sendError(clientFd, 404, "Not Found");
+		return;
 	}
 
-	file.seekg(0, std::ios::end);
-	size_t fileSize = file.tellg();
-	file.seekg(0, std::ios::beg);
+	if (S_ISDIR(fileStat.st_mode)) {
+		if (!handleDirectoryRedirect(clientFd, request, filePath, defaultIndex, fileStat))
+			return;
+	}
 
-	std::ostringstream headers;
-	headers << "HTTP/1.1 200 OK\r\n"
-			<< "Content-Length: " << fileSize << "\r\n"
-			<< "Content-Type: " << getMimeType(filePath) << "\r\n"
-			<< "Connection: close\r\n\r\n";
-
-	string headerStr = headers.str();
-	send(clientFd, headerStr.c_str(), headerStr.length(), 0);
-
-	char buffer[4096];
-	while(file.read(buffer, sizeof(buffer)))
-		send(clientFd, buffer, file.gcount(), 0);
-	if (file.gcount() > 0)
-		send(clientFd, buffer, file.gcount(), 0);
-	closeConnection(clientFd);
+	sendFileContent(clientFd, filePath);
 }
 
 void HttpServer::sendError(int clientFd, int statusCode, const string& statusText)
