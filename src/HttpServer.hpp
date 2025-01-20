@@ -63,6 +63,11 @@ private:
 	void closeConnection(int clientFd);
 	void removePollFd(int fd);
 	HttpRequest parseHttpRequest(const char *buffer);
+	bool validateServerConfig(int clientFd, const ServerCtx& serverConfig, string& rootDir, string& defaultIndex);
+	bool validatePath(int clientFd, const string& path);
+	bool handleDirectoryRedirect(int clientFd, const HttpRequest& request, string& filePath, 
+									const string& defaultIndex, struct stat& fileStat);
+	void sendFileContent(int clientFd, const string& filePath);
 	void handleGetRequest(int clientFd, const HttpRequest& request);
 	void sendError(int clientFd, int statusCode, const string& statusText);
 	void initMimeTypes();
