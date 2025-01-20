@@ -17,16 +17,12 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
-#define CHECKFN_HTTP(checkFunction) \
-	if (checkFunction("http", directive, arguments) && ++counts[directive] <= 1) \
+#define CHECKFN(ctx, checkFunction) \
+	if (checkFunction(ctx, directive, arguments) && ++counts[directive] <= 1) \
 		continue
 
-#define CHECKFN_SERVER(checkFunction) \
-	if (checkFunction("server", directive, arguments) && ++counts[directive] <= 1) \
-		continue
-
-#define CHECKFN_LOCATION(checkFunction) \
-	if (checkFunction("location", directive, arguments) && ++counts[directive] <= 1) \
+#define CHECKFN_MULTI(ctx, checkFunction) \
+	if (checkFunction(ctx, directive, arguments)) \
 		continue
 
 using std::map;
@@ -283,15 +279,14 @@ static void checkHttpDirectives(Directives& directives) {
 	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
 		Arguments& arguments = kv->second;
-		CHECKFN_HTTP(checkAutoindex);
-		CHECKFN_HTTP(checkCgiDir);
-		CHECKFN_HTTP(checkCgiExt);
-		CHECKFN_HTTP(checkClientMaxBodySize);
-		CHECKFN_HTTP(checkErrorPage);
-		CHECKFN_HTTP(checkIndex);
-		CHECKFN_HTTP(checkRoot);
-		CHECKFN_HTTP(checkRoot);
-		CHECKFN_HTTP(checkUploadDir);
+		CHECKFN      ("http", checkAutoindex);
+		CHECKFN      ("http", checkCgiDir);
+		CHECKFN_MULTI("http", checkCgiExt);
+		CHECKFN      ("http", checkClientMaxBodySize);
+		CHECKFN_MULTI("http", checkErrorPage);
+		CHECKFN_MULTI("http", checkIndex);
+		CHECKFN      ("http", checkRoot);
+		CHECKFN      ("http", checkUploadDir);
 		if (counts[directive] > 1)
 			throw runtime_error(Errors::Config::DirectiveNotUnique("http", directive));
 		throw runtime_error(Errors::Config::UnknownDirective("http", directive));
@@ -303,16 +298,16 @@ static void checkServerDirectives(Directives& directives) {
 	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
 		Arguments& arguments = kv->second;
-		CHECKFN_SERVER(checkAutoindex);
-		CHECKFN_SERVER(checkCgiDir);
-		CHECKFN_SERVER(checkCgiExt);
-		CHECKFN_SERVER(checkClientMaxBodySize);
-		CHECKFN_SERVER(checkErrorPage);
-		CHECKFN_SERVER(checkIndex);
-		CHECKFN_SERVER(checkListen);
-		CHECKFN_SERVER(checkRoot);
-		CHECKFN_SERVER(checkServerName);
-		CHECKFN_SERVER(checkUploadDir);
+		CHECKFN      ("server", checkAutoindex);
+		CHECKFN      ("server", checkCgiDir);
+		CHECKFN_MULTI("server", checkCgiExt);
+		CHECKFN      ("server", checkClientMaxBodySize);
+		CHECKFN_MULTI("server", checkErrorPage);
+		CHECKFN_MULTI("server", checkIndex);
+		CHECKFN_MULTI("server", checkListen);
+		CHECKFN      ("server", checkRoot);
+		CHECKFN_MULTI("server", checkServerName);
+		CHECKFN      ("server", checkUploadDir);
 		if (counts[directive] > 1)
 			throw runtime_error(Errors::Config::DirectiveNotUnique("server", directive));
 		throw runtime_error(Errors::Config::UnknownDirective("server", directive));
@@ -324,17 +319,17 @@ static void checkLocationDirectives(Directives& directives) {
 	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
 		Arguments& arguments = kv->second;
-		CHECKFN_LOCATION(checkAlias);
-		CHECKFN_LOCATION(checkAutoindex);
-		CHECKFN_LOCATION(checkCgiDir);
-		CHECKFN_LOCATION(checkCgiExt);
-		CHECKFN_LOCATION(checkClientMaxBodySize);
-		CHECKFN_LOCATION(checkErrorPage);
-		CHECKFN_LOCATION(checkIndex);
-		CHECKFN_LOCATION(checkLimitExcept);
-		CHECKFN_LOCATION(checkReturn);
-		CHECKFN_LOCATION(checkRoot);
-		CHECKFN_LOCATION(checkUploadDir);
+		CHECKFN      ("location", checkAlias);
+		CHECKFN      ("location", checkAutoindex);
+		CHECKFN      ("location", checkCgiDir);
+		CHECKFN_MULTI("location", checkCgiExt);
+		CHECKFN      ("location", checkClientMaxBodySize);
+		CHECKFN_MULTI("location", checkErrorPage);
+		CHECKFN_MULTI("location", checkIndex);
+		CHECKFN      ("location", checkLimitExcept);
+		CHECKFN      ("location", checkReturn);
+		CHECKFN      ("location", checkRoot);
+		CHECKFN      ("location", checkUploadDir);
 		if (counts[directive] > 1)
 			throw runtime_error(Errors::Config::DirectiveNotUnique("location", directive));
 		throw runtime_error(Errors::Config::UnknownDirective("location", directive));
