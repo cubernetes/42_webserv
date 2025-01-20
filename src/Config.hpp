@@ -15,6 +15,8 @@ typedef std::pair<Directives, LocationCtxs> ServerCtx;
 typedef std::vector<ServerCtx> ServerCtxs;
 typedef std::pair<Directives, ServerCtxs> Config;
 
+typedef std::vector<Arguments> ArgResults;
+
 enum TokenType {
 	TOK_SEMICOLON,
 	TOK_OPENING_BRACE,
@@ -33,4 +35,4 @@ Config parseConfig(std::string rawConfig);
 
 bool directiveExists(const Directives& directives, const std::string& directive);
 const Arguments& getFirstDirective(const Directives& directives, const std::string& directive);
-std::vector<Arguments> getAllDirectives(const Directives& directives, const std::string& directive);
+ArgResults getAllDirectives(const Directives& directives, const std::string& directive);

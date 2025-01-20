@@ -278,7 +278,7 @@ static inline bool checkUploadDir(const string& ctx, const string& directive, co
 	return false;
 }
 
-void checkHttpDirectives(Directives& directives) {
+static void checkHttpDirectives(Directives& directives) {
 	map<string, unsigned int> counts;
 	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
@@ -298,7 +298,7 @@ void checkHttpDirectives(Directives& directives) {
 	}
 }
 
-void checkServerDirectives(Directives& directives) {
+static void checkServerDirectives(Directives& directives) {
 	map<string, unsigned int> counts;
 	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
@@ -319,7 +319,7 @@ void checkServerDirectives(Directives& directives) {
 	}
 }
 
-void checkLocationDirectives(Directives& directives) {
+static void checkLocationDirectives(Directives& directives) {
 	map<string, unsigned int> counts;
 	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
@@ -341,6 +341,103 @@ void checkLocationDirectives(Directives& directives) {
 	}
 }
 
-// TODO: @timo: validate that server_name is unique among server with same host:port
-// TODO: @timo: validate that host:port is unique among servers
-// TODO: @timo: restructure config since some directives can be supplied multiple times (map is not good, rather use multimap)
+static inline bool addrSame(const struct in_addr& addr1, const struct in_addr& addr2) {
+	return std::memcmp(&addr1, &addr2, sizeof(addr1)) == 0;
+}
+
+static bool listenDirectivesSame(const Arguments& listenDirective, const Arguments& otherListenDirective) {
+	/*
+	const char wildcardStr[] = "0.0.0.0";
+	struct in_addr wildcard;
+
+	if (inet_aton(wildcardStr, &wildcard) == 0)
+		throw runtime_error("Logic error, 0.0.0.0 should be a valid ip address");
+	*/
+
+	const string& host = listenDirective[0];
+	const string& strPort = listenDirective[1];
+	long port;
+	struct in_addr addr;
+
+	const string& otherHost = otherListenDirective[0];
+	const string& otherStrPort = otherListenDirective[1];
+	long otherPort;
+	struct in_addr otherAddr;
+
+	if (inet_aton(host.c_str(), &addr) == 0)
+		throw runtime_error("Logic error, host should've been validated already");
+	if (inet_aton(otherHost.c_str(), &otherAddr) == 0)
+		throw runtime_error("Logic error, otherHost should've been validated already");
+
+	port = strtol(strPort.c_str(), NULL, 10);
+	otherPort = strtol(otherStrPort.c_str(), NULL, 10);
+
+	bool hostSame = addrSame(addr, otherAddr) /* || addrSame(otherAddr, wildcard) */;
+	bool portSame = port == otherPort;
+
+	return hostSame && portSame;
+}
+
+static bool overlapListen(const ArgResults& listenDirectives, const ArgResults& otherListenDirectives) {
+	for (ArgResults::const_iterator listenDirective = listenDirectives.begin(); listenDirective != listenDirectives.end(); ++listenDirective) {
+		for (ArgResults::const_iterator otherListenDirective = otherListenDirectives.begin(); otherListenDirective != otherListenDirectives.end(); ++otherListenDirective) {
+			if (listenDirectivesSame(*listenDirective, *otherListenDirective)) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+void ensureNoOverlapServerName(const ArgResults& serverNameDirectives, const ArgResults& otherServerNameDirectives) {
+	for (ArgResults::const_iterator serverNameDirective = serverNameDirectives.begin(); serverNameDirective != serverNameDirectives.end(); ++serverNameDirective) {
+		for (ArgResults::const_iterator otherServerNameDirective = otherServerNameDirectives.begin(); otherServerNameDirective != otherServerNameDirectives.end(); ++otherServerNameDirective) {
+			for (Arguments::const_iterator serverName = serverNameDirective->begin(); serverName != serverNameDirective->end(); ++serverName) {
+				for (Arguments::const_iterator otherServerName = otherServerNameDirective->begin(); otherServerName != otherServerNameDirective->end(); ++otherServerName) {
+					if (*serverName == *otherServerName) {
+						throw runtime_error("Config error: duplicate server_name values between servers");
+					}
+				}
+			}
+		}
+	}
+}
+
+void ensureServerUniqueness(const Directives& directives, const ServerCtxs& servers) {
+	ArgResults listenDirectives = getAllDirectives(directives, "listen");
+	ArgResults serverNameDirectives = getAllDirectives(directives, "server_name");
+
+	for (ArgResults::const_iterator listenDirective = listenDirectives.begin(); listenDirective != listenDirectives.end(); ++listenDirective) {
+		for (ArgResults::const_iterator otherListenDirective = listenDirectives.begin(); otherListenDirective != listenDirectives.end(); ++otherListenDirective) {
+			if (listenDirective == otherListenDirective) continue;
+			if (listenDirectivesSame(*listenDirective, *otherListenDirective)) {
+				throw runtime_error("Config error: duplicate listen values in the same server");
+			}
+		}
+	}
+
+	for (ServerCtxs::const_iterator server = servers.begin(); server != servers.end(); ++server) {
+		if (&directives == &server->first) continue;
+		
+		ArgResults otherListenDirectives = getAllDirectives(server->first, "listen");
+		ArgResults otherServerNameDirectives = getAllDirectives(server->first, "server_name");
+
+		if (overlapListen(listenDirectives, otherListenDirectives)) {
+			ensureNoOverlapServerName(serverNameDirectives, otherServerNameDirectives);
+		}
+	}
+}
+
+void checkDirectives(Config& config) {
+	checkHttpDirectives(config.first);
+	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
+		checkServerDirectives(server->first);
+		for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
+			checkLocationDirectives(location->second);
+		}
+	}
+	// we have to do it in a separate loop, since in the first loop, all the listen directives must be validated first
+	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
+		ensureServerUniqueness(server->first, config.second);
+	}
+}

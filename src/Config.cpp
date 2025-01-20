@@ -38,9 +38,9 @@ const Arguments& getFirstDirective(const Directives& directives, const string& d
 	return result_itr->second;
 }
 
-std::vector<Arguments> getAllDirectives(const Directives& directives, const string& directive) {
+ArgResults getAllDirectives(const Directives& directives, const string& directive) {
 	std::pair<Directives::const_iterator, Directives::const_iterator> result_itr = directives.equal_range(directive);
-	std::vector<Arguments> allArgs;
+	ArgResults allArgs;
 
 	for (Directives::const_iterator it = result_itr.first; it != result_itr.second; ++it) {
 		allArgs.push_back(it->second);
@@ -268,16 +268,6 @@ static void updateDefaults(Config& config) {
 		populateDefaultServerDirectives(server->first, config.first);
 		for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
 			populateDefaultLocationDirectives(location->second, server->first);
-		}
-	}
-}
-
-static void checkDirectives(Config& config) {
-	checkHttpDirectives(config.first);
-	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
-		checkServerDirectives(server->first);
-		for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
-			checkLocationDirectives(location->second);
 		}
 	}
 }
