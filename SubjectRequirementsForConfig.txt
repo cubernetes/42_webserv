@@ -4,12 +4,14 @@
 # Subject
 1. choose port and host for each server
 	- server.listen
-	- default: 0.0.0.0:8000
+	- default: *:8000
+	- multiple: yes
 	- https://nginx.org/en/docs/http/ngx_http_core_module.html#listen
 
 2. setup server_names or not
 	- server.server_name
 	- default: ""
+	- multiple: yes
 	- https://nginx.org/en/docs/http/ngx_http_core_module.html#server_name
 
 3. the first server for a host:port will be the default for this host:port (that means it will answer to all the requests that don't belong to an other server).
@@ -18,48 +20,61 @@
 4. setup default error pages
 	- {http,server,location}.error_page
 	- default: none
+	- multiple: yes
 	- https://nginx.org/en/docs/http/ngx_http_core_module.html#error_page
 
 5. limit client body size
 	- {http,server,location}.client_max_body_size
 	- default: 1m
+	- multiple: no
 	- https://nginx.org/en/docs/http/ngx_http_core_module.html#client_max_body_size
 
 6. setup routes with one or multiple of the following rules/configuration
 (routes won't be using regexp)
+	- location == route in nginx-speak
 	- server.location
 	- default: none
+	- multiple: yes
 	- https://nginx.org/en/docs/http/ngx_http_core_module.html#location
 
 6.1 define a list of accepted http methods for the route
 	- location.limit_except
 	- default: none
+	- multiple: no
 	- https://nginx.org/en/docs/http/ngx_http_core_module.html#limit_except
 
 6.2 define a http redirection
-	- {server,location}.return
+	- location.return
 	- default: none
+	- multiple: yes
 	- https://nginx.org/en/docs/http/ngx_http_rewrite_module.html#return
 
 6.3 define a directory or a file from where the file should be searched
 	- location.alias
 	- default: none
+	- multiple: no
 	- https://nginx.org/en/docs/http/ngx_http_core_module.html#alias
 
 6.4 turn on or off directory listing
 	- {http,server,location}.autoindex
 	- default: off
+	- multiple: no
 	- https://nginx.org/en/docs/http/ngx_http_autoindex_module.html#autoindex
 
 6.5 set a default file to answer if the request is a directory
 	- {http,server,location}.index
 	- default: index.html
+	- multiple: yes
 	- https://nginx.org/en/docs/http/ngx_http_index_module.html#index
 
 6.6 execute CGI based on certain file extension (for example .php)
 	- no NGINX equivalent
-	- {http,server,location}.cgi -> register file extension (1st arg) and optional handler (2nd arg)
-	- {http,server,location}.cgi_bin -> whitelist a directory for CGI-use, absolute or relative to root directive
+	- {http,server,location}.cgi_ext -> register file extension (1st arg) and optional handler (2nd arg)
+	- default: none
+	- multiple: yes
+	- {http,server,location}.cgi_dir -> whitelist a directory for CGI-use, absolute or relative to root directive
+	- default: cgi-bin
+	- multiple: no
 
 6.7 make it work with POST andd GET methods
 	- probably referring to CGI, since a simple static web server doesn't need POST
@@ -68,6 +83,7 @@
 	- no NGINX equivalent
 	- {http,server,location}.upload_dir -> absolute or relative to root directive
 	- default: ""
+	- multiple: no
 	- always passed as UPLOAD_FILE_PATH to CGI
 
 6.8.1 do you wonder what a CGI is
@@ -100,4 +116,5 @@
 7. define a root for various file operations
 	- {http,server,location}.root
 	- default: html
+	- multiple: no
 	- https://nginx.org/en/docs/http/ngx_http_core_module.html#root
