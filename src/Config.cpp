@@ -277,7 +277,7 @@ static Arguments processIPv4Address(const Arguments& arguments) {
 	string port;
 	Arguments newArgs;
 	string::size_type pos;
-	if ((pos = host.find(':')) != string::npos) {
+	if ((pos = host.rfind(':')) != string::npos) {
 		ipAddress = host.substr(0, pos);
 		port = host.substr(pos + 1);
 	} else if ((pos = host.find('.')) != string::npos) {
