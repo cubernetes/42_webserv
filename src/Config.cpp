@@ -24,14 +24,14 @@ static void updateIfNotExistsVec(Directives& directives, const string& directive
 		directives[directive] = value;
 }
 
-static void takeFromDefault(Directives& directives, Directives& mainDirectives, const string& directive, const string& value) {
-	if (mainDirectives.find(directive) == mainDirectives.end())
+static void takeFromDefault(Directives& directives, Directives& httpDirectives, const string& directive, const string& value) {
+	if (httpDirectives.find(directive) == httpDirectives.end())
 		updateIfNotExists(directives, directive, value);
 	else
-		updateIfNotExistsVec(directives, directive, mainDirectives[directive]);
+		updateIfNotExistsVec(directives, directive, httpDirectives[directive]);
 }
 
-static void populateDefaultMainDirectives(Directives& directives) {
+static void populateDefaultHttpDirectives(Directives& directives) {
 	updateIfNotExists(directives, "autoindex", "off");
 	updateIfNotExists(directives, "cgi_dir", "cgi-bin");
 	updateIfNotExists(directives, "client_max_body_size", "1m");
@@ -40,13 +40,13 @@ static void populateDefaultMainDirectives(Directives& directives) {
 	updateIfNotExists(directives, "upload_dir", "");
 }
 
-static void populateDefaultServerDirectives(Directives& directives, Directives& mainDirectives) {
-	takeFromDefault(directives, mainDirectives, "autoindex", "off");
-	takeFromDefault(directives, mainDirectives, "cgi_dir", "cgi-bin");
-	takeFromDefault(directives, mainDirectives, "client_max_body_size", "1m");
-	takeFromDefault(directives, mainDirectives, "index", "index.html");
-	takeFromDefault(directives, mainDirectives, "root", "html");
-	takeFromDefault(directives, mainDirectives, "upload_dir", "");
+static void populateDefaultServerDirectives(Directives& directives, Directives& httpDirectives) {
+	takeFromDefault(directives, httpDirectives, "autoindex", "off");
+	takeFromDefault(directives, httpDirectives, "cgi_dir", "cgi-bin");
+	takeFromDefault(directives, httpDirectives, "client_max_body_size", "1m");
+	takeFromDefault(directives, httpDirectives, "index", "index.html");
+	takeFromDefault(directives, httpDirectives, "root", "html");
+	takeFromDefault(directives, httpDirectives, "upload_dir", "");
 
 	updateIfNotExists(directives, "listen", "*:8000");
 	updateIfNotExists(directives, "server_name", "");
@@ -184,10 +184,6 @@ static ServerCtxs parseHttpBlock(Tokens& tokens) {
 	return servers;
 }
 
-static Token newToken(TokenType t, const string& s) {
-	return Token(t, s);
-}
-
 static string removeComments(const string& rawConfig) {
 	std::istringstream iss(rawConfig);
 	string line;
@@ -207,6 +203,23 @@ static string removeComments(const string& rawConfig) {
 	return cleanedConfig;
 }
 
+static Token newToken(TokenType t, const string& s) {
+	return Token(t, s);
+}
+
+static void updateTokenType(Tokens& tokens) {
+	if (tokens.back().second == ";")
+		tokens.back().first = TOK_SEMICOLON;
+	else if (tokens.back().second == "{")
+		tokens.back().first = TOK_OPENING_BRACE;
+	else if (tokens.back().second == "}")
+		tokens.back().first = TOK_CLOSING_BRACE;
+	else if (tokens.back().second == "")
+		tokens.back().first = TOK_EOF;
+	else
+		tokens.back().first = TOK_WORD;
+}
+
 static Tokens lexConfig(string rawConfig) {
 	Tokens tokens;
 	char c;
@@ -220,16 +233,7 @@ static Tokens lexConfig(string rawConfig) {
 		if (isspace(c) || c == ';' || c == '{' || c == '}' || prevC == ';' || prevC == '{' || prevC == '}') {
 			if (!tokens.empty()) {
 				createNewToken = true;
-				if (tokens.back().second == ";")
-					tokens.back().first = TOK_SEMICOLON;
-				else if (tokens.back().second == "{")
-					tokens.back().first = TOK_OPENING_BRACE;
-				else if (tokens.back().second == "}")
-					tokens.back().first = TOK_CLOSING_BRACE;
-				else if (tokens.back().second == "")
-					tokens.back().first = TOK_EOF;
-				else
-					tokens.back().first = TOK_WORD;
+				updateTokenType(tokens);
 			}
 			prevC = c;
 			if (isspace(c))
@@ -246,7 +250,7 @@ static Tokens lexConfig(string rawConfig) {
 }
 
 static void updateDefaults(Config& config) {
-	populateDefaultMainDirectives(config.first);
+	populateDefaultHttpDirectives(config.first);
 	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
 		populateDefaultServerDirectives(server->first, config.first);
 		for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
@@ -256,7 +260,7 @@ static void updateDefaults(Config& config) {
 }
 
 static void checkDirectives(Config& config) {
-	checkMainDirectives(config.first);
+	checkHttpDirectives(config.first);
 	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
 		checkServerDirectives(server->first);
 		for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
@@ -287,7 +291,7 @@ Config parseConfig(string rawConfig) {
 	return config;
 }
 /* How to access Config config:
-# Main directives:
+# Http directives:
 config.first["pid"] -> gives back vector of args
 config.first["pid"][0] -> most directives have only one argument, so you'll use this pattern quite often
                           watch out that some directive _might_ have zero arguments, although I can't think of any, but the parser allows that

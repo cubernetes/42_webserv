@@ -2,6 +2,6 @@
 
 #include "Config.hpp"
 
-void checkMainDirectives(Directives& directives);
+void checkHttpDirectives(Directives& directives);
 void checkServerDirectives(Directives& directives);
 void checkLocationDirectives(Directives& directives);
