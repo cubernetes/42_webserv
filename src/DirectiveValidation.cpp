@@ -149,11 +149,33 @@ static inline bool checkRoot(const string& ctx, const string& directive, const A
 	return false;
 }
 
+static inline Arguments processIPv4Address(const string& host) {
+	string ipAddress;
+	string port;
+	Arguments newArgs;
+	string::size_type pos;
+	if ((pos = host.rfind(':')) != string::npos) {
+		ipAddress = host.substr(0, pos);
+		port = host.substr(pos + 1);
+	} else if ((pos = host.find('.')) != string::npos) {
+		ipAddress = host;
+		port = Constants::defaultPort;
+	} else {
+		ipAddress = Constants::defaultAddress;
+		port = host;
+	}
+	newArgs.push_back(ipAddress);
+	newArgs.push_back(port);
+	return newArgs;
+}
+
 static inline bool checkListen(const string& ctx, const string& directive, Arguments& arguments) {
 	if (directive == "listen") {
-		ensureArity(ctx, directive, arguments, 2, 2);
-		ensureValidHost(ctx, directive, arguments[0]);
-		ensureValidPort(ctx, directive, arguments[1]);
+		ensureArity(ctx, directive, arguments, 1, 1);
+		Arguments ipAndPort = processIPv4Address(arguments[0]);
+		ensureValidHost(ctx, directive, ipAndPort[0]);
+		ensureValidPort(ctx, directive, ipAndPort[1]);
+		arguments = ipAndPort;
 		return true;
 	}
 	return false;

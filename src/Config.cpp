@@ -245,7 +245,7 @@ static Tokens lexConfig(string rawConfig) {
 	return tokens;
 }
 
-void updateDefaults(Config& config) {
+static void updateDefaults(Config& config) {
 	populateDefaultMainDirectives(config.first);
 	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
 		populateDefaultServerDirectives(server->first, config.first);
@@ -255,46 +255,13 @@ void updateDefaults(Config& config) {
 	}
 }
 
-void checkDirectives(Config& config) {
+static void checkDirectives(Config& config) {
 	checkMainDirectives(config.first);
 	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
 		checkServerDirectives(server->first);
 		for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
 			checkLocationDirectives(location->second);
 		}
-	}
-}
-
-static Arguments processIPv4Address(const Arguments& arguments) {
-	if (arguments.size() >= 2)
-		return arguments;
-	else if (arguments.size() == 1 && arguments[0].empty())
-		return arguments;
-	else if (arguments.size() <= 0)
-		return arguments;
-	string host = arguments[0];
-	string ipAddress;
-	string port;
-	Arguments newArgs;
-	string::size_type pos;
-	if ((pos = host.rfind(':')) != string::npos) {
-		ipAddress = host.substr(0, pos);
-		port = host.substr(pos + 1);
-	} else if ((pos = host.find('.')) != string::npos) {
-		ipAddress = host;
-		port = Constants::defaultPort;
-	} else {
-		ipAddress = Constants::defaultAddress;
-		port = host;
-	}
-	newArgs.push_back(ipAddress);
-	newArgs.push_back(port);
-	return newArgs;
-}
-
-void postProcess(Config& config) {
-	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
-		server->first["listen"] = processIPv4Address(server->first["listen"]);
 	}
 }
 
@@ -311,8 +278,6 @@ Config parseConfig(string rawConfig) {
 	Config config = std::make_pair(directives, httpBlock);
 
 	updateDefaults(config);
-
-	postProcess(config);
 
 	checkDirectives(config);
 
