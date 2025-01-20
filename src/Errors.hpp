@@ -8,6 +8,7 @@ using std::string;
 
 namespace Errors {
 	const string WrongArgs(int ac);
+	const string MultimapIndex(const string& key);
 
 	namespace Config {
 		const string OpeningError(const string& path);
@@ -28,7 +29,6 @@ namespace Errors {
 		const string InvalidDirectiveArgumentCount(const string& ctx, const string& directive, unsigned int count, int min, int max);
 		const string UnknownDirective(const string& ctx, const string& directive);
 		const string ZeroServers();
-		const string EmptyConfig();
 	}
 }
 

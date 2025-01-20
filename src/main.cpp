@@ -5,6 +5,8 @@
 #include "Logger.hpp"
 #include "Utils.hpp"
 
+#include "Config.hpp"
+
 using std::cout;
 
 int main(int ac, char **av) {

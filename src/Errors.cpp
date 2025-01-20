@@ -12,6 +12,10 @@ const string Errors::WrongArgs(int ac) {
 	return cmt("Server started with invalid number of arguments: ") + repr(ac);
 }
 
+const string Errors::MultimapIndex(const string& key) {
+	return cmt("Directives: Multimap Error: Tried to look up non-existing key ") + repr(key);
+}
+
 const string Errors::Config::OpeningError(const string& path) {
 	return cmt("Failed to open configuration file: ") + repr(path);
 }

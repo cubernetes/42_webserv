@@ -34,7 +34,7 @@ bool directiveExists(const Directives& directives, const string& directive) {
 const Arguments& getFirstDirective(const Directives& directives, const string& directive) {
 	Directives::const_iterator result_itr = directives.find(directive);
 	if (result_itr == directives.end())
-		throw runtime_error("Directives: Multimap Error: Tried to look up non-existing key '" + directive + "'");
+		throw runtime_error(Errors::MultimapIndex(directive));
 	return result_itr->second;
 }
 
