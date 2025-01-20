@@ -293,7 +293,6 @@ static Arguments processIPv4Address(const Arguments& arguments) {
 }
 
 void postProcess(Config& config) {
-	config.first["listen"] = processIPv4Address(config.first["listen"]);
 	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
 		server->first["listen"] = processIPv4Address(server->first["listen"]);
 	}
