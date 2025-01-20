@@ -186,15 +186,15 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 
 void HttpServer::run() {
 	_running = true;
-	int j = 8;
 
-	while (j--) {
+	while (_running){
+
 		int ready = poll(_pollFds.data(), _pollFds.size(), -1);
 		if (ready < 0) {
 			if (errno == EINTR)
-				continue;
+				continue ;
 			Logger::logerror("Poll failed");
-			break;
+			break ;
 		}
 		
 		for (size_t i = 0; i < _pollFds.size(); i++) {
@@ -258,10 +258,10 @@ void HttpServer::handleClientData(int clientFd) {
 		handleGetRequest(clientFd, request);
 	else {
 		string response = "HTTP/1.1 501 Not Implemented\r\n"
-					"Content-Length: 21\r\n"
+					"Content-Length: 22\r\n"
 					"Connection: close\r\n"
 					"\r\n"
-					"Method not implemented";
+					"Method not implemented\n";
 
 		send(clientFd, response.c_str(), response.length(), 0);
 		closeConnection(clientFd);
@@ -270,11 +270,13 @@ void HttpServer::handleClientData(int clientFd) {
 
 HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer)
 {
+
 	HttpRequest request;
 	std::istringstream requestStream(buffer);
 	string line;
 
 	std::getline(requestStream, line);
+
 	std::istringstream requestLine(line);
 	requestLine	>> request.method >> request.path >> request.httpVersion;
 
@@ -315,13 +317,16 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request)
 			return ;
 	}
 
-	string defaultIndex = serverConfig.first.at("index")[0];
-	string filePath = rootDir + request.path;
-
-	if (filePath.find("..") != string::npos) {
+	if (request.path.find("..") != string::npos || 
+		request.path.find("//") != string::npos || 
+		request.path[0] != '/' || 
+		request.path.find(':') != string::npos) {  // catches attempts like /etc:/passwd
 		sendError(clientFd, 403, "Forbidden");
-			return ;
+		return;
 	}
+
+	string filePath = rootDir + request.path;
+	string defaultIndex = serverConfig.first.at("index")[0];
 
 	if (filePath[filePath.length() - 1] == '/')
 		filePath += defaultIndex;
