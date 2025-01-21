@@ -79,7 +79,7 @@ const string Errors::Config::InvalidDirectiveArgument(const string& ctx, const s
 	return CONFIG_ERROR_PREFIX(ctx) + cmt("Argument ") + repr(argument) + cmt(" for directive ") + repr(directive) + cmt(" is invalid. Must be one of ") + repr(options);
 }
 
-const string Errors::Config::InvalidDirectiveArgumentCount(const string& ctx, const string& directive, unsigned int count, int min, int max) {
+const string Errors::Config::InvalidDirectiveArgumentCount(const string& ctx, const string& directive, int count, int min, int max) {
 	return CONFIG_ERROR_PREFIX(ctx) + cmt("Argument count of ") + repr(count) + cmt(" for directive ") + repr(directive) + cmt(" is invalid.") + (min == max ? cmt(" Must be exactly ") + repr(min) : cmt(" Must be at least ") + repr(min) + (max == -1 ? "" : cmt(" and at most ") + repr(max)));
 }
 

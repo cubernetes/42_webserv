@@ -1,12 +1,13 @@
 #include <iostream>
 #include <ostream>
-#include <netinet/in.h>
-#include <fcntl.h>
+#include <cstdlib>
 #include <fstream>
+#include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
 #include <sys/stat.h>
+#include <netinet/in.h>
 
 #include "HttpServer.hpp"
 #include "Logger.hpp"
@@ -296,19 +297,19 @@ HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer)
 
 bool HttpServer::validateServerConfig(int clientFd, const ServerCtx& serverConfig, string& rootDir, string& defaultIndex)
 {
-	if (serverConfig.first.find("root") == serverConfig.first.end() ||
-			serverConfig.first.at("root").empty()) {
+	if (!directiveExists(serverConfig.first, "root") ||
+			getFirstDirective(serverConfig.first, "root").empty()) {
 			sendError(clientFd, 500, "Internal Server Error");
 			return false;
 		}
-		rootDir = serverConfig.first.at("root")[0];
+		rootDir = getFirstDirective(serverConfig.first, "root")[0];
 
-		if (serverConfig.first.find("index") == serverConfig.first.end() ||
-			serverConfig.first.at("index").empty()) {
+		if (!directiveExists(serverConfig.first, "index") ||
+			getFirstDirective(serverConfig.first, "index").empty()) {
 			sendError(clientFd, 500, "Internal Server Error");
 			return false;
 		}
-		defaultIndex = serverConfig.first.at("index")[0];
+		defaultIndex = getFirstDirective(serverConfig.first, "index")[0];
 		return true;
 }
 
@@ -353,7 +354,7 @@ void HttpServer::sendFileContent(int clientFd, const string& filePath)
 		}
 
 		file.seekg(0, std::ios::end);
-		size_t fileSize = file.tellg();
+		long fileSize = file.tellg();
 		file.seekg(0, std::ios::beg);
 
 		std::ostringstream headers;
@@ -367,9 +368,9 @@ void HttpServer::sendFileContent(int clientFd, const string& filePath)
 
 		char buffer[4096];
 		while(file.read(buffer, sizeof(buffer)))
-			send(clientFd, buffer, file.gcount(), 0);
+			send(clientFd, buffer, (size_t)file.gcount(), 0);
 		if (file.gcount() > 0)
-			send(clientFd, buffer, file.gcount(), 0);
+			send(clientFd, buffer, (size_t)file.gcount(), 0);
 		closeConnection(clientFd);
 }
 

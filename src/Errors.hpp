@@ -26,7 +26,7 @@ namespace Errors {
 		const string DirectiveInvalidSizeArgument(const string& ctx, const string& directive, const string& argument);
 		const string DirectiveInvalidStatusCodeArgument(const string& ctx, const string& directive, const string& argument);
 		const string InvalidDirectiveArgument(const string& ctx, const string& directive, const string& argument, const Arguments& options);
-		const string InvalidDirectiveArgumentCount(const string& ctx, const string& directive, unsigned int count, int min, int max);
+		const string InvalidDirectiveArgumentCount(const string& ctx, const string& directive, int count, int min, int max);
 		const string UnknownDirective(const string& ctx, const string& directive);
 		const string ZeroServers();
 	}
