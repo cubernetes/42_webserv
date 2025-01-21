@@ -24,6 +24,7 @@
 using std::string;
 using std::vector;
 using std::map;
+using std::multimap;
 using std::pair;
 using ansi::rgb;
 using ansi::rgbBg;
@@ -130,7 +131,7 @@ template <> struct ReprWrapper<bool> {
 	}
 };
 
-// not escaping string value atm
+// TODO: @timo: escape for string literal
 template <>
 struct ReprWrapper<string> {
 	static inline string
@@ -142,7 +143,7 @@ struct ReprWrapper<string> {
 	}
 };
 
-// not escaping string value atm
+// TODO: @timo: escape for string literal
 template <> 
 struct ReprWrapper<char*> {
 	static inline string
@@ -154,7 +155,7 @@ struct ReprWrapper<char*> {
 	}
 };
 
-// not escaping char value atm
+// TODO: @timo: escape for char literal
 #define CHAR_REPR(T) template <> \
 	struct ReprWrapper<T> { \
 		static inline string \
@@ -293,6 +294,44 @@ struct ReprWrapper<map<K, V> > {
 	}
 };
 
+// for multimap
+template <typename K, typename V>
+struct ReprWrapper<multimap<K, V> > {
+	static inline string
+	repr(const multimap<K, V>& m, bool json = false) {
+		std::ostringstream oss;
+		if (json)
+			oss << "{";
+		else if (Constants::verboseLogs)
+			oss << kwrd("std") + punct("::") + kwrd("multimap") + punct("({");
+		else
+			oss << punct("{");
+		int i = 0;
+		for (typename multimap<K, V>::const_iterator it = m.begin(); it != m.end(); ++it) {
+			if (i != 0) {
+				if (json)
+					oss << ", ";
+				else
+					oss << punct(", ");
+			}
+			oss << ReprWrapper<K>::repr(it->first, json);
+			if (json)
+				oss << ": ";
+			else
+				oss << punct(": ");
+			oss << ReprWrapper<V>::repr(it->second, json);
+			++i;
+		}
+		if (json)
+			oss << "}";
+		else if (Constants::verboseLogs)
+			oss << punct("})");
+		else
+			oss << punct("}");
+		return oss.str();
+	}
+};
+
 // for pair
 template <typename F, typename S>
 struct ReprWrapper<pair<F, S> > {
@@ -320,6 +359,9 @@ static inline std::ostream& operator<<(std::ostream& os, const vector<T>& val) {
 
 template<typename K, typename V>
 static inline std::ostream& operator<<(std::ostream& os, const map<K, V>& val) { return os << repr(val, Constants::jsonTrace); }
+
+template<typename K, typename V>
+static inline std::ostream& operator<<(std::ostream& os, const multimap<K, V>& val) { return os << repr(val, Constants::jsonTrace); }
 
 template<typename F, typename S>
 static inline std::ostream& operator<<(std::ostream& os, const pair<F, S>& val) { return os << repr(val, Constants::jsonTrace); }

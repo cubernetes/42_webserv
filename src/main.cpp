@@ -5,12 +5,13 @@
 #include "Logger.hpp"
 #include "Utils.hpp"
 
+#include "Config.hpp"
+
 using std::cout;
 
 int main(int ac, char **av) {
 	try {
 		HttpServer server; // TODO: @discuss: consider initializing server with `const Config&' (see Server.hpp), since a server without a config is impossible
-		cout << server << '\n';
 
 		string configPath = Utils::parseArgs(ac, av);
 		if (!server.setup(parseConfig(readConfig(configPath)))) { // TODO: @discuss: when initializing using constructor instead, we would throw a runtime exception instead which would be caught below

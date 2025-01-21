@@ -27,6 +27,7 @@ CFLAGS += -Wunreachable-code
 CFLAGS += -std=c++98
 CFLAGS += -MMD
 CFLAGS += -fdiagnostics-color=always
+CFLAGS += -fmax-errors=1
 # CFLAGS += -Werror # TODO: @all: Add back
 
 CXXFLAGS :=
@@ -60,6 +61,7 @@ endif
 SRC :=
 
 vpath %.$(EXT) src
+SRC += DirectiveValidation.cpp
 SRC += Ansi.cpp
 SRC += CgiHandler.cpp
 SRC += Config.cpp
