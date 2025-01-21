@@ -1,11 +1,13 @@
 #include <iostream>
 #include <ostream>
-#include <sys/socket.h> // TODO: @sonia: unnecessary header?
-#include <netinet/in.h>
+#include <cstdlib>
+#include <fstream>
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
-#include <climits>
+#include <limits.h>
+#include <sys/stat.h>
+#include <netinet/in.h>
 
 #include "HttpServer.hpp"
 #include "Logger.hpp"
@@ -32,8 +34,10 @@ HttpServer::HttpServer() :
 	_pollFds(),
 	_running(false),
 	_config(),
-	_id(_idCntr++) {
+	_id(_idCntr++),
+	_mimeTypes() {
 	TRACE_DEFAULT_CTOR;
+	initMimeTypes();
 }
 
 HttpServer::HttpServer(const HttpServer& other) :
@@ -41,7 +45,8 @@ HttpServer::HttpServer(const HttpServer& other) :
 	_pollFds(other._pollFds),
 	_running(other._running),
 	_config(other._config),
-	_id(_idCntr++) {
+	_id(_idCntr++),
+	_mimeTypes() {
 	TRACE_COPY_CTOR;
 }
 
@@ -85,9 +90,50 @@ std::ostream& operator<<(std::ostream& os, const HttpServer& server) {
 // end of boilerplate
 
 
+void HttpServer::initMimeTypes() {
+
+	// Web content
+	_mimeTypes["html"] = "text/html";
+	_mimeTypes["htm"] = "text/html";
+	_mimeTypes["css"] = "text/css";
+	_mimeTypes["js"] = "application/javascript";
+	_mimeTypes["xml"] = "application/xml";
+	_mimeTypes["json"] = "application/json";
+
+	// Text files
+	_mimeTypes["txt"] = "text/plain";
+	_mimeTypes["csv"] = "text/csv";
+	_mimeTypes["md"] = "text/markdown";
+
+	// Images
+	_mimeTypes["jpg"] = "image/jpeg";
+	_mimeTypes["jpeg"] = "image/jpeg";
+	_mimeTypes["png"] = "image/png";
+	_mimeTypes["gif"] = "image/gif";
+	_mimeTypes["svg"] = "image/svg+xml";
+	_mimeTypes["ico"] = "image/x-icon";
+	_mimeTypes["webp"] = "image/webp";
+
+	// Documents
+	_mimeTypes["pdf"] = "application/pdf";
+	_mimeTypes["doc"] = "application/msword";
+	_mimeTypes["docx"] = "application/msword";
+	_mimeTypes["xls"] = "application/vnd.ms-excel";
+	_mimeTypes["xlsx"] = "application/vnd.ms-excel";
+	_mimeTypes["zip"] = "application/zip";
+
+	// Multimedia
+	_mimeTypes["mp3"] = "audio/mpeg";
+	_mimeTypes["mp4"] = "video/mp4";
+	_mimeTypes["webm"] = "video/webm";
+}
+
 bool HttpServer::setup(const Config& conf) {
 	_config = conf;
-	return setupSocket("127.0.0.1", 8080);  // Hardcoded for now
+	const Arguments hostPort = getFirstDirective(conf.second[0].first, "listen");
+	const char *host = hostPort[0].c_str();
+	int port = std::atoi(hostPort[1].c_str());
+	return setupSocket(host, port);
 }
 
 bool HttpServer::setupSocket(const std::string& ip, int port) {
@@ -105,7 +151,7 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 		return false;
 	}
 	
-	if (fcntl(_serverFd, F_SETFL, O_NONBLOCK) < 0) {
+	if (fcntl(_serverFd, F_SETFL, O_NONBLOCK) < 0) { // TODO: @sonia: use write(1)
 		Logger::logerror("Failed to set non-blocking socket");
 		close(_serverFd);
 		return false;
@@ -144,15 +190,15 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 
 void HttpServer::run() {
 	_running = true;
-	int j = 8;
 
-	while (j--) {
+	while (_running){
+
 		int ready = poll(_pollFds.data(), _pollFds.size(), -1);
 		if (ready < 0) {
 			if (errno == EINTR)
-				continue;
+				continue ;
 			Logger::logerror("Poll failed");
-			break;
+			break ;
 		}
 		
 		for (size_t i = 0; i < _pollFds.size(); i++) {
@@ -183,7 +229,7 @@ void HttpServer::handleNewConnection() {
 		return;
 	}
 	
-	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0) {
+	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0) { // TODO: @sonia: use write(1)
 		Logger::logerror("Failed to set client socket non-blocking");
 		close(clientFd);
 		return;
@@ -196,33 +242,200 @@ void HttpServer::handleNewConnection() {
 	_pollFds.push_back(pfd);
 	
 	cout << "New client connected. FD: " << clientFd << std::endl;
-	cout << *this << '\n';
+	// cout << *this << '\n';
 }
 
 void HttpServer::handleClientData(int clientFd) {
 	char buffer[4096];
 	ssize_t bytesRead = recv(clientFd, buffer, sizeof(buffer), 0);
 	
-	if (bytesRead < 0) {
-		if (errno != EWOULDBLOCK && errno != EAGAIN)
+	if (bytesRead <= 0) {
+		if (bytesRead == 0 || (bytesRead < 0 && errno != EWOULDBLOCK && errno != EAGAIN))
 			closeConnection(clientFd);
 		return;
 	}
 	
-	if (bytesRead == 0) {
-		closeConnection(clientFd);
-		return;
-	}
+	buffer[bytesRead] = '\0';
+	HttpRequest request = parseHttpRequest(buffer);
 	
-	// Simple response for now
-	string response = "HTTP/1.1 200 OK\r\n"
-					"Content-Length: 13\r\n"
+	if (request.method == "GET")
+		handleGetRequest(clientFd, request);
+	else {
+		string response = "HTTP/1.1 501 Not Implemented\r\n"
+					"Content-Length: 22\r\n"
 					"Connection: close\r\n"
 					"\r\n"
-					"Hello World!\n";
+					"Method not implemented\n";
 
-	send(clientFd, response.c_str(), response.length(), 0);
+		send(clientFd, response.c_str(), response.length(), 0);
+		closeConnection(clientFd);
+	}
+}
+
+HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer)
+{
+
+	HttpRequest request;
+	std::istringstream requestStream(buffer);
+	string line;
+
+	std::getline(requestStream, line);
+
+	std::istringstream requestLine(line);
+	requestLine	>> request.method >> request.path >> request.httpVersion;
+
+	while (std::getline(requestStream, line) && line != "\r") {
+		size_t colonPos = line.find(':');
+		if (colonPos != string::npos)
+		{
+			string key = line.substr(0, colonPos);
+			string value = line.substr(colonPos + 1);
+			value.erase(0, value.find_first_not_of(" "));
+			value.erase(value.find_last_not_of("\r") + 1);
+			request.headers[key] = value;
+		}
+	}
+	return request;
+}
+
+bool HttpServer::validateServerConfig(int clientFd, const ServerCtx& serverConfig, string& rootDir, string& defaultIndex)
+{
+	if (!directiveExists(serverConfig.first, "root") ||
+			getFirstDirective(serverConfig.first, "root").empty()) {
+			sendError(clientFd, 500, "Internal Server Error");
+			return false;
+		}
+		rootDir = getFirstDirective(serverConfig.first, "root")[0];
+
+		if (!directiveExists(serverConfig.first, "index") ||
+			getFirstDirective(serverConfig.first, "index").empty()) {
+			sendError(clientFd, 500, "Internal Server Error");
+			return false;
+		}
+		defaultIndex = getFirstDirective(serverConfig.first, "index")[0];
+		return true;
+}
+
+bool HttpServer::validatePath(int clientFd, const string& path) {
+		if (path.find("..") != string::npos || 
+			path.find("//") != string::npos || 
+			path[0] != '/' || 
+			path.find(':') != string::npos) {
+			sendError(clientFd, 403, "Forbidden");
+			return false;
+		}
+		return true;
+}
+
+bool HttpServer::handleDirectoryRedirect(int clientFd, const HttpRequest& request, string& filePath, 
+							   const string& defaultIndex, struct stat& fileStat) {
+		if (request.path[request.path.length() - 1] != '/') {
+			string redirectUrl = request.path + "/";
+			std::ostringstream response;
+			response << "HTTP/1.1 301 Moved Permanently\r\n"
+					<< "Location: " << redirectUrl << "\r\n"
+					<< "Connection: close\r\n\r\n";
+			string responseStr = response.str();
+			send(clientFd, responseStr.c_str(), responseStr.length(), 0);
+			closeConnection(clientFd);
+			return false;
+		}
+		filePath += defaultIndex;
+		if (stat(filePath.c_str(), &fileStat) == -1) {
+			sendError(clientFd, 404, "Not Found");
+			return false;
+		}
+		return true;
+}
+
+void HttpServer::sendFileContent(int clientFd, const string& filePath)
+{
+		std::ifstream file(filePath.c_str(), std::ios::binary);
+		if (!file) {
+			sendError(clientFd, 403, "Forbidden");
+			return;
+		}
+
+		file.seekg(0, std::ios::end);
+		long fileSize = file.tellg();
+		file.seekg(0, std::ios::beg);
+
+		std::ostringstream headers;
+		headers << "HTTP/1.1 200 OK\r\n"
+				<< "Content-Length: " << fileSize << "\r\n"
+				<< "Content-Type: " << getMimeType(filePath) << "\r\n"
+				<< "Connection: close\r\n\r\n";
+
+		string headerStr = headers.str();
+		send(clientFd, headerStr.c_str(), headerStr.length(), 0);
+
+		char buffer[4096];
+		while(file.read(buffer, sizeof(buffer)))
+			send(clientFd, buffer, (size_t)file.gcount(), 0);
+		if (file.gcount() > 0)
+			send(clientFd, buffer, (size_t)file.gcount(), 0);
+		closeConnection(clientFd);
+}
+
+void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request)
+{
+
+	//TODO: @sonia: multiple servers
+	if (_config.second.empty()) {
+		sendError(clientFd, 500, "Internal Server Error");
+		return;
+	}
+
+	const ServerCtx& serverConfig = _config.second[0];
+	string rootDir, defaultIndex;
+	if (!validateServerConfig(clientFd, serverConfig, rootDir, defaultIndex))
+		return;
+	if (!validatePath(clientFd, request.path))
+		return;
+
+	string filePath = rootDir + request.path;
+	if (filePath[filePath.length() - 1] == '/')
+		filePath += defaultIndex;
+
+	struct stat fileStat;
+	if (stat(filePath.c_str(), &fileStat) == -1) {
+		sendError(clientFd, 404, "Not Found");
+		return;
+	}
+
+	if (S_ISDIR(fileStat.st_mode)) {
+		if (!handleDirectoryRedirect(clientFd, request, filePath, defaultIndex, fileStat))
+			return;
+	}
+
+	sendFileContent(clientFd, filePath);
+}
+
+void HttpServer::sendError(int clientFd, int statusCode, const string& statusText)
+{
+	std::ostringstream response;
+	response << "HTTP/1.1 " << statusCode << " " << statusText << "\r\n"
+			<< "Content-Type: text/html\r\n"
+			<< "Connection: close\r\n\r\n"
+			<< "\r\n"
+			<< "<html><body><h1>" << statusCode << " " << statusText << "</h1></body></html>";
+	string responseStr = response.str();
+	send(clientFd, responseStr.c_str(), responseStr.length(), 0);
 	closeConnection(clientFd);
+}
+
+string HttpServer::getMimeType(const string& path)
+{
+	size_t dotPos = path.find_last_of('.');
+	if (dotPos == string::npos)
+		return "application/octet-stream";
+	
+	string ext = path.substr(dotPos + 1);
+	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+	std::map<string, string>::const_iterator it = _mimeTypes.find(ext);
+	if (it != _mimeTypes.end())
+		return it->second;
+	return "application/octet-stream";
 }
 
 void HttpServer::closeConnection(int clientFd) {

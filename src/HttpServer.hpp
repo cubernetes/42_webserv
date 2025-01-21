@@ -1,5 +1,7 @@
 #pragma once /* HttpServer.hpp */
 
+#include <algorithm>
+#include <cctype>
 #include <vector>
 #include <map>
 #include <string>
@@ -31,6 +33,7 @@ public:
 	bool get_running() const;
 	const Config& get_config() const;
 	unsigned int get_id() const;
+
 private:
 	int _serverFd;
 	std::vector<struct pollfd> _pollFds;
@@ -40,13 +43,35 @@ private:
 	// Instance tracking
 	unsigned int _id;
 	static unsigned int _idCntr;
-	
-	// Helper methods
+	std::map<string,string> _mimeTypes;
+	struct HttpRequest {
+		string method;
+		string path;
+		string httpVersion;
+		std::map<string, string> headers;
+
+		HttpRequest() :
+			method(),
+			path(),
+			httpVersion(),
+			headers() {}
+	};
+
 	bool setupSocket(const std::string& ip, int port);
 	void handleNewConnection();
 	void handleClientData(int clientFd);
 	void closeConnection(int clientFd);
 	void removePollFd(int fd);
+	HttpRequest parseHttpRequest(const char *buffer);
+	bool validateServerConfig(int clientFd, const ServerCtx& serverConfig, string& rootDir, string& defaultIndex);
+	bool validatePath(int clientFd, const string& path);
+	bool handleDirectoryRedirect(int clientFd, const HttpRequest& request, string& filePath, 
+									const string& defaultIndex, struct stat& fileStat);
+	void sendFileContent(int clientFd, const string& filePath);
+	void handleGetRequest(int clientFd, const HttpRequest& request);
+	void sendError(int clientFd, int statusCode, const string& statusText);
+	void initMimeTypes();
+	string getMimeType(const string& path);
 };
 
 // global scope swap (aka ::swap), needed since friend keyword is forbidden :(

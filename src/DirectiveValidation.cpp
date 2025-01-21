@@ -51,14 +51,14 @@ static inline void ensureNotEmpty(const string& ctx, const string& directive, co
 }
 
 // was only needed for the int argument to the worker_processes directive, which is not needed anymore
-static inline void ensureInt(const string& ctx, const string& directive, const string& argument) {
-	ensureNotEmpty(ctx, directive, argument);
-	string::const_iterator c = argument.begin();
-	while (c != argument.end() && std::isdigit(*c)) ++c;
-	if (c == argument.end())
-		return;
-	throw runtime_error(Errors::Config::DirectiveArgumentNotNumeric(ctx, directive, argument));
-}
+// static inline void ensureInt(const string& ctx, const string& directive, const string& argument) {
+// 	ensureNotEmpty(ctx, directive, argument);
+// 	string::const_iterator c = argument.begin();
+// 	while (c != argument.end() && std::isdigit(*c)) ++c;
+// 	if (c == argument.end())
+// 		return;
+// 	throw runtime_error(Errors::Config::DirectiveArgumentNotNumeric(ctx, directive, argument));
+// }
 
 static inline void ensureValidSize(const string& ctx, const string& directive, const string& argument) {
 	ensureNotEmpty(ctx, directive, argument);
