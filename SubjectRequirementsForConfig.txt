@@ -1,5 +1,5 @@
 # Contexts
-- Main, Events, Http, Server, Location
+- Http, Server, Location
 
 # Subject
 1. choose port and host for each server

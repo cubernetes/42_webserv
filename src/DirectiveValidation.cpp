@@ -17,8 +17,8 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
-#define CHECKFN_MAIN(checkFunction) \
-	if (checkFunction("main", directive, arguments) && ++counts[directive] <= 1) \
+#define CHECKFN_HTTP(checkFunction) \
+	if (checkFunction("http", directive, arguments) && ++counts[directive] <= 1) \
 		continue
 
 #define CHECKFN_SERVER(checkFunction) \
@@ -278,23 +278,23 @@ static inline bool checkUploadDir(const string& ctx, const string& directive, co
 	return false;
 }
 
-void checkMainDirectives(Directives& directives) {
+void checkHttpDirectives(Directives& directives) {
 	map<string, unsigned int> counts;
 	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
 		Arguments& arguments = kv->second;
-		CHECKFN_MAIN(checkAutoindex);
-		CHECKFN_MAIN(checkCgiDir);
-		CHECKFN_MAIN(checkCgiExt);
-		CHECKFN_MAIN(checkClientMaxBodySize);
-		CHECKFN_MAIN(checkErrorPage);
-		CHECKFN_MAIN(checkIndex);
-		CHECKFN_MAIN(checkRoot);
-		CHECKFN_MAIN(checkRoot);
-		CHECKFN_MAIN(checkUploadDir);
+		CHECKFN_HTTP(checkAutoindex);
+		CHECKFN_HTTP(checkCgiDir);
+		CHECKFN_HTTP(checkCgiExt);
+		CHECKFN_HTTP(checkClientMaxBodySize);
+		CHECKFN_HTTP(checkErrorPage);
+		CHECKFN_HTTP(checkIndex);
+		CHECKFN_HTTP(checkRoot);
+		CHECKFN_HTTP(checkRoot);
+		CHECKFN_HTTP(checkUploadDir);
 		if (counts[directive] > 1)
-			throw runtime_error(Errors::Config::DirectiveNotUnique("main", directive));
-		throw runtime_error(Errors::Config::UnknownDirective("main", directive));
+			throw runtime_error(Errors::Config::DirectiveNotUnique("http", directive));
+		throw runtime_error(Errors::Config::UnknownDirective("http", directive));
 	}
 }
 
