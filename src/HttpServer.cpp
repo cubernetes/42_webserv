@@ -242,7 +242,7 @@ void HttpServer::handleNewConnection() {
 	_pollFds.push_back(pfd);
 	
 	cout << "New client connected. FD: " << clientFd << std::endl;
-	cout << *this << '\n';
+	// cout << *this << '\n';
 }
 
 void HttpServer::handleClientData(int clientFd) {
