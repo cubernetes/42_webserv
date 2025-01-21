@@ -130,7 +130,10 @@ void HttpServer::initMimeTypes() {
 
 bool HttpServer::setup(const Config& conf) {
 	_config = conf;
-	return setupSocket("127.0.0.1", 8080);  // Hardcoded for now
+	const Arguments hostPort = getFirstDirective(conf.second[0].first, "listen");
+	const char *host = hostPort[0].c_str();
+	int port = std::atoi(hostPort[1].c_str());
+	return setupSocket(host, port);
 }
 
 bool HttpServer::setupSocket(const std::string& ip, int port) {
@@ -148,7 +151,7 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 		return false;
 	}
 	
-	if (fcntl(_serverFd, F_SETFL, O_NONBLOCK) < 0) {
+	if (fcntl(_serverFd, F_SETFL, O_NONBLOCK) < 0) { // TODO: @sonia: use write(1)
 		Logger::logerror("Failed to set non-blocking socket");
 		close(_serverFd);
 		return false;
@@ -226,7 +229,7 @@ void HttpServer::handleNewConnection() {
 		return;
 	}
 	
-	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0) {
+	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0) { // TODO: @sonia: use write(1)
 		Logger::logerror("Failed to set client socket non-blocking");
 		close(clientFd);
 		return;
