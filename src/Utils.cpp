@@ -15,5 +15,5 @@ string Utils::parseArgs(int ac, char** av) {
 		return Constants::defaultConfPath;
 	else if (ac == 2)
 		return av[1];
-	throw std::runtime_error(Errors::WrongArgs);
+	throw std::runtime_error(Errors::WrongArgs(ac - 1));
 }

@@ -6,8 +6,12 @@ using std::string;
 
 namespace Constants {
 	extern const string defaultConfPath;
+	extern const char commentSymbol;
 	extern const int logLevel;
 	extern const bool kwargLogs;
 	extern const bool verboseLogs;
 	extern const bool jsonTrace;
+	extern const int highestPort;
+	extern const string defaultPort;
+	extern const string defaultAddress;
 }
