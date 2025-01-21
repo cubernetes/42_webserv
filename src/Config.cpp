@@ -24,41 +24,41 @@ static void updateIfNotExistsVec(Directives& directives, const string& directive
 		directives[directive] = value;
 }
 
-static void populateDefaultGlobalDirectives(Directives& directives) {
-	updateIfNotExists(directives, "pid", "run/webserv.pid");
-	updateIfNotExists(directives, "worker_processes", "auto");
-
-	updateIfNotExists(directives, "index", "index.html");
-	updateIfNotExists(directives, "root", "html");
-	updateIfNotExists(directives, "listen", "127.0.0.1:80");
-	updateIfNotExists(directives, "access_log", "log/access.log");
-	updateIfNotExists(directives, "error_log", "log/error.log");
-}
-
-static void takeFromDefault(Directives& directives, Directives& globalDirectives, const string& directive, const string& value) {
-	if (globalDirectives.find(directive) == globalDirectives.end())
+static void takeFromDefault(Directives& directives, Directives& mainDirectives, const string& directive, const string& value) {
+	if (mainDirectives.find(directive) == mainDirectives.end())
 		updateIfNotExists(directives, directive, value);
 	else
-		updateIfNotExistsVec(directives, directive, globalDirectives[directive]);
+		updateIfNotExistsVec(directives, directive, mainDirectives[directive]);
 }
 
-static void populateDefaultServerDirectives(Directives& directives, Directives& globalDirectives) {
-	takeFromDefault(directives, globalDirectives, "index", "index.html");
-	takeFromDefault(directives, globalDirectives, "root", "html");
-	takeFromDefault(directives, globalDirectives, "listen", "127.0.0.1:80");
-	takeFromDefault(directives, globalDirectives, "access_log", "log/access.log");
-	takeFromDefault(directives, globalDirectives, "error_log", "log/error.log");
+static void populateDefaultMainDirectives(Directives& directives) {
+	updateIfNotExists(directives, "autoindex", "off");
+	updateIfNotExists(directives, "cgi_dir", "cgi-bin");
+	updateIfNotExists(directives, "client_max_body_size", "1m");
+	updateIfNotExists(directives, "index", "index.html");
+	updateIfNotExists(directives, "root", "html");
+	updateIfNotExists(directives, "upload_dir", "");
+}
 
+static void populateDefaultServerDirectives(Directives& directives, Directives& mainDirectives) {
+	takeFromDefault(directives, mainDirectives, "autoindex", "off");
+	takeFromDefault(directives, mainDirectives, "cgi_dir", "cgi-bin");
+	takeFromDefault(directives, mainDirectives, "client_max_body_size", "1m");
+	takeFromDefault(directives, mainDirectives, "index", "index.html");
+	takeFromDefault(directives, mainDirectives, "root", "html");
+	takeFromDefault(directives, mainDirectives, "upload_dir", "");
+
+	updateIfNotExists(directives, "listen", "*:8000");
 	updateIfNotExists(directives, "server_name", "");
 }
 
-static void populateDefaultRouteDirectives(Directives& directives, Directives& serverDirectives) {
+static void populateDefaultLocationDirectives(Directives& directives, Directives& serverDirectives) {
+	takeFromDefault(directives, serverDirectives, "autoindex", "off");
+	takeFromDefault(directives, serverDirectives, "cgi_dir", "cgi-bin");
+	takeFromDefault(directives, serverDirectives, "client_max_body_size", "1m");
 	takeFromDefault(directives, serverDirectives, "index", "index.html");
 	takeFromDefault(directives, serverDirectives, "root", "html");
-
-	updateIfNotExists(directives, "allowed_methods", "GET");
-	// updateIfNotExists(directives, "alias", "GET"); // has no default
-	// updateIfNotExistsVec(directives, "return", VEC(string, "", "")); // has no default
+	takeFromDefault(directives, serverDirectives, "upload_dir", "");
 }
 
 static Arguments parseArguments(Tokens& tokens) {
@@ -102,8 +102,8 @@ static Directives parseDirectives(Tokens& tokens) {
 	return directives;
 }
 
-static RouteCtx parseRoute(Tokens& tokens) {
-	RouteCtx route;
+static LocationCtx parseLocation(Tokens& tokens) {
+	LocationCtx location;
 
 	if (tokens.empty() || tokens.front().second != "location")
 		throw runtime_error(Errors::Config::ParseError(tokens));
@@ -112,31 +112,31 @@ static RouteCtx parseRoute(Tokens& tokens) {
 	if (tokens.empty() || tokens.front().first != TOK_WORD)
 		throw runtime_error(Errors::Config::ParseError(tokens));
 
-	route.first = tokens.front().second;
+	location.first = tokens.front().second;
 	tokens.pop_front();
 
 	if (tokens.empty() || tokens.front().first != TOK_OPENING_BRACE)
 		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 
-	route.second = parseDirectives(tokens);
+	location.second = parseDirectives(tokens);
 
 	if (tokens.empty() || tokens.front().first != TOK_CLOSING_BRACE)
 		throw runtime_error(Errors::Config::ParseError(tokens));
 	tokens.pop_front();
 
-	return route;
+	return location;
 }
 
-static RouteCtxs parseRoutes(Tokens& tokens) {
-	std::vector<RouteCtx> routes;
+static LocationCtxs parseLocations(Tokens& tokens) {
+	std::vector<LocationCtx> locations;
 	while (true) {
 		if (tokens.empty() || tokens.front().second != "location")
 			break;
-		RouteCtx route = parseRoute(tokens);
-		routes.push_back(route);
+		LocationCtx location = parseLocation(tokens);
+		locations.push_back(location);
 	}
-	return routes;
+	return locations;
 }
 
 static ServerCtx parseServer(Tokens& tokens) {
@@ -150,8 +150,8 @@ static ServerCtx parseServer(Tokens& tokens) {
 	tokens.pop_front();
 
 	Directives directives = parseDirectives(tokens);
-	RouteCtxs routes = parseRoutes(tokens);
-	server = std::make_pair(directives, routes);
+	LocationCtxs locations = parseLocations(tokens);
+	server = std::make_pair(directives, locations);
 
 	if (tokens.empty() || tokens.front().first != TOK_CLOSING_BRACE)
 		throw runtime_error(Errors::Config::ParseError(tokens));
@@ -245,57 +245,23 @@ static Tokens lexConfig(string rawConfig) {
 	return tokens;
 }
 
-void updateDefaults(Config& config) {
-	populateDefaultGlobalDirectives(config.first);
+static void updateDefaults(Config& config) {
+	populateDefaultMainDirectives(config.first);
 	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
 		populateDefaultServerDirectives(server->first, config.first);
-		for (RouteCtxs::iterator route = server->second.begin(); route != server->second.end(); ++route) {
-			populateDefaultRouteDirectives(route->second, server->first);
+		for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
+			populateDefaultLocationDirectives(location->second, server->first);
 		}
 	}
 }
 
-void checkDirectives(Config& config) {
-	checkGlobalDirectives(config.first);
+static void checkDirectives(Config& config) {
+	checkMainDirectives(config.first);
 	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
 		checkServerDirectives(server->first);
-		for (RouteCtxs::iterator route = server->second.begin(); route != server->second.end(); ++route) {
-			checkRouteDirectives(route->second);
+		for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
+			checkLocationDirectives(location->second);
 		}
-	}
-}
-
-static Arguments processIPv4Address(const Arguments& arguments) {
-	if (arguments.size() >= 2)
-		return arguments;
-	else if (arguments.size() == 1 && arguments[0].empty())
-		return arguments;
-	else if (arguments.size() <= 0)
-		return arguments;
-	string host = arguments[0];
-	string ipAddress;
-	string port;
-	Arguments newArgs;
-	string::size_type pos;
-	if ((pos = host.find(':')) != string::npos) {
-		ipAddress = host.substr(0, pos);
-		port = host.substr(pos + 1);
-	} else if ((pos = host.find('.')) != string::npos) {
-		ipAddress = host;
-		port = Constants::defaultPort;
-	} else {
-		ipAddress = Constants::defaultAddress;
-		port = host;
-	}
-	newArgs.push_back(ipAddress);
-	newArgs.push_back(port);
-	return newArgs;
-}
-
-void postProcess(Config& config) {
-	config.first["listen"] = processIPv4Address(config.first["listen"]);
-	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
-		server->first["listen"] = processIPv4Address(server->first["listen"]);
 	}
 }
 
@@ -313,8 +279,6 @@ Config parseConfig(string rawConfig) {
 
 	updateDefaults(config);
 
-	postProcess(config);
-
 	checkDirectives(config);
 
 	if (config.second.empty())
@@ -323,24 +287,24 @@ Config parseConfig(string rawConfig) {
 	return config;
 }
 /* How to access Config config:
-# Global directives:
+# Main directives:
 config.first["pid"] -> gives back vector of args
 config.first["pid"][0] -> most directives have only one argument, so you'll use this pattern quite often
                           watch out that some directive _might_ have zero arguments, although I can't think of any, but the parser allows that
 
 # ServerCtxs configs
 config.second -> vector of ServerCtx
-config.second[0] -> pair of directives and routes
+config.second[0] -> pair of directives and locations
 config.second[0].first -> directives specific for a server (order is not important, which is why Directives is a map)
 config.second[0].first["server_name"] -> how you would access the server name for a given server
 
-## Routes
-config.second[0].second -> vector of routes for a server (order is important for the routers (top-bottom)!, that's why it's a vector)
-config.second[0].second[0] -> first route (if there are any, check for empty!)
-config.second[0].second[0].first -> the actual route (a string), something like /web
+## Locations
+config.second[0].second -> vector of locations for a server (order is important for the locations (top-bottom)!, that's why it's a vector)
+config.second[0].second[0] -> first location (if there are any, check for empty!)
+config.second[0].second[0].first -> the actual location (a string), something like /web
 config.second[0].second[0].second -> again, Directives, so a map of directives similar to above
-config.second[0].second[0].second["allowed_methods"] -> which methods does this route support? mutliple arguments!
-config.second[0].second[0].second["allowed_methods"][0] == "GET" -> check if the first allowed method for this route is "GET"
+config.second[0].second[0].second["limit_except"] -> which methods does this location support? mutliple arguments!
+config.second[0].second[0].second["limit_except"][0] == "GET" -> check if the first allowed method for this location is "GET"
 
 
 # Example JSON (might want to add more keys, instead of just plain lists, but let's keep it MVP)
@@ -363,7 +327,7 @@ config.second[0].second[0].second["allowed_methods"][0] == "GET" -> check if the
       [ [ "/",
           {
             "index": [ "index.html" ],
-            "allowed_methods": [ "GET" ],
+            "limit_except": [ "GET" ],
             "return": [ "" ],
             "root": [ "html/server1" ]
           }
@@ -382,7 +346,7 @@ config.second[0].second[0].second["allowed_methods"][0] == "GET" -> check if the
           "/",
           {
             "index": [ "index.html" ],
-            "allowed_methods": [ "GET" ],
+            "limit_except": [ "GET" ],
             "return": [ "" ],
             "root": [ "html/server2" ],
             "try_files": [ "$uri", "$uri/", "=404" ]
