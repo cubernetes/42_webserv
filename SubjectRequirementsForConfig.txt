@@ -46,7 +46,7 @@
 6.2 define a http redirection
 	- location.return
 	- default: none
-	- multiple: yes
+	- multiple: no // although nginx allows for multiple
 	- https://nginx.org/en/docs/http/ngx_http_rewrite_module.html#return
 
 6.3 define a directory or a file from where the file should be searched

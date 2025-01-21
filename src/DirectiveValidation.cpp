@@ -17,16 +17,12 @@
 #include "Constants.hpp"
 #include "Utils.hpp"
 
-#define CHECKFN_HTTP(checkFunction) \
-	if (checkFunction("http", directive, arguments) && ++counts[directive] <= 1) \
+#define CHECKFN(ctx, checkFunction) \
+	if (checkFunction(ctx, directive, arguments) && ++counts[directive] <= 1) \
 		continue
 
-#define CHECKFN_SERVER(checkFunction) \
-	if (checkFunction("server", directive, arguments) && ++counts[directive] <= 1) \
-		continue
-
-#define CHECKFN_LOCATION(checkFunction) \
-	if (checkFunction("location", directive, arguments) && ++counts[directive] <= 1) \
+#define CHECKFN_MULTI(ctx, checkFunction) \
+	if (checkFunction(ctx, directive, arguments)) \
 		continue
 
 using std::map;
@@ -278,69 +274,165 @@ static inline bool checkUploadDir(const string& ctx, const string& directive, co
 	return false;
 }
 
-void checkHttpDirectives(Directives& directives) {
+static void checkHttpDirectives(Directives& directives) {
 	map<string, unsigned int> counts;
 	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
 		Arguments& arguments = kv->second;
-		CHECKFN_HTTP(checkAutoindex);
-		CHECKFN_HTTP(checkCgiDir);
-		CHECKFN_HTTP(checkCgiExt);
-		CHECKFN_HTTP(checkClientMaxBodySize);
-		CHECKFN_HTTP(checkErrorPage);
-		CHECKFN_HTTP(checkIndex);
-		CHECKFN_HTTP(checkRoot);
-		CHECKFN_HTTP(checkRoot);
-		CHECKFN_HTTP(checkUploadDir);
+		CHECKFN      ("http", checkAutoindex);
+		CHECKFN      ("http", checkCgiDir);
+		CHECKFN_MULTI("http", checkCgiExt);
+		CHECKFN      ("http", checkClientMaxBodySize);
+		CHECKFN_MULTI("http", checkErrorPage);
+		CHECKFN_MULTI("http", checkIndex);
+		CHECKFN      ("http", checkRoot);
+		CHECKFN      ("http", checkUploadDir);
 		if (counts[directive] > 1)
 			throw runtime_error(Errors::Config::DirectiveNotUnique("http", directive));
 		throw runtime_error(Errors::Config::UnknownDirective("http", directive));
 	}
 }
 
-void checkServerDirectives(Directives& directives) {
+static void checkServerDirectives(Directives& directives) {
 	map<string, unsigned int> counts;
 	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
 		Arguments& arguments = kv->second;
-		CHECKFN_SERVER(checkAutoindex);
-		CHECKFN_SERVER(checkCgiDir);
-		CHECKFN_SERVER(checkCgiExt);
-		CHECKFN_SERVER(checkClientMaxBodySize);
-		CHECKFN_SERVER(checkErrorPage);
-		CHECKFN_SERVER(checkIndex);
-		CHECKFN_SERVER(checkListen);
-		CHECKFN_SERVER(checkRoot);
-		CHECKFN_SERVER(checkServerName);
-		CHECKFN_SERVER(checkUploadDir);
+		CHECKFN      ("server", checkAutoindex);
+		CHECKFN      ("server", checkCgiDir);
+		CHECKFN_MULTI("server", checkCgiExt);
+		CHECKFN      ("server", checkClientMaxBodySize);
+		CHECKFN_MULTI("server", checkErrorPage);
+		CHECKFN_MULTI("server", checkIndex);
+		CHECKFN_MULTI("server", checkListen);
+		CHECKFN      ("server", checkRoot);
+		CHECKFN_MULTI("server", checkServerName);
+		CHECKFN      ("server", checkUploadDir);
 		if (counts[directive] > 1)
 			throw runtime_error(Errors::Config::DirectiveNotUnique("server", directive));
 		throw runtime_error(Errors::Config::UnknownDirective("server", directive));
 	}
 }
 
-void checkLocationDirectives(Directives& directives) {
+static void checkLocationDirectives(Directives& directives) {
 	map<string, unsigned int> counts;
 	for (Directives::iterator kv = directives.begin(); kv != directives.end(); ++kv) {
 		const string& directive = kv->first;
 		Arguments& arguments = kv->second;
-		CHECKFN_LOCATION(checkAlias);
-		CHECKFN_LOCATION(checkAutoindex);
-		CHECKFN_LOCATION(checkCgiDir);
-		CHECKFN_LOCATION(checkCgiExt);
-		CHECKFN_LOCATION(checkClientMaxBodySize);
-		CHECKFN_LOCATION(checkErrorPage);
-		CHECKFN_LOCATION(checkIndex);
-		CHECKFN_LOCATION(checkLimitExcept);
-		CHECKFN_LOCATION(checkReturn);
-		CHECKFN_LOCATION(checkRoot);
-		CHECKFN_LOCATION(checkUploadDir);
+		CHECKFN      ("location", checkAlias);
+		CHECKFN      ("location", checkAutoindex);
+		CHECKFN      ("location", checkCgiDir);
+		CHECKFN_MULTI("location", checkCgiExt);
+		CHECKFN      ("location", checkClientMaxBodySize);
+		CHECKFN_MULTI("location", checkErrorPage);
+		CHECKFN_MULTI("location", checkIndex);
+		CHECKFN      ("location", checkLimitExcept);
+		CHECKFN      ("location", checkReturn);
+		CHECKFN      ("location", checkRoot);
+		CHECKFN      ("location", checkUploadDir);
 		if (counts[directive] > 1)
 			throw runtime_error(Errors::Config::DirectiveNotUnique("location", directive));
 		throw runtime_error(Errors::Config::UnknownDirective("location", directive));
 	}
 }
 
-// TODO: @timo: validate that server_name is unique among server with same host:port
-// TODO: @timo: validate that host:port is unique among servers
-// TODO: @timo: restructure config since some directives can be supplied multiple times (map is not good, rather use multimap)
+static inline bool addrSame(const struct in_addr& addr1, const struct in_addr& addr2) {
+	return std::memcmp(&addr1, &addr2, sizeof(addr1)) == 0;
+}
+
+static bool listenDirectivesSame(const Arguments& listenDirective, const Arguments& otherListenDirective) {
+	/*
+	const char wildcardStr[] = "0.0.0.0";
+	struct in_addr wildcard;
+
+	if (inet_aton(wildcardStr, &wildcard) == 0)
+		throw runtime_error("Logic error, 0.0.0.0 should be a valid ip address");
+	*/
+
+	const string& host = listenDirective[0];
+	const string& strPort = listenDirective[1];
+	long port;
+	struct in_addr addr;
+
+	const string& otherHost = otherListenDirective[0];
+	const string& otherStrPort = otherListenDirective[1];
+	long otherPort;
+	struct in_addr otherAddr;
+
+	if (inet_aton(host.c_str(), &addr) == 0)
+		throw runtime_error("Logic error, host should've been validated already");
+	if (inet_aton(otherHost.c_str(), &otherAddr) == 0)
+		throw runtime_error("Logic error, otherHost should've been validated already");
+
+	port = strtol(strPort.c_str(), NULL, 10);
+	otherPort = strtol(otherStrPort.c_str(), NULL, 10);
+
+	bool hostSame = addrSame(addr, otherAddr) /* || addrSame(otherAddr, wildcard) */;
+	bool portSame = port == otherPort;
+
+	return hostSame && portSame;
+}
+
+static bool overlapListen(const ArgResults& listenDirectives, const ArgResults& otherListenDirectives) {
+	for (ArgResults::const_iterator listenDirective = listenDirectives.begin(); listenDirective != listenDirectives.end(); ++listenDirective) {
+		for (ArgResults::const_iterator otherListenDirective = otherListenDirectives.begin(); otherListenDirective != otherListenDirectives.end(); ++otherListenDirective) {
+			if (listenDirectivesSame(*listenDirective, *otherListenDirective)) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+void ensureNoOverlapServerName(const ArgResults& serverNameDirectives, const ArgResults& otherServerNameDirectives) {
+	for (ArgResults::const_iterator serverNameDirective = serverNameDirectives.begin(); serverNameDirective != serverNameDirectives.end(); ++serverNameDirective) {
+		for (ArgResults::const_iterator otherServerNameDirective = otherServerNameDirectives.begin(); otherServerNameDirective != otherServerNameDirectives.end(); ++otherServerNameDirective) {
+			for (Arguments::const_iterator serverName = serverNameDirective->begin(); serverName != serverNameDirective->end(); ++serverName) {
+				for (Arguments::const_iterator otherServerName = otherServerNameDirective->begin(); otherServerName != otherServerNameDirective->end(); ++otherServerName) {
+					if (*serverName == *otherServerName) {
+						throw runtime_error("Config error: duplicate server_name values between servers");
+					}
+				}
+			}
+		}
+	}
+}
+
+void ensureServerUniqueness(const Directives& directives, const ServerCtxs& servers) {
+	ArgResults listenDirectives = getAllDirectives(directives, "listen");
+	ArgResults serverNameDirectives = getAllDirectives(directives, "server_name");
+
+	for (ArgResults::const_iterator listenDirective = listenDirectives.begin(); listenDirective != listenDirectives.end(); ++listenDirective) {
+		for (ArgResults::const_iterator otherListenDirective = listenDirectives.begin(); otherListenDirective != listenDirectives.end(); ++otherListenDirective) {
+			if (listenDirective == otherListenDirective) continue;
+			if (listenDirectivesSame(*listenDirective, *otherListenDirective)) {
+				throw runtime_error("Config error: duplicate listen values in the same server");
+			}
+		}
+	}
+
+	for (ServerCtxs::const_iterator server = servers.begin(); server != servers.end(); ++server) {
+		if (&directives == &server->first) continue;
+		
+		ArgResults otherListenDirectives = getAllDirectives(server->first, "listen");
+		ArgResults otherServerNameDirectives = getAllDirectives(server->first, "server_name");
+
+		if (overlapListen(listenDirectives, otherListenDirectives)) {
+			ensureNoOverlapServerName(serverNameDirectives, otherServerNameDirectives);
+		}
+	}
+}
+
+void checkDirectives(Config& config) {
+	checkHttpDirectives(config.first);
+	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
+		checkServerDirectives(server->first);
+		for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
+			checkLocationDirectives(location->second);
+		}
+	}
+	// we have to do it in a separate loop, since in the first loop, all the listen directives must be validated first
+	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
+		ensureServerUniqueness(server->first, config.second);
+	}
+}
