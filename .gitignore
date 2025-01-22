@@ -6,9 +6,11 @@ a.c
 # build artefacts
 a.out
 webserv
+c2_tests
 
 # objects
 obj/
+obj_c2/
 
 # clangd stuff
 .cache/
