@@ -12,6 +12,9 @@ warn () {
 	printf "\033\13333m%s\033\133\n" "${0}: ${1:-Warning for unknown reason}" 1>&2
 }
 
+top_level="$(git rev-parse --show-toplevel)" || die "Failed to obtain root of git repository"
+cd -- "${top_level}" || die "Failed to change directory to '${top_level}'"
+
 1>/dev/null 2>/dev/null command -v gcovr || die "gcovr is not installed, install gcovr, or look at https://command-not-found.com/gcovr"
 
 GCOVR_OUT_DIR="gcovr_report"
@@ -27,7 +30,7 @@ export LDFLAGS='-fprofile-arcs -ftest-coverage'
 rm -rf "./${GCOVR_OUT_DIR}" || die "Could not remove GCOVR_OUT_DIR (${GCOVR_OUT_DIR})"
 mkdir -p "${GCOVR_OUT_DIR}" || die "Could not create GCOVR_OUT_DIR (${GCOVR_OUT_DIR})"
 make -sj test || die "Build failed"
-gcovr --root . --html --html-details --output "${GCOVR_OUT_DIR}/index.html"
+gcovr --root . --html --html-details --output "${GCOVR_OUT_DIR}/index.html" || die "Failed to generate gcovr html"
 
 printf "Run 'python3 -m http.server 8888 -d \"${GCOVR_OUT_DIR}\"' (y/N): "
 read -r choice

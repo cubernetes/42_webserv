@@ -178,21 +178,20 @@ test: all_c2
 retest: fclean
 	make test
 
-
 llvmcov:
-	./llvmcov.sh
+	./tools/llvmcov.sh
 
 rellvmcov: fclean
 	make llvmcov
 
 lcov:
-	./lcov.sh
+	./tools/lcov.sh
 
 relcov: fclean
 	make lcov
 
 gcovr:
-	./gcovr.sh
+	./tools/gcovr.sh
 
 regcovr: fclean
 	make gcovr

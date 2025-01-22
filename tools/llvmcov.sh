@@ -12,6 +12,9 @@ warn () {
 	printf "\033\13333m%s\033\133\n" "${0}: ${1:-Warning for unknown reason}" 1>&2
 }
 
+top_level="$(git rev-parse --show-toplevel)" || die "Failed to obtain root of git repository"
+cd -- "${top_level}" || die "Failed to change directory to '${top_level}'"
+
 1>/dev/null 2>/dev/null command -v llvm-profdata || die "llvm-profdata is not installed, install llvm, or look at https://command-not-found.com/llvm-profdata"
 1>/dev/null 2>/dev/null command -v llvm-cov || die "llvm-cov is not installed, install llvm, or look at https://command-not-found.com/llvm-cov"
 
