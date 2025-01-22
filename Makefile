@@ -7,6 +7,7 @@ NAME := webserv
 # source files must still be specified with their extension
 EXT := cpp
 TEST := c2_tests
+TEST_DIR := tests
 
 # tools
 CXX := c++
@@ -81,15 +82,14 @@ SRC += Utils.cpp
 SRC += main.cpp # translation unit with int main(){} MUST be called main.cpp for tests to work, see object vars logic below
 
 # additional catch2 sources
-C2_SRC :=
-
-vpath %.$(EXT) tests
-C2_SRC += Utils_tests.cpp
+vpath %.$(EXT) $(TEST_DIR)
+C2_SRC := $(wildcard $(TEST_DIR)/*.cpp)
+C2_SRC := $(C2_SRC:$(TEST_DIR)/%=%) # strip $(TEST_DIR) prefix
 
 # object vars
 OBJ := $(SRC:.$(EXT)=.o)
-OBJ_C2 := $(filter-out main.c2.o, $(SRC:.$(EXT)=.c2.o)) # remove main.cpp
-OBJ_C2 += $(C2_SRC:.$(EXT)=.c2.o)                       # add test sources
+OBJ_C2 := $(filter-out main.c2.o, $(SRC:.$(EXT)=.c2.o)) # removes main.cpp
+OBJ_C2 += $(C2_SRC:.$(EXT)=.c2.o)                       # adds test sources
 OBJDIR := obj
 OBJDIR_C2 := obj_c2
 OBJ := $(addprefix $(OBJDIR)/,$(OBJ))
