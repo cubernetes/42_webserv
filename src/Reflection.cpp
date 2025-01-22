@@ -12,11 +12,11 @@ using std::swap;
 
 static string _replace(string s, const string& search, const string& replace) {
 	std::size_t pos = 0;
-    while ((pos = s.find(search, pos)) != string::npos) {
-         s.replace(pos, search.length(), replace);
-         pos += replace.length();
-    }
-    return s;
+	while ((pos = s.find(search, pos)) != string::npos) {
+		 s.replace(pos, search.length(), replace);
+		 pos += replace.length();
+	}
+	return s;
 }
 
 static string jsonEscape(string s) {
