@@ -8,6 +8,7 @@ using std::string;
 
 namespace Errors {
 	const string WrongArgs(int ac);
+	const string DegenerateArgv(int ac, char **av);
 	const string MultimapIndex(const string& key);
 
 	namespace Config {

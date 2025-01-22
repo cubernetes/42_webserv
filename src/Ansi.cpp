@@ -19,7 +19,7 @@ bool ansi::noColor() {
 	const char *noColor = std::getenv("NO_COLOR");
 	if (noColor == NULL)
 		return false;
-	else if (*noColor == '\0')
+	else if (noColor[0] == '\0' || (noColor[0] == '0' && noColor[1] == '\0'))
 		return false;
 	return true;
 }
