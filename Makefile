@@ -10,14 +10,14 @@ TEST := c2_tests
 TEST_DIR := tests
 
 # tools
-CXX := c++
-#CXX := clang++ # TODO: @all: make sure it compiles with this
-#CXX := g++     # TODO: @all: make sure it compiles with this as well, although not super necessary
+CXX ?= c++
+#CXX ?= clang++ # TODO: @all: make sure it compiles with this
+#CXX ?= g++     # TODO: @all: make sure it compiles with this as well, although not super necessary
 RM := /bin/rm -f
 MKDIR := /bin/mkdir -p
 
 # flags
-CFLAGS :=
+# CFLAGS := # Don't reset CFLAGS, as the coverage helper scripts in this repo need to adjust CFLAGS
 CFLAGS += -O2
 CFLAGS += -Wall
 CFLAGS += -Wextra
@@ -27,17 +27,22 @@ CFLAGS += -Wconversion
 CFLAGS += -Wunreachable-code
 CFLAGS += -std=c++98
 CFLAGS += -MMD
-CFLAGS += -fdiagnostics-color=always
-CFLAGS += -fmax-errors=1
 #CFLAGS += -pedantic # Mhhhh maybe don't put this flag, see `-Wno-...' flag below :) # TODO: @all: Remove this and comment to the left
 #CFLAGS += -Wno-variadic-macros # C++98 doesn't have variadic macros. Also, emtpy macro argument are UB. But yeahhhh we don't have to be pedantic :))
+
+CFLAGS += -fdiagnostics-color=always
+ifeq ($(strip $(CXX)),clang++)
+CFLAGS += -ferror-limit=1
+else
+CFLAGS += -fmax-errors=1
+endif
 
 CXXFLAGS :=
 CXXFLAGS += -Weffc++
 
 CPPFLAGS := -Isrc
 
-LDFLAGS :=
+# LDFLAGS := # Don't reset CFLAGS, as the coverage helper scripts in this repo need to adjust CFLAGS
 
 LDLIBS :=
 
@@ -134,6 +139,9 @@ clean:
 	$(RM) $(DEPS_C2)
 	$(RM) -r $(OBJDIR)
 	$(RM) -r $(OBJDIR_C2)
+	$(RM) -r llvm_profdata
+	$(RM) -r lcov_report
+	$(RM) -r gcovr_report
 
 fclean: clean
 	$(RM) $(NAME)
@@ -170,4 +178,23 @@ test: all_c2
 retest: fclean
 	make test
 
-.PHONY: all clean fclean re run rerun leakcheck test
+
+llvmcov:
+	./llvmcov.sh
+
+rellvmcov: fclean
+	make llvmcov
+
+lcov:
+	./lcov.sh
+
+relcov: fclean
+	make lcov
+
+gcovr:
+	./gcovr.sh
+
+regcovr: fclean
+	make gcovr
+
+.PHONY: all clean fclean re run rerun leakcheck test retest llvmcov rellvmcov lcov relcov gcovr regcovr

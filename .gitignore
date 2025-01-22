@@ -8,6 +8,12 @@ a.out
 webserv
 c2_tests
 
+# coverage artefacts
+*.profraw
+llvm_profdata/
+lcov_report/
+gcovr_report/
+
 # objects
 obj/
 obj_c2/
