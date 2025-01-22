@@ -9,7 +9,7 @@
 
 using std::string;
 
-static string itoa(int n) {
+static inline string itoa(int n) {
 	std::ostringstream oss;
 	oss << n;
 	return oss.str();
