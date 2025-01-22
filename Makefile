@@ -6,8 +6,8 @@ NAME := webserv
 # change to c for C projects and cpp for C++ projects
 # source files must still be specified with their extension
 EXT := cpp
-TEST := c2_tests
-TEST_DIR := tests
+TEST := c2_unit_tests
+TEST_UNIT_DIR := unit_tests
 
 # tools
 CXX ?= c++
@@ -84,17 +84,17 @@ SRC += Reflection.cpp
 SRC += Repr.cpp
 SRC += Server.cpp
 SRC += Utils.cpp
-SRC += main.cpp # translation unit with int main(){} MUST be called main.cpp for tests to work, see object vars logic below
+SRC += main.cpp # translation unit with int main(){} MUST be called main.cpp for unit tests to work, see object vars logic below
 
 # additional catch2 sources
-vpath %.$(EXT) $(TEST_DIR)
-C2_SRC := $(wildcard $(TEST_DIR)/*.cpp)
-C2_SRC := $(C2_SRC:$(TEST_DIR)/%=%) # strip $(TEST_DIR) prefix
+vpath %.$(EXT) $(TEST_UNIT_DIR)
+C2_SRC := $(wildcard $(TEST_UNIT_DIR)/*.cpp)
+C2_SRC := $(C2_SRC:$(TEST_UNIT_DIR)/%=%) # strip $(TEST_UNIT_DIR) prefix
 
 # object vars
 OBJ := $(SRC:.$(EXT)=.o)
 OBJ_C2 := $(filter-out main.c2.o, $(SRC:.$(EXT)=.c2.o)) # removes main.cpp
-OBJ_C2 += $(C2_SRC:.$(EXT)=.c2.o)                       # adds test sources
+OBJ_C2 += $(C2_SRC:.$(EXT)=.c2.o)                       # adds test unit sources
 OBJDIR := obj
 OBJDIR_C2 := obj_c2
 OBJ := $(addprefix $(OBJDIR)/,$(OBJ))
@@ -172,11 +172,11 @@ rerun: re
 leakcheck: re
 	make valrun
 
-test: all_c2
+unit_tests: all_c2
 	./$(TEST)
 
-retest: fclean
-	make test
+reunit_tests: fclean
+	make unit_tests
 
 llvmcov:
 	./tools/llvmcov.sh
@@ -196,4 +196,4 @@ gcovr:
 regcovr: fclean
 	make gcovr
 
-.PHONY: all clean fclean re run rerun leakcheck test retest llvmcov rellvmcov lcov relcov gcovr regcovr
+.PHONY: all clean fclean re run rerun leakcheck unit_tests reunit_tests llvmcov rellvmcov lcov relcov gcovr regcovr

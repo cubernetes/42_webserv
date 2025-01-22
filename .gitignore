@@ -6,7 +6,7 @@ a.c
 # build artefacts
 a.out
 webserv
-c2_tests
+c2_unit_tests
 
 # coverage artefacts
 *.profraw

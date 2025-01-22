@@ -30,7 +30,7 @@ export LDFLAGS='-fprofile-arcs -ftest-coverage'
 
 rm -rf "./${LCOV_OUT_DIR}" || die "Could not remove LCOV_OUT_DIR (${LCOV_OUT_DIR})"
 mkdir -p "${LCOV_OUT_DIR}" || die "Could not create LCOV_OUT_DIR (${LCOV_OUT_DIR})"
-make -sj test || die "Build failed"
+make -sj unit_test || die "Build failed"
 lcov --quiet --no-external --demangle-cpp --capture --base-directory . --directory obj_c2 --output-file "${LCOV_OUT_DIR}/coverage.info" || die "Failed to generate lcov report"
 genhtml --quiet "${LCOV_OUT_DIR}/coverage.info" --output-directory "${LCOV_OUT_DIR}" || die "Failed to generate html from lcov report"
 

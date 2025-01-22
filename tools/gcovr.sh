@@ -29,7 +29,7 @@ export LDFLAGS='-fprofile-arcs -ftest-coverage'
 
 rm -rf "./${GCOVR_OUT_DIR}" || die "Could not remove GCOVR_OUT_DIR (${GCOVR_OUT_DIR})"
 mkdir -p "${GCOVR_OUT_DIR}" || die "Could not create GCOVR_OUT_DIR (${GCOVR_OUT_DIR})"
-make -sj test || die "Build failed"
+make -sj unit_tests || die "Build failed"
 gcovr --root . --html --html-details --output "${GCOVR_OUT_DIR}/index.html" || die "Failed to generate gcovr html"
 
 printf "Run 'python3 -m http.server 8888 -d \"${GCOVR_OUT_DIR}\"' (y/N): "
