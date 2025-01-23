@@ -77,6 +77,7 @@ SRC += CgiHandler.cpp
 SRC += Config.cpp
 SRC += Constants.cpp
 SRC += DirectiveValidation.cpp
+SRC += DirectoryIndexing.cpp
 SRC += Errors.cpp
 SRC += HttpServer.cpp
 SRC += Logger.cpp

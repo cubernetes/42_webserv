@@ -13,6 +13,7 @@
 #include "Logger.hpp"
 #include "Config.hpp"
 #include "Repr.hpp"
+#include "DirectoryIndexing.hpp"
 
 using std::swap;
 using std::cout;
@@ -104,6 +105,7 @@ void HttpServer::initMimeTypes() {
 	_mimeTypes["txt"] = "text/plain";
 	_mimeTypes["csv"] = "text/csv";
 	_mimeTypes["md"] = "text/markdown";
+	_mimeTypes["sh"] = "text/x-shellscript";
 
 	// Images
 	_mimeTypes["jpg"] = "image/jpeg";
@@ -438,12 +440,29 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 	if (!validatePath(clientFd, request.path))
 		return;
 
-	string filePath = rootDir + request.path;
-	if (filePath[filePath.length() - 1] == '/')
-		filePath += defaultIndex;
-
 	struct stat fileStat;
-	if (stat(filePath.c_str(), &fileStat) == -1) {
+	string filePath = rootDir + request.path;
+	int fileExists = stat(filePath.c_str(), &fileStat) == 0;
+
+	if (filePath[filePath.length() - 1] == '/') {
+		struct stat indexFileStat;
+		string indexPath = filePath + defaultIndex;
+
+		if (stat(indexPath.c_str(), &indexFileStat) == -1) {
+			if (getFirstDirective(serverConfig.first, "autoindex")[0] == "off") {
+				sendError(clientFd, 403, "Forbidden");
+				return;
+			}
+			if (fileExists)
+				sendText(clientFd, indexDirectory(request.path, filePath));
+			sendError(clientFd, 404, "Not Found");
+			return;
+		}
+		filePath == indexPath;
+		fileExists = stat(filePath.c_str(), &fileStat) == 0;
+	}
+
+	if (!fileExists) {
 		sendError(clientFd, 404, "Not Found");
 		return;
 	}
@@ -453,7 +472,10 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 			return;
 	}
 
-	sendFileContent(clientFd, filePath);
+	if (S_ISREG(fileStat.st_mode))
+		sendFileContent(clientFd, filePath);
+	else
+		sendError(clientFd, 404, "Not Found"); // sometimes it's also 403, or 500, but haven't figured out the pattern yet
 }
 
 void HttpServer::sendError(int clientFd, int statusCode, const string& statusText) {
@@ -461,12 +483,29 @@ void HttpServer::sendError(int clientFd, int statusCode, const string& statusTex
 	std::ostringstream	body;
 
 	body << "<html><body><h1>" << statusCode << " " << statusText << "</h1></body></html>";
-	string	bodyStr = body.str();
+	string bodyStr = body.str();
 	
 	response << "HTTP/1.1 " << statusCode << " " << statusText << "\r\n"
 			<< "Content-Type: text/html\r\n"
 			<< "Content-Length: " << bodyStr.length() << "\r\n"
-			<< "Connection: close\r\n\r\n"
+			<< "Connection: close\r\n"
+			<< "\r\n"
+			<< bodyStr;
+	queueWrite(clientFd, response.str());
+	_pendingClose.insert(clientFd);
+}
+
+void HttpServer::sendText(int clientFd, const string& text) {
+	std::ostringstream	response;
+	std::ostringstream	body;
+
+	body << "<html><body>" << text << "</body></html>";
+	string bodyStr = body.str();
+	
+	response << "HTTP/1.1 200 OK\r\n"
+			<< "Content-Type: text/html\r\n"
+			<< "Content-Length: " << bodyStr.length() << "\r\n"
+			<< "Connection: close\r\n"
 			<< "\r\n"
 			<< bodyStr;
 	queueWrite(clientFd, response.str());

@@ -82,6 +82,7 @@ private:
 	void sendFileContent(int clientFd, const string& filePath);
 	void handleGetRequest(int clientFd, const HttpRequest& request);
 	void sendError(int clientFd, int statusCode, const string& statusText);
+	void sendText(int clientFd, const string& text);
 	void initMimeTypes();
 	string getMimeType(const string& path);
 	void queueWrite(int clientFd, const string& data);
