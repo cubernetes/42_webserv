@@ -308,9 +308,9 @@ static void checkServerDirectives(Directives& directives) {
 		CHECKFN      ("server", checkClientMaxBodySize);
 		CHECKFN      ("server", checkErrorPage);
 		CHECKFN_MULTI("server", checkIndex);
-		CHECKFN_MULTI("server", checkListen);
+		CHECKFN      ("server", checkListen);
 		CHECKFN      ("server", checkRoot);
-		CHECKFN_MULTI("server", checkServerName);
+		CHECKFN      ("server", checkServerName);
 		CHECKFN      ("server", checkUploadDir);
 		if (counts[directive] > 1)
 			throw runtime_error(Errors::Config::DirectiveNotUnique("server", directive));
