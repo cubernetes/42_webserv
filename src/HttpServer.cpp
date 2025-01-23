@@ -36,7 +36,9 @@ HttpServer::HttpServer() :
 	_running(false),
 	_config(),
 	_id(_idCntr++),
-	_mimeTypes() {
+	_mimeTypes(),
+	_pendingWrites(),
+	_pendingClose() {
 	TRACE_DEFAULT_CTOR;
 	initMimeTypes();
 }
@@ -47,7 +49,9 @@ HttpServer::HttpServer(const HttpServer& other) :
 	_running(other._running),
 	_config(other._config),
 	_id(_idCntr++),
-	_mimeTypes() {
+	_mimeTypes(),
+	_pendingWrites(),
+	_pendingClose() {
 	TRACE_COPY_CTOR;
 }
 
