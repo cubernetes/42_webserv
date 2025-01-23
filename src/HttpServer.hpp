@@ -76,12 +76,13 @@ private:
 	void removePollFd(int fd);
 	HttpRequest parseHttpRequest(const char *buffer);
 	bool validateServerConfig(int clientFd, const ServerCtx& serverConfig, string& rootDir, string& defaultIndex);
-	bool validatePath(int clientFd, const string& path);
-	bool handleDirectoryRedirect(int clientFd, const HttpRequest& request, string& filePath, 
+	bool validatePath(const ServerCtx& serverConfig, int clientFd, const string& path);
+	bool handleDirectoryRedirect(const ServerCtx& serverConfig, int clientFd, const HttpRequest& request, string& filePath, 
 									const string& defaultIndex, struct stat& fileStat);
-	void sendFileContent(int clientFd, const string& filePath);
+	void sendFileContent(const ServerCtx& serverConfig, int clientFd, const string& filePath);
 	void handleGetRequest(int clientFd, const HttpRequest& request);
-	void sendError(int clientFd, int statusCode, const string& statusText);
+	void sendError(const ServerCtx& serverConfig, int clientFd, int statusCode, const string& statusText);
+	string getErrorPagePath(int statusCode, const ServerCtx& serverConfig);
 	void sendText(int clientFd, const string& text);
 	void initMimeTypes();
 	string getMimeType(const string& path);

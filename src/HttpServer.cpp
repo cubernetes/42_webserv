@@ -36,7 +36,9 @@ HttpServer::HttpServer() :
 	_running(false),
 	_config(),
 	_id(_idCntr++),
-	_mimeTypes() {
+	_mimeTypes(),
+	_pendingWrites(),
+	_pendingClose() {
 	TRACE_DEFAULT_CTOR;
 	initMimeTypes();
 }
@@ -47,7 +49,9 @@ HttpServer::HttpServer(const HttpServer& other) :
 	_running(other._running),
 	_config(other._config),
 	_id(_idCntr++),
-	_mimeTypes() {
+	_mimeTypes(),
+	_pendingWrites(),
+	_pendingClose() {
 	TRACE_COPY_CTOR;
 }
 
@@ -352,32 +356,32 @@ HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer) {
 bool HttpServer::validateServerConfig(int clientFd, const ServerCtx& serverConfig, string& rootDir, string& defaultIndex) {
 	if (!directiveExists(serverConfig.first, "root") ||
 			getFirstDirective(serverConfig.first, "root").empty()) {
-			sendError(clientFd, 500, "Internal Server Error");
+			sendError(serverConfig, clientFd, 500, "Internal Server Error");
 			return false;
 		}
 		rootDir = getFirstDirective(serverConfig.first, "root")[0];
 
 		if (!directiveExists(serverConfig.first, "index") ||
 			getFirstDirective(serverConfig.first, "index").empty()) {
-			sendError(clientFd, 500, "Internal Server Error");
+			sendError(serverConfig, clientFd, 500, "Internal Server Error");
 			return false;
 		}
 		defaultIndex = getFirstDirective(serverConfig.first, "index")[0];
 		return true;
 }
 
-bool HttpServer::validatePath(int clientFd, const string& path) {
+bool HttpServer::validatePath(const ServerCtx& serverConfig, int clientFd, const string& path) {
 		if (path.find("..") != string::npos || 
 			path.find("//") != string::npos || 
 			path[0] != '/' || 
 			path.find(':') != string::npos) {
-			sendError(clientFd, 403, "Forbidden");
+			sendError(serverConfig, clientFd, 403, "Forbidden");
 			return false;
 		}
 		return true;
 }
 
-bool HttpServer::handleDirectoryRedirect(int clientFd, const HttpRequest& request, string& filePath, 
+bool HttpServer::handleDirectoryRedirect(const ServerCtx& serverConfig, int clientFd, const HttpRequest& request, string& filePath, 
 							   const string& defaultIndex, struct stat& fileStat) {
 		if (request.path[request.path.length() - 1] != '/') {
 			string redirectUrl = request.path + "/";
@@ -392,16 +396,16 @@ bool HttpServer::handleDirectoryRedirect(int clientFd, const HttpRequest& reques
 		}
 		filePath += defaultIndex;
 		if (stat(filePath.c_str(), &fileStat) == -1) {
-			sendError(clientFd, 404, "Not Found");
+			sendError(serverConfig, clientFd, 404, "Not Found");
 			return false;
 		}
 		return true;
 }
 
-void HttpServer::sendFileContent(int clientFd, const string& filePath) {
+void HttpServer::sendFileContent(const ServerCtx& serverConfig, int clientFd, const string& filePath) {
 		std::ifstream file(filePath.c_str(), std::ios::binary);
 		if (!file) {
-			sendError(clientFd, 403, "Forbidden");
+			sendError(serverConfig, clientFd, 403, "Forbidden");
 			return;
 		}
 
@@ -426,18 +430,18 @@ void HttpServer::sendFileContent(int clientFd, const string& filePath) {
 }
 
 void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
+	const ServerCtx& serverConfig = _config.second[0];
 
 	//TODO: @sonia: multiple servers
 	if (_config.second.empty()) {
-		sendError(clientFd, 500, "Internal Server Error");
+		sendError(serverConfig, clientFd, 500, "Internal Server Error");
 		return;
 	}
 
-	const ServerCtx& serverConfig = _config.second[0];
 	string rootDir, defaultIndex;
 	if (!validateServerConfig(clientFd, serverConfig, rootDir, defaultIndex))
 		return;
-	if (!validatePath(clientFd, request.path))
+	if (!validatePath(serverConfig, clientFd, request.path))
 		return;
 
 	struct stat fileStat;
@@ -450,12 +454,12 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 
 		if (stat(indexPath.c_str(), &indexFileStat) == -1) {
 			if (getFirstDirective(serverConfig.first, "autoindex")[0] == "off") {
-				sendError(clientFd, 403, "Forbidden");
+				sendError(serverConfig, clientFd, 403, "Forbidden");
 				return;
 			}
 			if (fileExists)
 				sendText(clientFd, indexDirectory(request.path, filePath));
-			sendError(clientFd, 404, "Not Found");
+			sendError(serverConfig, clientFd, 404, "Not Found");
 			return;
 		}
 		filePath == indexPath;
@@ -463,26 +467,48 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 	}
 
 	if (!fileExists) {
-		sendError(clientFd, 404, "Not Found");
+		sendError(serverConfig, clientFd, 404, "Not Found");
 		return;
 	}
 
 	if (S_ISDIR(fileStat.st_mode)) {
-		if (!handleDirectoryRedirect(clientFd, request, filePath, defaultIndex, fileStat))
+		if (!handleDirectoryRedirect(serverConfig, clientFd, request, filePath, defaultIndex, fileStat))
 			return;
 	}
 
 	if (S_ISREG(fileStat.st_mode))
-		sendFileContent(clientFd, filePath);
+		sendFileContent(serverConfig, clientFd, filePath);
 	else
-		sendError(clientFd, 404, "Not Found"); // sometimes it's also 403, or 500, but haven't figured out the pattern yet
+		sendError(serverConfig, clientFd, 404, "Not Found"); // sometimes it's also 403, or 500, but haven't figured out the pattern yet
 }
 
-void HttpServer::sendError(int clientFd, int statusCode, const string& statusText) {
+string HttpServer::getErrorPagePath(int statusCode, const ServerCtx& serverConfig) {
+	ArgResults allErrPageDirs = getAllDirectives(serverConfig.first, "error_page");
+	for (ArgResults::const_iterator args = allErrPageDirs.begin(); args != allErrPageDirs.end(); ++args) {
+		Arguments::const_iterator code = args->begin(), before = --args->end();
+		for (; code != before; ++code) {
+			if (atoi(code->c_str()) == statusCode) {
+				return args->back();
+			}
+		}
+	}
+	return "";
+}
+
+void HttpServer::sendError(const ServerCtx& serverConfig, int clientFd, int statusCode, const string& statusText) {
 	std::ostringstream	response;
 	std::ostringstream	body;
 
-	body << "<html><body><h1>" << statusCode << " " << statusText << "</h1></body></html>";
+	string errorPagePath = getErrorPagePath(statusCode, serverConfig);
+	if (errorPagePath.empty())
+		body << "<html><body><h1>" << statusCode << " " << statusText << "</h1></body></html>";
+	else {
+		std::ifstream errorPageFile((getFirstDirective(serverConfig.first, "root")[0] + errorPagePath).c_str());
+		if (!errorPageFile)
+			body << "<html><body><h1>" << statusCode << " " << statusText << "</h1></body></html>";
+		else
+			body << errorPageFile.rdbuf();
+	}
 	string bodyStr = body.str();
 	
 	response << "HTTP/1.1 " << statusCode << " " << statusText << "\r\n"
