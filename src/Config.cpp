@@ -48,11 +48,16 @@ ArgResults getAllDirectives(const Directives& directives, const string& directiv
 	return allArgs;
 }
 
-static inline void takeFromDefault(Directives& directives, Directives& httpDirectives, const string& directive, const string& value) {
-	if (httpDirectives.find(directive) == httpDirectives.end())
+static inline void takeFromParentOrSet(Directives& directives, Directives& parentDirectives, const string& directive, const string& value) {
+	if (parentDirectives.find(directive) == parentDirectives.end())
 		updateIfNotExists(directives, directive, value);
 	else
-		updateIfNotExistsVec(directives, directive, getFirstDirective(httpDirectives, directive));
+		updateIfNotExistsVec(directives, directive, getFirstDirective(parentDirectives, directive));
+}
+
+static inline void takeFromParent(Directives& directives, Directives& parentDirectives, const string& directive) {
+	if (parentDirectives.find(directive) != parentDirectives.end())
+		updateIfNotExistsVec(directives, directive, getFirstDirective(parentDirectives, directive));
 }
 
 static inline void populateDefaultHttpDirectives(Directives& directives) {
@@ -65,24 +70,32 @@ static inline void populateDefaultHttpDirectives(Directives& directives) {
 }
 
 static inline void populateDefaultServerDirectives(Directives& directives, Directives& httpDirectives) {
-	takeFromDefault(directives, httpDirectives, "autoindex", "off");
-	takeFromDefault(directives, httpDirectives, "cgi_dir", "cgi-bin");
-	takeFromDefault(directives, httpDirectives, "client_max_body_size", "1m");
-	takeFromDefault(directives, httpDirectives, "index", "index.html");
-	takeFromDefault(directives, httpDirectives, "root", "html");
-	takeFromDefault(directives, httpDirectives, "upload_dir", "");
+	takeFromParentOrSet(directives, httpDirectives, "autoindex", "off");
+	takeFromParentOrSet(directives, httpDirectives, "cgi_dir", "cgi-bin");
+	takeFromParentOrSet(directives, httpDirectives, "client_max_body_size", "1m");
+	takeFromParentOrSet(directives, httpDirectives, "index", "index.html");
+	takeFromParentOrSet(directives, httpDirectives, "root", "html");
+	takeFromParentOrSet(directives, httpDirectives, "upload_dir", "");
+
+	takeFromParent(directives, httpDirectives, "error_page");
+	takeFromParent(directives, httpDirectives, "cgi_ext");
+	takeFromParent(directives, httpDirectives, "cgi_dir");
 
 	updateIfNotExists(directives, "listen", "*:8000");
 	updateIfNotExists(directives, "server_name", "");
 }
 
 static inline void populateDefaultLocationDirectives(Directives& directives, Directives& serverDirectives) {
-	takeFromDefault(directives, serverDirectives, "autoindex", "off");
-	takeFromDefault(directives, serverDirectives, "cgi_dir", "cgi-bin");
-	takeFromDefault(directives, serverDirectives, "client_max_body_size", "1m");
-	takeFromDefault(directives, serverDirectives, "index", "index.html");
-	takeFromDefault(directives, serverDirectives, "root", "html");
-	takeFromDefault(directives, serverDirectives, "upload_dir", "");
+	takeFromParentOrSet(directives, serverDirectives, "autoindex", "off");
+	takeFromParentOrSet(directives, serverDirectives, "cgi_dir", "cgi-bin");
+	takeFromParentOrSet(directives, serverDirectives, "client_max_body_size", "1m");
+	takeFromParentOrSet(directives, serverDirectives, "index", "index.html");
+	takeFromParentOrSet(directives, serverDirectives, "root", "html");
+	takeFromParentOrSet(directives, serverDirectives, "upload_dir", "");
+
+	takeFromParent(directives, httpDirectives, "error_page");
+	takeFromParent(directives, httpDirectives, "cgi_ext");
+	takeFromParent(directives, httpDirectives, "cgi_dir");
 }
 
 static inline Arguments parseArguments(Tokens& tokens) {
