@@ -287,7 +287,7 @@ static void checkHttpDirectives(Directives& directives) {
 		CHECKFN      ("http", checkCgiDir);
 		CHECKFN_MULTI("http", checkCgiExt);
 		CHECKFN      ("http", checkClientMaxBodySize);
-		CHECKFN_MULTI("http", checkErrorPage);
+		CHECKFN      ("http", checkErrorPage);
 		CHECKFN_MULTI("http", checkIndex);
 		CHECKFN      ("http", checkRoot);
 		CHECKFN      ("http", checkUploadDir);
@@ -306,7 +306,7 @@ static void checkServerDirectives(Directives& directives) {
 		CHECKFN      ("server", checkCgiDir);
 		CHECKFN_MULTI("server", checkCgiExt);
 		CHECKFN      ("server", checkClientMaxBodySize);
-		CHECKFN_MULTI("server", checkErrorPage);
+		CHECKFN      ("server", checkErrorPage);
 		CHECKFN_MULTI("server", checkIndex);
 		CHECKFN_MULTI("server", checkListen);
 		CHECKFN      ("server", checkRoot);
@@ -328,7 +328,7 @@ static void checkLocationDirectives(Directives& directives) {
 		CHECKFN      ("location", checkCgiDir);
 		CHECKFN_MULTI("location", checkCgiExt);
 		CHECKFN      ("location", checkClientMaxBodySize);
-		CHECKFN_MULTI("location", checkErrorPage);
+		CHECKFN      ("location", checkErrorPage);
 		CHECKFN_MULTI("location", checkIndex);
 		CHECKFN      ("location", checkLimitExcept);
 		CHECKFN      ("location", checkReturn);
