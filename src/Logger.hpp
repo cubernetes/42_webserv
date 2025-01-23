@@ -1,5 +1,6 @@
 #pragma once /* Logger.hpp */
 
+#include <string>
 #include <exception>
 
 class Logger {
@@ -11,7 +12,7 @@ public:
 	void swap(Logger& other);
 	
 	static void logexception(const std::exception& exception);
-	static void logerror(const char* error);
+	static void logerror(const std::string& msg);
 	static const int TRACE = 0;
 	static const int DEBUG = 1;
 	static const int INFO  = 2;

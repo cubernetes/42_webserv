@@ -71,11 +71,15 @@ static inline void ensureValidSize(const string& ctx, const string& directive, c
 	throw runtime_error(Errors::Config::DirectiveInvalidSizeArgument(ctx, directive, argument));
 }
 
-static inline void ensureOnOff(const string& ctx, const string& directive, const string& argument) {
-	if (argument == "on" || argument == "yes" || argument == "true")
+static inline void ensureOnOff(const string& ctx, const string& directive, string& argument) {
+	if (argument == "on" || argument == "yes" || argument == "true") {
+		argument = "on";
 		return;
-	if (argument == "off" || argument == "no" || argument == "false")
+	}
+	if (argument == "off" || argument == "no" || argument == "false") {
+		argument = "off";
 		return;
+	}
 	throw runtime_error(Errors::Config::DirectiveInvalidBooleanArgument(ctx, directive, argument));
 }
 
@@ -224,7 +228,7 @@ static inline bool checkReturn(const string& ctx, const string& directive, const
 	return false;
 }
 
-static inline bool checkAutoindex(const string& ctx, const string& directive, const Arguments& arguments) {
+static inline bool checkAutoindex(const string& ctx, const string& directive, Arguments& arguments) {
 	if (directive == "autoindex") {
 		ensureArity(ctx, directive, arguments, 1, 1);
 		ensureOnOff(ctx, directive, arguments[0]);

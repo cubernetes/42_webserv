@@ -26,12 +26,12 @@ void swap(Logger& a, Logger& b) /* noexcept */ { a.swap(b); }
 // end of boilerplate
 
 
-void Logger::logexception(const std::exception& exception) {
+void Logger::logexception(const std::exception& exception) { // TODO: @timo: make camelCase
 	cerr << exception.what() << endl;
 }
 
-void Logger::logerror(const char* error) {
-	cerr << error << endl;
+void Logger::logerror(const std::string& msg) { // TODO: @timo: make camelCase
+	cerr << msg << endl;
 }
 
 bool Logger::trace() {
