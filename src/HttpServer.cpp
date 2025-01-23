@@ -38,7 +38,9 @@ HttpServer::HttpServer() :
 	_id(_idCntr++),
 	_mimeTypes(),
 	_pendingWrites(),
-	_pendingClose() {
+	_pendingClose(),
+	_servers(),
+	_defaultServers() {
 	TRACE_DEFAULT_CTOR;
 	initMimeTypes();
 }
@@ -51,7 +53,9 @@ HttpServer::HttpServer(const HttpServer& other) :
 	_id(_idCntr++),
 	_mimeTypes(),
 	_pendingWrites(),
-	_pendingClose() {
+	_pendingClose(),
+	_servers(),
+	_defaultServers() {
 	TRACE_COPY_CTOR;
 }
 
@@ -136,10 +140,33 @@ void HttpServer::initMimeTypes() {
 
 bool HttpServer::setup(const Config& conf) {
 	_config = conf;
-	const Arguments hostPort = getFirstDirective(conf.second[0].first, "listen");
-	const char *host = hostPort[0].c_str();
-	int port = std::atoi(hostPort[1].c_str());
-	return setupSocket(host, port);
+
+	for (ServerCtxs::const_iterator server = conf.second.begin();
+			server != conf.second.end(); ++server) {
+		ServerConfig serverConfig;
+		const Arguments hostPort = getFirstDirective(server->first, "listen");
+		serverConfig.ip = hostPort[0];
+		serverConfig.port = std::atoi(hostPort[1].c_str());
+
+		if (directiveExists(server->first, "server_name")) {
+			const Arguments& names = getFirstDirective(server->first, "server_name");
+			serverConfig.serverNames.insert(serverConfig.serverNames.end(),
+											names.begin(), names.end());
+		}
+
+		serverConfig.directives = server->first;
+		serverConfig.locations = server->second;
+
+		if (!setupSocket(serverConfig.ip, serverConfig.port))
+			return false;
+		
+		_servers.push_back(serverConfig);
+
+		std::pair<std::string, int> addr(serverConfig.ip, serverConfig.port);
+		if (_defaultServers.find(addr) == _defaultServers.end())
+			_defaultServers[addr] = &_servers.back();
+	}
+	return true;
 }
 
 bool HttpServer::setupSocket(const std::string& ip, int port) {
@@ -186,6 +213,33 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 	
 	cout << "Server is listening on port " << port << std::endl;
 	return true;
+}
+
+const HttpServer::ServerConfig* HttpServer::findMatchingServer(const std::string& host, 
+													const std::string& ip, 
+													int port) const {
+	std::string serverName = host;
+	size_t colonPos = serverName.find(':');
+	if (colonPos != std::string::npos) 
+		serverName = serverName.substr(0, colonPos);
+	for (std::vector<ServerConfig>::const_iterator it = _servers.begin();
+			it != _servers.end(); ++it) {
+		if (it->port == port && it->ip == ip) {
+			for (std::vector<std::string>::const_iterator name = it->serverNames.begin();
+					name != it->serverNames.end(); ++name) {
+				if (*name == serverName)
+					return &(*it);
+			}
+		}
+	}
+
+	std::pair<std::string, int> addr(ip, port);
+	std::map<std::pair<std::string, int>, const ServerConfig*>::const_iterator it = _defaultServers.find(addr);
+	if (it != _defaultServers.end()) {
+		return it->second;
+	}
+
+	return NULL;
 }
 
 void HttpServer::queueWrite(int clientFd, const string& data) {
@@ -382,7 +436,7 @@ bool HttpServer::validatePath(int clientFd, const string& path) {
 }
 
 bool HttpServer::handleDirectoryRedirect(int clientFd, const HttpRequest& request, string& filePath, 
-							   const string& defaultIndex, struct stat& fileStat) {
+								const string& defaultIndex, struct stat& fileStat) {
 		if (request.path[request.path.length() - 1] != '/') {
 			string redirectUrl = request.path + "/";
 			std::ostringstream response;
@@ -431,15 +485,30 @@ void HttpServer::sendFileContent(int clientFd, const string& filePath) {
 
 void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 
-	//TODO: @sonia: multiple servers
-	if (_config.second.empty()) {
+	struct sockaddr_in addr;
+	socklen_t addrLen = sizeof(addr);
+	if (getsockname(clientFd, (struct sockaddr*)&addr, &addrLen) < 0) {
 		sendError(clientFd, 500, "Internal Server Error");
 		return;
 	}
+	
+	int port = ntohs(addr.sin_port);
+	// Get host from request headers (nginx style)
+	string host;
+	if (request.headers.find("Host") != request.headers.end()) {
+		host = request.headers.at("Host");
+		size_t colonPos = host.find(':');
+		if (colonPos != string::npos)
+			host = host.substr(0, colonPos);
+	}
 
-	const ServerCtx& serverConfig = _config.second[0];
+	const ServerConfig* server = findMatchingServer(host, addr.sin_addr, port);
+	if (!server) {
+		sendError(clientFd, 404, "Not Found");
+		return;
+	}
 	string rootDir, defaultIndex;
-	if (!validateServerConfig(clientFd, serverConfig, rootDir, defaultIndex))
+	if (!validateServerConfig(clientFd, std::make_pair(server->directives, server->locations), rootDir, defaultIndex))
 		return;
 	if (!validatePath(clientFd, request.path))
 		return;
@@ -453,7 +522,7 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 		string indexPath = filePath + defaultIndex;
 
 		if (stat(indexPath.c_str(), &indexFileStat) == -1) {
-			if (getFirstDirective(serverConfig.first, "autoindex")[0] == "off") {
+			if (getFirstDirective(server->directives, "autoindex")[0] == "off") {
 				sendError(clientFd, 403, "Forbidden");
 				return;
 			}

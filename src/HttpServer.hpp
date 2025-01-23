@@ -68,6 +68,18 @@ private:
 
 	std::map<int, PendingWrite>	_pendingWrites;
 	std::set<int>				_pendingClose;
+	struct ServerConfig {
+		std::string	ip;
+		int			port;
+		std::vector<std::string> serverNames;
+		Directives directives;
+		LocationCtxs locations;
+
+		ServerConfig() : ip(), port(0), serverNames(), directives(), locations() {}
+	};
+
+	std::vector<ServerConfig> _servers;
+	std::map<std::pair<std::string, int>, const ServerConfig*> _defaultServers;
 
 	bool setupSocket(const std::string& ip, int port);
 	void handleNewConnection();
@@ -87,6 +99,7 @@ private:
 	string getMimeType(const string& path);
 	void queueWrite(int clientFd, const string& data);
 	void handleClientWrite(int clientFd);
+	const ServerConfig* findMatchingServer(const std::string& host, const std::string& ip, int port) const;
 };
 
 // global scope swap (aka ::swap), needed since friend keyword is forbidden :(
