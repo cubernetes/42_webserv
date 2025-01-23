@@ -14,12 +14,12 @@
 using std::string;
 using std::runtime_error;
 
-static void updateIfNotExists(Directives& directives, const string& directive, const string& value) {
+static inline void updateIfNotExists(Directives& directives, const string& directive, const string& value) {
 	if (directives.find(directive) == directives.end())
 		directives.insert(std::make_pair(directive, VEC(string, value)));
 }
 
-static void updateIfNotExistsVec(Directives& directives, const string& directive, const Arguments& value) {
+static inline void updateIfNotExistsVec(Directives& directives, const string& directive, const Arguments& value) {
 	if (directives.find(directive) == directives.end())
 		directives.insert(std::make_pair(directive, value));
 }
@@ -48,14 +48,14 @@ ArgResults getAllDirectives(const Directives& directives, const string& directiv
 	return allArgs;
 }
 
-static void takeFromDefault(Directives& directives, Directives& httpDirectives, const string& directive, const string& value) {
+static inline void takeFromDefault(Directives& directives, Directives& httpDirectives, const string& directive, const string& value) {
 	if (httpDirectives.find(directive) == httpDirectives.end())
 		updateIfNotExists(directives, directive, value);
 	else
 		updateIfNotExistsVec(directives, directive, getFirstDirective(httpDirectives, directive));
 }
 
-static void populateDefaultHttpDirectives(Directives& directives) {
+static inline void populateDefaultHttpDirectives(Directives& directives) {
 	updateIfNotExists(directives, "autoindex", "off");
 	updateIfNotExists(directives, "cgi_dir", "cgi-bin");
 	updateIfNotExists(directives, "client_max_body_size", "1m");
@@ -64,7 +64,7 @@ static void populateDefaultHttpDirectives(Directives& directives) {
 	updateIfNotExists(directives, "upload_dir", "");
 }
 
-static void populateDefaultServerDirectives(Directives& directives, Directives& httpDirectives) {
+static inline void populateDefaultServerDirectives(Directives& directives, Directives& httpDirectives) {
 	takeFromDefault(directives, httpDirectives, "autoindex", "off");
 	takeFromDefault(directives, httpDirectives, "cgi_dir", "cgi-bin");
 	takeFromDefault(directives, httpDirectives, "client_max_body_size", "1m");
@@ -76,7 +76,7 @@ static void populateDefaultServerDirectives(Directives& directives, Directives& 
 	updateIfNotExists(directives, "server_name", "");
 }
 
-static void populateDefaultLocationDirectives(Directives& directives, Directives& serverDirectives) {
+static inline void populateDefaultLocationDirectives(Directives& directives, Directives& serverDirectives) {
 	takeFromDefault(directives, serverDirectives, "autoindex", "off");
 	takeFromDefault(directives, serverDirectives, "cgi_dir", "cgi-bin");
 	takeFromDefault(directives, serverDirectives, "client_max_body_size", "1m");
@@ -85,7 +85,7 @@ static void populateDefaultLocationDirectives(Directives& directives, Directives
 	takeFromDefault(directives, serverDirectives, "upload_dir", "");
 }
 
-static Arguments parseArguments(Tokens& tokens) {
+static inline Arguments parseArguments(Tokens& tokens) {
 	Arguments arguments;
 	while (!tokens.empty()) {
 		if (tokens.front().first == TOK_WORD) {

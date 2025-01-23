@@ -27,13 +27,13 @@
 #include "inc_macros.h"
 
 #define CHECK_N(x, n, ...) n
-#define CHECK(...) CHECK_N(__VA_ARGS__, 0,)
+#define CHECK_(...) CHECK_N(__VA_ARGS__, 0,)
 #define PROBE(x) x, 1,
 
-#define IS_PAREN(x) CHECK(IS_PAREN_PROBE x)
+#define IS_PAREN(x) CHECK_(IS_PAREN_PROBE x)
 #define IS_PAREN_PROBE(...) PROBE(~)
 
-#define NOT(x) CHECK(PRIMITIVE_CAT(NOT_, x))
+#define NOT(x) CHECK_(PRIMITIVE_CAT(NOT_, x))
 #define NOT_0 PROBE(~)
 
 #define BOOL(x) COMPL(NOT(x))
@@ -41,7 +41,7 @@
 
 #define EAT(...)
 #define EXPAND(...) __VA_ARGS__
-#define WHEN(c) IF(c)(EXPAND, EAT)
+#define WHEN_(c) IF(c)(EXPAND, EAT)
 
 #define EMPTY()
 #define DEFER(id) id EMPTY()
@@ -63,7 +63,7 @@
 #define EVAL_5(...) __VA_ARGS__
 
 #define REPEAT(count, macro, ...) \
-	WHEN(count) \
+	WHEN_(count) \
 	( \
 	  DEFER2(REPEAT_INDIRECT) () \
 	  ( \

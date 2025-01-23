@@ -6,9 +6,17 @@ a.c
 # build artefacts
 a.out
 webserv
+c2_unit_tests
+
+# coverage artefacts
+*.profraw
+llvm_profdata/
+lcov_report/
+gcovr_report/
 
 # objects
 obj/
+obj_c2/
 
 # clangd stuff
 .cache/

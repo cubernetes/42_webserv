@@ -9,7 +9,16 @@
 using std::string;
 
 const string Errors::WrongArgs(int ac) {
-	return cmt("Server started with invalid number of arguments: ") + repr(ac);
+	return cmt("Server started with invalid number of arguments: ") + repr(ac - 1);
+}
+
+const string Errors::DegenerateArgv(int ac, char **av) {
+	unsigned int realAc = 0;
+	while (av && av[realAc])
+		++realAc;
+	if (av)
+		return cmt("Argument vector is corrupted. Count is ") + repr(ac) + cmt(" and vector until NULL is ") + reprArr(av, realAc);
+	return cmt("Argument vector is NULL and supposed count is ") + repr(ac);
 }
 
 const string Errors::MultimapIndex(const string& key) {

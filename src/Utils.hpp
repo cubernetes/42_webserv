@@ -12,7 +12,7 @@ namespace Utils {
 	string parseArgs(int ac, char **av);
 
 	template<typename T>
-	vector<T>& getTmpVec() {
+	static inline vector<T>& getTmpVec() {
 		static vector<T> _;
 		return _;
 	}

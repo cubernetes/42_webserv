@@ -384,7 +384,7 @@ static bool overlapListen(const ArgResults& listenDirectives, const ArgResults& 
 	return false;
 }
 
-void ensureNoOverlapServerName(const ArgResults& serverNameDirectives, const ArgResults& otherServerNameDirectives) {
+static void ensureNoOverlapServerName(const ArgResults& serverNameDirectives, const ArgResults& otherServerNameDirectives) {
 	for (ArgResults::const_iterator serverNameDirective = serverNameDirectives.begin(); serverNameDirective != serverNameDirectives.end(); ++serverNameDirective) {
 		for (ArgResults::const_iterator otherServerNameDirective = otherServerNameDirectives.begin(); otherServerNameDirective != otherServerNameDirectives.end(); ++otherServerNameDirective) {
 			for (Arguments::const_iterator serverName = serverNameDirective->begin(); serverName != serverNameDirective->end(); ++serverName) {
@@ -398,7 +398,7 @@ void ensureNoOverlapServerName(const ArgResults& serverNameDirectives, const Arg
 	}
 }
 
-void ensureServerUniqueness(const Directives& directives, const ServerCtxs& servers) {
+static void ensureServerUniqueness(const Directives& directives, const ServerCtxs& servers) {
 	ArgResults listenDirectives = getAllDirectives(directives, "listen");
 	ArgResults serverNameDirectives = getAllDirectives(directives, "server_name");
 

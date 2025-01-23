@@ -10,7 +10,7 @@
 using std::string;
 using std::swap;
 
-static string _replace(string s, const string& search, const string& replace) {
+static inline string _replace(string s, const string& search, const string& replace) {
 	std::size_t pos = 0;
 	while ((pos = s.find(search, pos)) != string::npos) {
 		 s.replace(pos, search.length(), replace);
@@ -19,7 +19,7 @@ static string _replace(string s, const string& search, const string& replace) {
 	return s;
 }
 
-static string jsonEscape(string s) {
+static inline string jsonEscape(string s) {
 	return _replace(_replace(s, "\\", "\\\\"), "\"", "\\\"");
 }
 
