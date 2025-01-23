@@ -2,10 +2,11 @@
 
 #include <algorithm>
 #include <cctype>
-#include <vector>
 #include <map>
+#include <set> 
 #include <string>
 #include <sys/poll.h>
+#include <vector>
 
 #include "Config.hpp"
 
@@ -35,20 +36,20 @@ public:
 	unsigned int get_id() const;
 
 private:
-	int _serverFd;
-	std::vector<struct pollfd> _pollFds;
-	bool _running;
-	Config _config;
+	int							_serverFd;
+	std::vector<struct pollfd>	_pollFds;
+	bool						_running;
+	Config						_config;
 
 	// Instance tracking
-	unsigned int _id;
-	static unsigned int _idCntr;
-	std::map<string,string> _mimeTypes;
+	unsigned int				_id;
+	static unsigned int			_idCntr;
+	std::map<string,string>		_mimeTypes;
 	struct HttpRequest {
-		string method;
-		string path;
-		string httpVersion;
-		std::map<string, string> headers;
+		string						method;
+		string						path;
+		string						httpVersion;
+		std::map<string, string>	headers;
 
 		HttpRequest() :
 			method(),
@@ -56,6 +57,17 @@ private:
 			httpVersion(),
 			headers() {}
 	};
+
+	struct PendingWrite {
+		string	data;
+		size_t	bytesSent;
+
+		PendingWrite() : data(), bytesSent(0) {}
+		PendingWrite(const string& d) : data(d), bytesSent(0) {}
+	};
+
+	std::map<int, PendingWrite>	_pendingWrites;
+	std::set<int>				_pendingClose;
 
 	bool setupSocket(const std::string& ip, int port);
 	void handleNewConnection();
@@ -72,6 +84,8 @@ private:
 	void sendError(int clientFd, int statusCode, const string& statusText);
 	void initMimeTypes();
 	string getMimeType(const string& path);
+	void queueWrite(int clientFd, const string& data);
+	void handleClientWrite(int clientFd);
 };
 
 // global scope swap (aka ::swap), needed since friend keyword is forbidden :(

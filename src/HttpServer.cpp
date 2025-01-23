@@ -2,7 +2,7 @@
 #include <ostream>
 #include <cstdlib>
 #include <fstream>
-#include <fcntl.h>
+#include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
@@ -138,7 +138,7 @@ bool HttpServer::setup(const Config& conf) {
 
 bool HttpServer::setupSocket(const std::string& ip, int port) {
 	(void)ip;
-	_serverFd = socket(AF_INET, SOCK_STREAM, 0);
+	_serverFd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (_serverFd < 0) {
 		Logger::logerror("Failed to create socket");
 		return false;
@@ -147,12 +147,6 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 	int opt = 1;
 	if (setsockopt(_serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
 		Logger::logerror("Failed to set socket options");
-		close(_serverFd);
-		return false;
-	}
-	
-	if (fcntl(_serverFd, F_SETFL, O_NONBLOCK) < 0) { // TODO: @sonia: use write(1)
-		Logger::logerror("Failed to set non-blocking socket");
 		close(_serverFd);
 		return false;
 	}
@@ -188,10 +182,71 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 	return true;
 }
 
+void HttpServer::queueWrite(int clientFd, const string& data) {
+
+	if (_pendingWrites.find(clientFd) == _pendingWrites.end())
+		_pendingWrites[clientFd] = PendingWrite(data);
+	else
+		_pendingWrites[clientFd].data += data;
+	
+	for (size_t i = 0; i < _pollFds.size(); ++i) {
+		if (_pollFds[i].fd == clientFd) {
+			_pollFds[i].events |= POLLOUT;
+			break ;
+		}
+	}
+}
+
+void HttpServer::handleClientWrite(int clientFd) {
+
+	std::map<int, PendingWrite>::iterator it = _pendingWrites.find(clientFd);
+	if (it == _pendingWrites.end()) {
+	// No pending writes, remove POLLOUT from events
+		for (size_t i = 0; i < _pollFds.size(); ++i) {
+			if (_pollFds[i].fd == clientFd) {
+				_pollFds[i].events &= ~POLLOUT;
+				break;
+			}
+		}
+
+		if (_pendingClose.find(clientFd) != _pendingClose.end()) {
+			_pendingClose.erase(clientFd);
+			closeConnection(clientFd);
+		}
+		return;
+	}
+
+	PendingWrite& pw = it->second;
+	const char* data = pw.data.c_str() + pw.bytesSent;
+	size_t remaining = pw.data.length() - pw.bytesSent;
+	
+	ssize_t bytesSent = send(clientFd, data, remaining, 0);
+	if (bytesSent < 0) {
+		if (errno != EAGAIN && errno != EWOULDBLOCK) {
+			closeConnection(clientFd);
+		}
+		return;
+	}
+	
+	pw.bytesSent += static_cast<size_t>(bytesSent);
+	
+	// Check if we've sent everything
+	if (pw.bytesSent >= pw.data.length()) {
+		_pendingWrites.erase(it);
+		// Rm POLLOUT from events since we're done writing
+		for (size_t i = 0; i < _pollFds.size(); ++i) {
+			if (_pollFds[i].fd == clientFd) {
+				_pollFds[i].events &= ~POLLOUT;
+				break;
+			}
+		}
+	}
+}
+
 void HttpServer::run() {
 	_running = true;
 
-	while (_running){
+	while (_running) {
 
 		int ready = poll(_pollFds.data(), _pollFds.size(), -1);
 		if (ready < 0) {
@@ -211,6 +266,9 @@ void HttpServer::run() {
 				else
 					handleClientData(_pollFds[i].fd);
 			}
+
+			if (_pollFds[i].revents & POLLOUT)
+				handleClientWrite(_pollFds[i].fd);
 			
 			if (_pollFds[i].revents & (POLLHUP | POLLERR))
 				closeConnection(_pollFds[i].fd);
@@ -229,20 +287,13 @@ void HttpServer::handleNewConnection() {
 		return;
 	}
 	
-	if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0) { // TODO: @sonia: use write(1)
-		Logger::logerror("Failed to set client socket non-blocking");
-		close(clientFd);
-		return;
-	}
-	
 	struct pollfd pfd;
 	pfd.fd = clientFd;
-	pfd.events = POLLIN;
+	pfd.events = POLLIN | POLLOUT;
 	pfd.revents = 0;
 	_pollFds.push_back(pfd);
 	
 	cout << "New client connected. FD: " << clientFd << std::endl;
-	// cout << *this << '\n';
 }
 
 void HttpServer::handleClientData(int clientFd) {
@@ -272,8 +323,7 @@ void HttpServer::handleClientData(int clientFd) {
 	}
 }
 
-HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer)
-{
+HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer) {
 
 	HttpRequest request;
 	std::istringstream requestStream(buffer);
@@ -286,8 +336,7 @@ HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer)
 
 	while (std::getline(requestStream, line) && line != "\r") {
 		size_t colonPos = line.find(':');
-		if (colonPos != string::npos)
-		{
+		if (colonPos != string::npos) {
 			string key = line.substr(0, colonPos);
 			string value = line.substr(colonPos + 1);
 			value.erase(0, value.find_first_not_of(" "));
@@ -298,8 +347,7 @@ HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer)
 	return request;
 }
 
-bool HttpServer::validateServerConfig(int clientFd, const ServerCtx& serverConfig, string& rootDir, string& defaultIndex)
-{
+bool HttpServer::validateServerConfig(int clientFd, const ServerCtx& serverConfig, string& rootDir, string& defaultIndex) {
 	if (!directiveExists(serverConfig.first, "root") ||
 			getFirstDirective(serverConfig.first, "root").empty()) {
 			sendError(clientFd, 500, "Internal Server Error");
@@ -348,8 +396,7 @@ bool HttpServer::handleDirectoryRedirect(int clientFd, const HttpRequest& reques
 		return true;
 }
 
-void HttpServer::sendFileContent(int clientFd, const string& filePath)
-{
+void HttpServer::sendFileContent(int clientFd, const string& filePath) {
 		std::ifstream file(filePath.c_str(), std::ios::binary);
 		if (!file) {
 			sendError(clientFd, 403, "Forbidden");
@@ -366,19 +413,17 @@ void HttpServer::sendFileContent(int clientFd, const string& filePath)
 				<< "Content-Type: " << getMimeType(filePath) << "\r\n"
 				<< "Connection: close\r\n\r\n";
 
-		string headerStr = headers.str();
-		send(clientFd, headerStr.c_str(), headerStr.length(), 0);
+		queueWrite(clientFd, headers.str());
 
 		char buffer[4096];
 		while(file.read(buffer, sizeof(buffer)))
-			send(clientFd, buffer, (size_t)file.gcount(), 0);
+			queueWrite(clientFd, string(buffer, static_cast<size_t>(file.gcount())));
 		if (file.gcount() > 0)
-			send(clientFd, buffer, (size_t)file.gcount(), 0);
-		closeConnection(clientFd);
+			queueWrite(clientFd, string(buffer, static_cast<size_t>(file.gcount())));
+		_pendingClose.insert(clientFd);
 }
 
-void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request)
-{
+void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 
 	//TODO: @sonia: multiple servers
 	if (_config.second.empty()) {
@@ -411,21 +456,24 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request)
 	sendFileContent(clientFd, filePath);
 }
 
-void HttpServer::sendError(int clientFd, int statusCode, const string& statusText)
-{
-	std::ostringstream response;
+void HttpServer::sendError(int clientFd, int statusCode, const string& statusText) {
+	std::ostringstream	response;
+	std::ostringstream	body;
+
+	body << "<html><body><h1>" << statusCode << " " << statusText << "</h1></body></html>";
+	string	bodyStr = body.str();
+	
 	response << "HTTP/1.1 " << statusCode << " " << statusText << "\r\n"
 			<< "Content-Type: text/html\r\n"
+			<< "Content-Length: " << bodyStr.length() << "\r\n"
 			<< "Connection: close\r\n\r\n"
 			<< "\r\n"
-			<< "<html><body><h1>" << statusCode << " " << statusText << "</h1></body></html>";
-	string responseStr = response.str();
-	send(clientFd, responseStr.c_str(), responseStr.length(), 0);
-	closeConnection(clientFd);
+			<< bodyStr;
+	queueWrite(clientFd, response.str());
+	_pendingClose.insert(clientFd);
 }
 
-string HttpServer::getMimeType(const string& path)
-{
+string HttpServer::getMimeType(const string& path) {
 	size_t dotPos = path.find_last_of('.');
 	if (dotPos == string::npos)
 		return "application/octet-stream";
