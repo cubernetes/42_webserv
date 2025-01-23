@@ -93,9 +93,9 @@ static inline void populateDefaultLocationDirectives(Directives& directives, Dir
 	takeFromParentOrSet(directives, serverDirectives, "root", "html");
 	takeFromParentOrSet(directives, serverDirectives, "upload_dir", "");
 
-	takeFromParent(directives, httpDirectives, "error_page");
-	takeFromParent(directives, httpDirectives, "cgi_ext");
-	takeFromParent(directives, httpDirectives, "cgi_dir");
+	takeFromParent(directives, serverDirectives, "error_page");
+	takeFromParent(directives, serverDirectives, "cgi_ext");
+	takeFromParent(directives, serverDirectives, "cgi_dir");
 }
 
 static inline Arguments parseArguments(Tokens& tokens) {
