@@ -1,14 +1,3 @@
-#include <iostream>
-#include <ostream>
-#include <cstdlib>
-#include <fstream>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <errno.h>
-#include <limits.h>
-#include <sys/stat.h>
-#include <netinet/in.h>
-
 #include "HttpServer.hpp"
 #include "Logger.hpp"
 #include "Config.hpp"
@@ -145,24 +134,33 @@ bool HttpServer::setup(const Config& conf) {
 			server != conf.second.end(); ++server) {
 		ServerConfig serverConfig;
 		const Arguments hostPort = getFirstDirective(server->first, "listen");
-		serverConfig.ip = hostPort[0];
+		struct addrinfo hints, *res;
+		std::memset(&hints, 0, sizeof(hints));
+		hints.ai_family = AF_INET;
+		hints.ai_socktype = SOCK_STREAM;
+
+		if (getaddrinfo(hostPort[0].c_str(), NULL, &hints, &res) != 0) {
+			Logger::logerror("Invalid IP address");
+			return false;
+		}
+		serverConfig.ip = ((struct sockaddr_in*)res->ai_addr)->sin_addr;
+		freeaddrinfo(res);
+		
 		serverConfig.port = std::atoi(hostPort[1].c_str());
 
-		if (directiveExists(server->first, "server_name")) {
-			const Arguments& names = getFirstDirective(server->first, "server_name");
-			serverConfig.serverNames.insert(serverConfig.serverNames.end(),
-											names.begin(), names.end());
-		}
-
+		const Arguments& names = getFirstDirective(server->first, "server_name");
+		serverConfig.serverNames.insert(serverConfig.serverNames.end(), 
+										names.begin(), names.end());
+		
 		serverConfig.directives = server->first;
 		serverConfig.locations = server->second;
-
-		if (!setupSocket(serverConfig.ip, serverConfig.port))
-			return false;
 		
+		if (!setupSocket(hostPort[0].c_str(), serverConfig.port))
+			return false;
+			
 		_servers.push_back(serverConfig);
 
-		std::pair<std::string, int> addr(serverConfig.ip, serverConfig.port);
+		std::pair<struct in_addr, int> addr(serverConfig.ip, serverConfig.port);
 		if (_defaultServers.find(addr) == _defaultServers.end())
 			_defaultServers[addr] = &_servers.back();
 	}
@@ -216,7 +214,7 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 }
 
 const HttpServer::ServerConfig* HttpServer::findMatchingServer(const std::string& host, 
-													const std::string& ip, 
+													const struct in_addr& addr, 
 													int port) const {
 	std::string serverName = host;
 	size_t colonPos = serverName.find(':');
@@ -224,7 +222,7 @@ const HttpServer::ServerConfig* HttpServer::findMatchingServer(const std::string
 		serverName = serverName.substr(0, colonPos);
 	for (std::vector<ServerConfig>::const_iterator it = _servers.begin();
 			it != _servers.end(); ++it) {
-		if (it->port == port && it->ip == ip) {
+		if (it->port == port && memcmp(&it->ip, &addr, sizeof(struct in_addr)) == 0) {
 			for (std::vector<std::string>::const_iterator name = it->serverNames.begin();
 					name != it->serverNames.end(); ++name) {
 				if (*name == serverName)
@@ -233,8 +231,8 @@ const HttpServer::ServerConfig* HttpServer::findMatchingServer(const std::string
 		}
 	}
 
-	std::pair<std::string, int> addr(ip, port);
-	std::map<std::pair<std::string, int>, const ServerConfig*>::const_iterator it = _defaultServers.find(addr);
+	std::pair<struct in_addr, int> addrPair(addr, port);
+	std::map<std::pair<struct in_addr, int>, const ServerConfig*>::const_iterator it = _defaultServers.find(addrPair);
 	if (it != _defaultServers.end()) {
 		return it->second;
 	}
@@ -493,7 +491,7 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 	}
 	
 	int port = ntohs(addr.sin_port);
-	// Get host from request headers (nginx style)
+	// Get host from request headers
 	string host;
 	if (request.headers.find("Host") != request.headers.end()) {
 		host = request.headers.at("Host");
