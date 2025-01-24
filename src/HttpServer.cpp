@@ -1,12 +1,16 @@
 #include <iostream>
 #include <ostream>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
+#include <vector>
+#include <algorithm>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <netinet/in.h>
 
 #include "HttpServer.hpp"
@@ -21,17 +25,19 @@ using std::string;
 
 HttpServer::~HttpServer() {
 	TRACE_DTOR;
-	if (_serverFd >= 0)
-		close(_serverFd);
+	for (std::vector<int>::const_iterator _serverFd = _serverFds.begin(); _serverFd != _serverFds.end(); ++_serverFd) {
+		if (*_serverFd >= 0)
+			close(*_serverFd);
+	}
 	
 	for (std::vector<struct pollfd>::iterator it = _pollFds.begin(); it != _pollFds.end(); ++it) {
-		if (it->fd >= 0 && it->fd != _serverFd)
+		if (it->fd >= 0 && !isServerFd(it->fd))
 			close(it->fd);
 	}
 }
 
 HttpServer::HttpServer() : 
-	_serverFd(-1),
+	_serverFds(),
 	_pollFds(),
 	_running(false),
 	_config(),
@@ -46,7 +52,7 @@ HttpServer::HttpServer() :
 }
 
 HttpServer::HttpServer(const HttpServer& other) :
-	_serverFd(-1),
+	_serverFds(),
 	_pollFds(other._pollFds),
 	_running(other._running),
 	_config(other._config),
@@ -70,7 +76,7 @@ HttpServer& HttpServer::operator=(HttpServer other) {
 }
 
 // Getters
-int HttpServer::get_serverFd() const { return _serverFd; }
+const std::vector<int>& HttpServer::get_serverFds() const { return _serverFds; }
 const std::vector<struct pollfd>& HttpServer::get_pollFds() const { return _pollFds; }
 bool HttpServer::get_running() const { return _running; }
 const Config& HttpServer::get_config() const { return _config; }
@@ -78,7 +84,7 @@ unsigned int HttpServer::get_id() const { return _id; }
 
 void HttpServer::swap(HttpServer& other) {
 	TRACE_SWAP_BEGIN;
-	::swap(_serverFd, other._serverFd);
+	::swap(_serverFds, other._serverFds);
 	::swap(_pollFds, other._pollFds);
 	::swap(_running, other._running);
 	::swap(_config, other._config);
@@ -98,6 +104,10 @@ std::ostream& operator<<(std::ostream& os, const HttpServer& server) {
 }
 // end of boilerplate
 
+
+bool HttpServer::isServerFd(int serverFd) {
+	return std::find(_serverFds.begin(), _serverFds.end(), serverFd) != _serverFds.end();
+}
 
 void HttpServer::initMimeTypes() {
 
@@ -138,6 +148,22 @@ void HttpServer::initMimeTypes() {
 	_mimeTypes["webm"] = "video/webm";
 }
 
+static struct in_addr stringAddrToStructAddr(string strAddr) {
+	struct addrinfo hints, *res;
+	struct in_addr addr;
+
+	std::memset(&hints, 0, sizeof(hints));
+	std::memset(&addr, 0, sizeof(addr));
+	hints.ai_family = PF_INET;
+	if (getaddrinfo(strAddr.c_str(), NULL, &hints, &res) != 0) {
+		// TODO: @all: couldn't resolve/convert address argument of listen directive to an actual address
+		return addr; // <- this is wrong, fix the logic according to TODO above
+	}
+	struct sockaddr_in *ipv4 = (struct sockaddr_in *)res->ai_addr; // sockaddr can be safely cast to sockaddr_in
+	addr = ipv4->sin_addr;
+	return addr;
+}
+
 bool HttpServer::setup(const Config& conf) {
 	_config = conf;
 
@@ -145,11 +171,11 @@ bool HttpServer::setup(const Config& conf) {
 			server != conf.second.end(); ++server) {
 		ServerConfig serverConfig;
 		const Arguments hostPort = getFirstDirective(server->first, "listen");
-		serverConfig.ip = hostPort[0];
-		serverConfig.port = std::atoi(hostPort[1].c_str());
+		serverConfig.ip = stringAddrToStructAddr(hostPort[0]);
+		serverConfig.port = (in_port_t)std::atoi(hostPort[1].c_str());
 
-		if (directiveExists(server->first, "server_name")) {
-			const Arguments& names = getFirstDirective(server->first, "server_name");
+		if (directiveExists(server->first, "server_name")) { // TODO: @sonia: server_name is guaranteed to exist, with a default value of "", which should catch all Host: headers (acting as a catch-all)
+			const Arguments names = getFirstDirective(server->first, "server_name");
 			serverConfig.serverNames.insert(serverConfig.serverNames.end(),
 											names.begin(), names.end());
 		}
@@ -162,24 +188,26 @@ bool HttpServer::setup(const Config& conf) {
 		
 		_servers.push_back(serverConfig);
 
-		std::pair<std::string, int> addr(serverConfig.ip, serverConfig.port);
+		std::pair<struct in_addr, in_port_t> addr(serverConfig.ip, serverConfig.port);
 		if (_defaultServers.find(addr) == _defaultServers.end())
-			_defaultServers[addr] = &_servers.back();
+			_defaultServers[addr] = _servers.back(); // TODO: @sonia: wouldn't _servers.back() mean it's always the last server that is the default, instead of the first? Maybe we can use reverse iterators, to solve that problem
 	}
 	return true;
 }
 
-bool HttpServer::setupSocket(const std::string& ip, int port) {
+bool HttpServer::setupSocket(const struct in_addr& ip, in_port_t port) {
 	(void)ip;
-	_serverFd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	int _serverFd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
 	if (_serverFd < 0) {
 		Logger::logerror("Failed to create socket");
 		return false;
 	}
+	_serverFds.push_back(_serverFd);
 	
 	int opt = 1;
 	if (setsockopt(_serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
 		Logger::logerror("Failed to set socket options");
+		_serverFds.pop_back();
 		close(_serverFd);
 		return false;
 	}
@@ -196,12 +224,14 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 	
 	if (bind(_serverFd, (struct sockaddr*)&address, sizeof(address)) < 0) {
 		Logger::logerror("Failed to bind socket");
+		_serverFds.pop_back();
 		close(_serverFd);
 		return false;
 	}
 	
 	if (listen(_serverFd, SOMAXCONN) < 0) {
 		Logger::logerror("Failed to listen on socket");
+		_serverFds.pop_back();
 		close(_serverFd);
 		return false;
 	}
@@ -215,17 +245,17 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 	return true;
 }
 
-const HttpServer::ServerConfig* HttpServer::findMatchingServer(const std::string& host, 
-													const std::string& ip, 
-													int port) const {
-	std::string serverName = host;
-	size_t colonPos = serverName.find(':');
-	if (colonPos != std::string::npos) 
+const HttpServer::ServerConfig* HttpServer::findMatchingServer(const string& host, 
+													const struct in_addr& ip, 
+													in_port_t port) const {
+	string serverName = host;
+	size_t colonPos = serverName.rfind(':'); // TODO: @all: can be tricky for IPv6 hosts..., changed it to rfind for now but what if it's IPv6 without a port, then it'll be tricky...
+	if (colonPos != string::npos)
 		serverName = serverName.substr(0, colonPos);
 	for (std::vector<ServerConfig>::const_iterator it = _servers.begin();
 			it != _servers.end(); ++it) {
-		if (it->port == port && it->ip == ip) {
-			for (std::vector<std::string>::const_iterator name = it->serverNames.begin();
+		if (it->port == port && std::memcmp(&it->ip, &ip, sizeof(ip)) == 0) {
+			for (std::vector<string>::const_iterator name = it->serverNames.begin();
 					name != it->serverNames.end(); ++name) {
 				if (*name == serverName)
 					return &(*it);
@@ -233,10 +263,10 @@ const HttpServer::ServerConfig* HttpServer::findMatchingServer(const std::string
 		}
 	}
 
-	std::pair<std::string, int> addr(ip, port);
-	std::map<std::pair<std::string, int>, const ServerConfig*>::const_iterator it = _defaultServers.find(addr);
+	std::pair<struct in_addr, in_port_t> addr(ip, port);
+	std::map<std::pair<struct in_addr, in_port_t>, ServerConfig>::const_iterator it = _defaultServers.find(addr);
 	if (it != _defaultServers.end()) {
-		return it->second;
+		return &it->second;
 	}
 
 	return NULL;
@@ -321,8 +351,8 @@ void HttpServer::run() {
 				continue;
 				
 			if (_pollFds[i].revents & POLLIN) {
-				if (_pollFds[i].fd == _serverFd)
-					handleNewConnection();
+				if (isServerFd(_pollFds[i].fd))
+					handleNewConnection(_pollFds[i].fd);
 				else
 					handleClientData(_pollFds[i].fd);
 			}
@@ -336,11 +366,11 @@ void HttpServer::run() {
 	}
 }
 
-void HttpServer::handleNewConnection() {
+void HttpServer::handleNewConnection(int serverFd) {
 	struct sockaddr_in clientAddr;
 	socklen_t clientLen = sizeof(clientAddr);
 	
-	int clientFd = accept(_serverFd, (struct sockaddr*)&clientAddr, &clientLen);
+	int clientFd = accept(serverFd, (struct sockaddr*)&clientAddr, &clientLen);
 	if (clientFd < 0) {
 		if (errno != EWOULDBLOCK && errno != EAGAIN)
 			Logger::logerror("Accept failed");
@@ -492,7 +522,7 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 		return;
 	}
 	
-	int port = ntohs(addr.sin_port);
+	in_port_t port = ntohs(addr.sin_port);
 	// Get host from request headers (nginx style)
 	string host;
 	if (request.headers.find("Host") != request.headers.end()) {
@@ -508,7 +538,10 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 		return;
 	}
 	string rootDir, defaultIndex;
-	if (!validateServerConfig(clientFd, std::make_pair(server->directives, server->locations), rootDir, defaultIndex))
+	ServerCtx serverConfig;
+	serverConfig.first = server->directives;
+	serverConfig.second = server->locations;
+	if (!validateServerConfig(clientFd, serverConfig, rootDir, defaultIndex))
 		return;
 	if (!validatePath(clientFd, request.path))
 		return;

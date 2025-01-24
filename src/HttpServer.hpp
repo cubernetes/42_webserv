@@ -5,12 +5,18 @@
 #include <map>
 #include <set> 
 #include <string>
-#include <sys/poll.h>
 #include <vector>
+#include <sys/poll.h>
+#include <netinet/in.h>
+#include <netdb.h>
 
 #include "Config.hpp"
 
 using std::string;
+
+static inline bool operator<(const in_addr& lhs, const in_addr& rhs) {
+	return lhs.s_addr < rhs.s_addr;
+}
 
 class HttpServer {
 public:
@@ -29,14 +35,14 @@ public:
 	void run();
 
 	// Getters
-	int get_serverFd() const;
+	const std::vector<int>& get_serverFds() const;
 	const std::vector<struct pollfd>& get_pollFds() const;
 	bool get_running() const;
 	const Config& get_config() const;
 	unsigned int get_id() const;
 
 private:
-	int							_serverFd;
+	std::vector<int>			_serverFds;
 	std::vector<struct pollfd>	_pollFds;
 	bool						_running;
 	Config						_config;
@@ -69,8 +75,8 @@ private:
 	std::map<int, PendingWrite>	_pendingWrites;
 	std::set<int>				_pendingClose;
 	struct ServerConfig {
-		std::string	ip;
-		int			port;
+		struct in_addr	ip;
+		in_port_t			port;
 		std::vector<std::string> serverNames;
 		Directives directives;
 		LocationCtxs locations;
@@ -79,10 +85,10 @@ private:
 	};
 
 	std::vector<ServerConfig> _servers;
-	std::map<std::pair<std::string, int>, const ServerConfig*> _defaultServers;
+	std::map<std::pair<struct in_addr, in_port_t>, ServerConfig> _defaultServers;
 
-	bool setupSocket(const std::string& ip, int port);
-	void handleNewConnection();
+	bool setupSocket(const struct in_addr& ip, in_port_t port);
+	void handleNewConnection(int serverFd);
 	void handleClientData(int clientFd);
 	void closeConnection(int clientFd);
 	void removePollFd(int fd);
@@ -99,7 +105,9 @@ private:
 	string getMimeType(const string& path);
 	void queueWrite(int clientFd, const string& data);
 	void handleClientWrite(int clientFd);
-	const ServerConfig* findMatchingServer(const std::string& host, const std::string& ip, int port) const;
+	const ServerConfig* findMatchingServer(const std::string& host, const struct in_addr& ip, in_port_t port) const;
+
+	bool isServerFd(int serverFd);
 };
 
 // global scope swap (aka ::swap), needed since friend keyword is forbidden :(

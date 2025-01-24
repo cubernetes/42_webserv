@@ -217,7 +217,7 @@ CHAR_REPR(signed char);
 POST_REFLECT_MEMBER(struct pollfd, int, fd, short, events, short, revents);
 
 #include "HttpServer.hpp"
-POST_REFLECT_GETTER(HttpServer, int, _serverFd, vector<struct pollfd>, _pollFds, bool, _running, Config, _config, unsigned int, _id);
+POST_REFLECT_GETTER(HttpServer, vector<int>, _serverFds, vector<struct pollfd>, _pollFds, bool, _running, Config, _config, unsigned int, _id);
 
 #include "Server.hpp"
 POST_REFLECT_GETTER(Server, unsigned int, _exitStatus, string, _rawConfig, Config, _config, HttpServer, _http, unsigned int, _id);
