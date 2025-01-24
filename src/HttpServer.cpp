@@ -1,3 +1,14 @@
+#include <iostream>
+#include <ostream>
+#include <cstdlib>
+#include <fstream>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <errno.h>
+#include <limits.h>
+#include <sys/stat.h>
+#include <netinet/in.h>
+
 #include "HttpServer.hpp"
 #include "Logger.hpp"
 #include "Config.hpp"
@@ -27,9 +38,7 @@ HttpServer::HttpServer() :
 	_id(_idCntr++),
 	_mimeTypes(),
 	_pendingWrites(),
-	_pendingClose(),
-	_servers(),
-	_defaultServers() {
+	_pendingClose() {
 	TRACE_DEFAULT_CTOR;
 	initMimeTypes();
 }
@@ -42,9 +51,7 @@ HttpServer::HttpServer(const HttpServer& other) :
 	_id(_idCntr++),
 	_mimeTypes(),
 	_pendingWrites(),
-	_pendingClose(),
-	_servers(),
-	_defaultServers() {
+	_pendingClose() {
 	TRACE_COPY_CTOR;
 }
 
@@ -129,42 +136,10 @@ void HttpServer::initMimeTypes() {
 
 bool HttpServer::setup(const Config& conf) {
 	_config = conf;
-
-	for (ServerCtxs::const_iterator server = conf.second.begin();
-			server != conf.second.end(); ++server) {
-		ServerConfig serverConfig;
-		const Arguments hostPort = getFirstDirective(server->first, "listen");
-		struct addrinfo hints, *res;
-		std::memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_INET;
-		hints.ai_socktype = SOCK_STREAM;
-
-		if (getaddrinfo(hostPort[0].c_str(), NULL, &hints, &res) != 0) {
-			Logger::logerror("Invalid IP address");
-			return false;
-		}
-		serverConfig.ip = ((struct sockaddr_in*)res->ai_addr)->sin_addr;
-		freeaddrinfo(res);
-		
-		serverConfig.port = std::atoi(hostPort[1].c_str());
-
-		const Arguments& names = getFirstDirective(server->first, "server_name");
-		serverConfig.serverNames.insert(serverConfig.serverNames.end(), 
-										names.begin(), names.end());
-		
-		serverConfig.directives = server->first;
-		serverConfig.locations = server->second;
-		
-		if (!setupSocket(hostPort[0].c_str(), serverConfig.port))
-			return false;
-			
-		_servers.push_back(serverConfig);
-
-		std::pair<struct in_addr, int> addr(serverConfig.ip, serverConfig.port);
-		if (_defaultServers.find(addr) == _defaultServers.end())
-			_defaultServers[addr] = &_servers.back();
-	}
-	return true;
+	const Arguments hostPort = getFirstDirective(conf.second[0].first, "listen");
+	const char *host = hostPort[0].c_str();
+	int port = std::atoi(hostPort[1].c_str());
+	return setupSocket(host, port);
 }
 
 bool HttpServer::setupSocket(const std::string& ip, int port) {
@@ -211,33 +186,6 @@ bool HttpServer::setupSocket(const std::string& ip, int port) {
 	
 	cout << "Server is listening on port " << port << std::endl;
 	return true;
-}
-
-const HttpServer::ServerConfig* HttpServer::findMatchingServer(const std::string& host, 
-													const struct in_addr& addr, 
-													int port) const {
-	std::string serverName = host;
-	size_t colonPos = serverName.find(':');
-	if (colonPos != std::string::npos) 
-		serverName = serverName.substr(0, colonPos);
-	for (std::vector<ServerConfig>::const_iterator it = _servers.begin();
-			it != _servers.end(); ++it) {
-		if (it->port == port && memcmp(&it->ip, &addr, sizeof(struct in_addr)) == 0) {
-			for (std::vector<std::string>::const_iterator name = it->serverNames.begin();
-					name != it->serverNames.end(); ++name) {
-				if (*name == serverName)
-					return &(*it);
-			}
-		}
-	}
-
-	std::pair<struct in_addr, int> addrPair(addr, port);
-	std::map<std::pair<struct in_addr, int>, const ServerConfig*>::const_iterator it = _defaultServers.find(addrPair);
-	if (it != _defaultServers.end()) {
-		return it->second;
-	}
-
-	return NULL;
 }
 
 void HttpServer::queueWrite(int clientFd, const string& data) {
@@ -434,7 +382,7 @@ bool HttpServer::validatePath(int clientFd, const string& path) {
 }
 
 bool HttpServer::handleDirectoryRedirect(int clientFd, const HttpRequest& request, string& filePath, 
-								const string& defaultIndex, struct stat& fileStat) {
+							   const string& defaultIndex, struct stat& fileStat) {
 		if (request.path[request.path.length() - 1] != '/') {
 			string redirectUrl = request.path + "/";
 			std::ostringstream response;
@@ -483,30 +431,15 @@ void HttpServer::sendFileContent(int clientFd, const string& filePath) {
 
 void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 
-	struct sockaddr_in addr;
-	socklen_t addrLen = sizeof(addr);
-	if (getsockname(clientFd, (struct sockaddr*)&addr, &addrLen) < 0) {
+	//TODO: @sonia: multiple servers
+	if (_config.second.empty()) {
 		sendError(clientFd, 500, "Internal Server Error");
 		return;
 	}
-	
-	int port = ntohs(addr.sin_port);
-	// Get host from request headers
-	string host;
-	if (request.headers.find("Host") != request.headers.end()) {
-		host = request.headers.at("Host");
-		size_t colonPos = host.find(':');
-		if (colonPos != string::npos)
-			host = host.substr(0, colonPos);
-	}
 
-	const ServerConfig* server = findMatchingServer(host, addr.sin_addr, port);
-	if (!server) {
-		sendError(clientFd, 404, "Not Found");
-		return;
-	}
+	const ServerCtx& serverConfig = _config.second[0];
 	string rootDir, defaultIndex;
-	if (!validateServerConfig(clientFd, std::make_pair(server->directives, server->locations), rootDir, defaultIndex))
+	if (!validateServerConfig(clientFd, serverConfig, rootDir, defaultIndex))
 		return;
 	if (!validatePath(clientFd, request.path))
 		return;
@@ -520,7 +453,7 @@ void HttpServer::handleGetRequest(int clientFd, const HttpRequest& request) {
 		string indexPath = filePath + defaultIndex;
 
 		if (stat(indexPath.c_str(), &indexFileStat) == -1) {
-			if (getFirstDirective(server->directives, "autoindex")[0] == "off") {
+			if (getFirstDirective(serverConfig.first, "autoindex")[0] == "off") {
 				sendError(clientFd, 403, "Forbidden");
 				return;
 			}
