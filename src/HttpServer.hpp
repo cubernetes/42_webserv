@@ -2,11 +2,23 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
+#include <cstring>
+#include <errno.h>
+#include <fstream>
+#include <iostream>
 #include <map>
+#include <limits.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <ostream>
 #include <set> 
 #include <string>
 #include <sys/poll.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
 #include <vector>
+#include <unistd.h>
 
 #include "Config.hpp"
 
@@ -68,7 +80,31 @@ private:
 
 	std::map<int, PendingWrite>	_pendingWrites;
 	std::set<int>				_pendingClose;
+	struct ServerConfig {
+		struct in_addr	ip;
+		int				port;
+		std::vector<std::string> serverNames;
+		Directives directives;
+		LocationCtxs locations;
 
+		ServerConfig() : ip(), port(0), serverNames(), directives(), locations() {
+			ip.s_addr = 0;
+		}
+	};
+
+	struct AddrPortCompare {
+	bool operator()(const std::pair<struct in_addr, int>& a,
+					const std::pair<struct in_addr, int>& b) const {
+		if (memcmp(&a.first, &b.first, sizeof(struct in_addr)) < 0)
+			return true;
+		if (memcmp(&a.first, &b.first, sizeof(struct in_addr)) > 0)
+			return false;
+		return a.second < b.second;
+	}
+};
+
+	std::vector<ServerConfig> _servers;
+	std::map<std::pair<struct in_addr, int>, const ServerConfig*, AddrPortCompare> _defaultServers;
 	bool setupSocket(const std::string& ip, int port);
 	void handleNewConnection();
 	void handleClientData(int clientFd);
@@ -87,6 +123,7 @@ private:
 	string getMimeType(const string& path);
 	void queueWrite(int clientFd, const string& data);
 	void handleClientWrite(int clientFd);
+	const ServerConfig* findMatchingServer(const std::string& host, const struct in_addr& addr, int port) const;
 };
 
 // global scope swap (aka ::swap), needed since friend keyword is forbidden :(
