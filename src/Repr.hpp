@@ -447,14 +447,14 @@ template <>
 struct ReprWrapper<struct in_addr> {
 	static inline string
 	repr(const struct in_addr& value, bool json = false) {
-		union { struct { char first; char second; char third; char fourth; }; uint32_t i; } addr;
-		addr.i = ntohl(value.s_addr);
+		union { struct { char first; char second; char third; char fourth; }; uint32_t s_addr; } addr;
+		addr.s_addr = value.s_addr;
 		std::ostringstream oss;
 		std::ostringstream oss_final;
-		oss << (int)addr.fourth << '.';
-		oss << (int)addr.third << '.';
+		oss << (int)addr.first << '.';
 		oss << (int)addr.second << '.';
-		oss << (int)addr.first;
+		oss << (int)addr.third << '.';
+		oss << (int)addr.fourth;
 		oss_final << kwrd("struct in_addr") << punct("(");
 		if (json)
 			oss_final << oss.str();

@@ -41,7 +41,7 @@ public:
 
 	//// typedefs ////
 	typedef pair<struct in_addr, int> AddrPort;
-	typedef map<AddrPort, Server, AddrPortCompare> DefaultServers;
+	typedef map<AddrPort, size_t, AddrPortCompare> DefaultServers;
 	typedef vector<int> SelectFds;
 	typedef vector<Server> Servers;
 	typedef vector<struct pollfd> PollFds;
@@ -72,21 +72,22 @@ public:
 		PendingWrite() : data(), bytesSent() {}
 		PendingWrite(const string& d) : data(d), bytesSent() {}
 	};
-	struct Server {
-		struct in_addr	ip;
-		int				port;
-		vector<string> serverNames;
-		Directives directives; // TODO: @timo: make const ref
-		LocationCtxs locations; // TODO: @timo: make const ref
+	struct Server { // Basically just a thin wrapper around ServerCtx, but with some fields transformed for ease of use and efficiency
+		struct in_addr	ip; // network byte order // Should multiple listen directive be possible in the future, then this, along with port, would become a vector of pairs, but for MVP's sake, let's keep it at one
+		in_port_t		port; // network byte order
+		const Directives& directives;
+		const LocationCtxs& locations;
+		const Arguments& serverNames;
 
-		Server() : ip(), port(), serverNames(), directives(), locations() {}
+		Server(const Directives& _directives, const LocationCtxs& _locations, const Arguments& _serverNames) : ip(), port(), directives(_directives), locations(_locations), serverNames(_serverNames) {}
+		Server& operator=(const Server& other) { (void)other; return *this; }
 	};
 	struct AddrPortCompare {
 		bool operator()(const AddrPort& a,
 						const AddrPort& b) const {
-			if (memcmp(&a.first, &b.first, sizeof(struct in_addr)) < 0)
+			if (memcmp(&a.first, &b.first, sizeof(a.first)) < 0)
 				return true;
-			if (memcmp(&a.first, &b.first, sizeof(struct in_addr)) > 0)
+			if (memcmp(&a.first, &b.first, sizeof(a.first)) > 0)
 				return false;
 			return a.second < b.second;
 		}
@@ -144,11 +145,17 @@ private:
 	// HttpServer cannot be assigned to
 	HttpServer& operator=(HttpServer) { return *this; };
 
-	// setup
+	// Setup
 	void setupServers(const Config& config);
-	void setupListeningSocket(const string& ip, int port);
+	void setupListeningSocket(const Server& server);
 	void initMimeTypes(MimeTypes& mimeTypes);
 	void initStatusTexts(StatusTexts& statusTexts);
+	string getServerIpStr(const ServerCtx& serverCtx);
+	struct in_addr getServerIp(const ServerCtx& serverCtx);
+	in_port_t getServerPort(const ServerCtx& serverCtx);
+	int createTcpListenSocket();
+	void bindSocket(int listeningSocket, const Server& server);
+	void listenSocket(int listeningSocket);
 
 	// Adding a client
 	void addNewClient(int listeningSocket);
@@ -160,8 +167,8 @@ private:
 
 	// request handling/parsing
 	HttpRequest parseHttpRequest(const char *buffer);
-	bool findMatchingServer(Server& serverConfig, const string& host, const struct in_addr& addr, int port) const;
-	bool findMatchingLocation(LocationCtx& location, const Server& serverConfig, const string& path) const;
+	size_t findMatchingServer(const string& host, const struct in_addr& addr, in_port_t port) const;
+	size_t findMatchingLocation(const Server& serverConfig, const string& path) const;
 	bool validatePath(int clientSocket, const string& path);
 	bool handleDirectoryRedirect(int clientSocket, const HttpRequest& request, string& filePath, const string& defaultIndex, struct stat& fileStat);
 	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
@@ -198,7 +205,7 @@ private:
 	void handleReadyFds(const MultPlexFds& readyFds);
 	struct pollfd *multPlexFdsToPollFds(const MultPlexFds& fds);
 	nfds_t getNumberOfPollFds(const MultPlexFds& fds);
-	int multPlexFdToRawFd(const MultPlexFds& readyFds, int i);
+	int multPlexFdToRawFd(const MultPlexFds& readyFds, size_t i);
 
 	// helpers
 	string getMimeType(const string& path);

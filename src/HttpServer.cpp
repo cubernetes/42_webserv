@@ -52,110 +52,127 @@ HttpServer::operator string() const {
 	return ::repr(*this);
 }
 
-std::ostream& operator<<(std::ostream& os, const HttpServer& server) {
-	return os << static_cast<string>(server);
+std::ostream& operator<<(std::ostream& os, const HttpServer& httpServer) {
+	return os << static_cast<string>(httpServer);
+}
+
+string HttpServer::getServerIpStr(const ServerCtx& serverCtx) {
+	const Arguments hostPort = getFirstDirective(serverCtx.first, "listen");
+	return hostPort[0];
+}
+
+struct in_addr HttpServer::getServerIp(const ServerCtx& serverCtx) {
+	const Arguments hostPort = getFirstDirective(serverCtx.first, "listen");
+
+	struct addrinfo hints, *res;
+	std::memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+
+	if (getaddrinfo(hostPort[0].c_str(), NULL, &hints, &res) != 0) {
+		throw runtime_error("Invalid IP address for listen directive in serverCtx config");
+	}
+	struct in_addr ipv4 = ((struct sockaddr_in*)res->ai_addr)->sin_addr;
+	freeaddrinfo(res);
+	return ipv4;
+}
+
+in_port_t HttpServer::getServerPort(const ServerCtx& serverCtx) {
+	const Arguments hostPort = getFirstDirective(serverCtx.first, "listen");
+	return htons((in_port_t)std::atoi(hostPort[1].c_str()));
 }
 
 void HttpServer::setupServers(const Config& config) {
-	for (ServerCtxs::const_iterator server = config.second.begin(); server != config.second.end(); ++server) {
-		Server serverConfig;
-		const Arguments hostPort = getFirstDirective(server->first, "listen");
-		struct addrinfo hints, *res;
-		std::memset(&hints, 0, sizeof(hints));
-		hints.ai_family = AF_INET;
-		hints.ai_socktype = SOCK_STREAM;
+	for (ServerCtxs::const_iterator serverCtx = config.second.begin(); serverCtx != config.second.end(); ++serverCtx) {
+		Server server(
+			serverCtx->first,
+			serverCtx->second,
+			getFirstDirective(serverCtx->first, "server_name")
+		);
 
-		if (getaddrinfo(hostPort[0].c_str(), NULL, &hints, &res) != 0) {
-			throw runtime_error("Invalid IP address for listen directive in server config");
-		}
-		serverConfig.ip = ((struct sockaddr_in*)res->ai_addr)->sin_addr;
-		freeaddrinfo(res);
-		
-		serverConfig.port = std::atoi(hostPort[1].c_str());
+		server.ip = getServerIp(*serverCtx);
+		server.port = getServerPort(*serverCtx);
 
-		const Arguments names = getFirstDirective(server->first, "server_name");
-		serverConfig.serverNames.insert(serverConfig.serverNames.end(), 
-										names.begin(), names.end());
-		
-		serverConfig.directives = server->first;
-		serverConfig.locations = server->second;
-		
-		setupListeningSocket(hostPort[0].c_str(), serverConfig.port);
-		cout << cmt("Server with names ") << repr(serverConfig.serverNames) << cmt(" is listening on ") << num(hostPort[0]) << num(":") << repr(serverConfig.port) << '\n';
+		setupListeningSocket(server);
+		cout << cmt("Server with names ") << repr(server.serverNames) << cmt(" is listening on ") << num(getServerIpStr(*serverCtx)) << num(":") << repr(server.port) << '\n';
 			
-		_servers.push_back(serverConfig);
+		_servers.push_back(server);
 
-		AddrPort addr(serverConfig.ip, serverConfig.port);
+		AddrPort addr(server.ip, server.port);
 		if (_defaultServers.find(addr) == _defaultServers.end())
-			_defaultServers[addr] = _servers.back();
+			_defaultServers[addr] = _servers.size() - 1;
 	}
 }
 
-void HttpServer::setupListeningSocket(const string& ip, int port) {
-	(void)ip;
+int HttpServer::createTcpListenSocket() {
 	int listeningSocket = socket(AF_INET, SOCK_STREAM, 0); // TODO: @discuss: removed SOCK_NONBLOCK since we're doing I/O multiplexing, not nonblocking I/O (see other TODO's for more details)
-	_listeningSockets.push_back(listeningSocket);
-	if (listeningSocket < 0) {
+	if (listeningSocket < 0)
 		throw runtime_error("Failed to create socket");
-	}
 	
 	int opt = 1;
 	if (setsockopt(listeningSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-		throw runtime_error("Failed to set socket options");
 		close(listeningSocket);
+		throw runtime_error("Failed to set socket options");
 	}
-	
+	return listeningSocket;
+}
+
+void HttpServer::bindSocket(int listeningSocket, const Server& server) {
 	struct sockaddr_in address;
 	address.sin_family = AF_INET;
-	if (port > 0 && port <= SHRT_MAX) {
-		address.sin_port = htons(static_cast<uint16_t>(port));
-	} else {
-		throw runtime_error("Invalid port number");
-	}
-	address.sin_addr.s_addr = INADDR_ANY;
+	address.sin_port = server.port;
+	address.sin_addr = server.ip;
 	
 	if (bind(listeningSocket, (struct sockaddr*)&address, sizeof(address)) < 0) {
-		throw runtime_error("Failed to bind socket");
 		close(listeningSocket);
+		throw runtime_error(string("bind error: ") + strerror(errno));
 	}
-	
+}
+
+void HttpServer::listenSocket(int listeningSocket) {
 	if (listen(listeningSocket, SOMAXCONN) < 0) {
-		throw runtime_error("Failed to listen on socket");
 		close(listeningSocket);
+		throw runtime_error(string("listen error: ") + strerror(errno));
 	}
+}
+
+void HttpServer::setupListeningSocket(const Server& server) {
+	int listeningSocket = createTcpListenSocket();
+	
+	bindSocket(listeningSocket, server);
+	listenSocket(listeningSocket);
 	
 	struct pollfd pfd;
 	pfd.fd = listeningSocket;
 	pfd.events = POLLIN;
 	_monitorFds.pollFds.push_back(pfd);
+
+	_listeningSockets.push_back(listeningSocket);
 }
 
-bool HttpServer::findMatchingServer(Server& serverConfig, const string& host, const struct in_addr& addr, int port) const {
-	string serverName = host;
-	size_t colonPos = serverName.find(':');
+size_t HttpServer::findMatchingServer(const string& host, const struct in_addr& addr, in_port_t port) const {
+	string requestedHost = host;
+	size_t colonPos = requestedHost.rfind(':');
 	if (colonPos != string::npos) 
-		serverName = serverName.substr(0, colonPos);
-	for (Servers::const_iterator it = _servers.begin();
-			it != _servers.end(); ++it) {
-		if (it->port == port && memcmp(&it->ip, &addr, sizeof(struct in_addr)) == 0) {
-			for (vector<string>::const_iterator name = it->serverNames.begin();
-					name != it->serverNames.end(); ++name) {
-				if (*name == serverName) {
-					serverConfig = *it;
-					return true;
+		requestedHost = requestedHost.substr(0, colonPos);
+	for (size_t i = 0; i < _servers.size(); ++i) {
+		const Server& server = _servers[i];
+		if (server.port == port && memcmp(&server.ip, &addr, sizeof(addr)) == 0) {
+			for (size_t j = 0; j < server.serverNames.size(); ++j) {
+				if (requestedHost == server.serverNames[i]) {
+					return i + 1;
 				}
 			}
 		}
 	}
 
-	AddrPort addrPair(addr, port);
-	DefaultServers::const_iterator it = _defaultServers.find(addrPair);
+	AddrPort addrPort(addr, port);
+	DefaultServers::const_iterator it = _defaultServers.find(addrPort);
 	if (it != _defaultServers.end()) {
-		serverConfig = it->second;
-		return true;
+		return it->second + 1;
 	}
 
-	return false;
+	return 0;
 }
 
 void HttpServer::queueWrite(int clientSocket, const string& data) {
@@ -289,27 +306,26 @@ void HttpServer::addNewClient(int listeningSocket) {
 	Logger::logDebug("New client connected. FD: " + STR(clientSocket));
 }
 
-bool HttpServer::findMatchingLocation(LocationCtx& location, const Server& serverConfig, const string& path) const {
+size_t HttpServer::findMatchingLocation(const Server& server, const string& path) const {
 	int bestIdx = -1;
 	int bestScore = -1;
-	for (int i = 0; i < static_cast<int>(serverConfig.locations.size()); ++i) {
-		LocationCtx loc = serverConfig.locations[static_cast<size_t>(i)];
+	for (size_t i = 0; i < server.locations.size(); ++i) {
+		LocationCtx loc = server.locations[i];
 		const string& locPath = loc.first;
 		pair<string::const_iterator, string::const_iterator> matcher = std::mismatch(locPath.begin(), locPath.end(), path.begin());
 		int currentScore = static_cast<int>(std::distance(locPath.begin(), matcher.first));
 		if (currentScore > bestScore) {
 			bestScore = currentScore;
-			bestIdx = i;
+			bestIdx = static_cast<int>(i);
 		}
 	}
 	if (bestIdx >= 0) {
-		location = serverConfig.locations[static_cast<size_t>(bestIdx)];
-		return true;
+		return bestIdx + 1;
 	}
 
-	// TODO: @all: not good
-	location = serverConfig.locations[0];
-	return true; // TODO: maybe false, idk
+	// TODO: @all: there MUST be a default location on "/", like with nginx, otherwise complicated
+	// location = server.locations[0];
+	return 0;
 }
 
 void HttpServer::readFromClient(int clientSocket) {
@@ -337,7 +353,6 @@ void HttpServer::readFromClient(int clientSocket) {
 		return;
 	}
 	
-	int port = ntohs(addr.sin_port);
 	// Get host from request headers
 	string host;
 	if (request.headers.find("Host") != request.headers.end()) {
@@ -347,16 +362,19 @@ void HttpServer::readFromClient(int clientSocket) {
 			host = host.substr(0, colonPos);
 	}
 
-	Server server;
-	if (!findMatchingServer(server, host, addr.sin_addr, port)) {
-		sendError(clientSocket, 404);
+	size_t serverIdx;
+	if (!(serverIdx = findMatchingServer(host, addr.sin_addr, addr.sin_port))) {
+		sendError(clientSocket, 404); // TODO: @all: is 404 rlly correct?
 		return;
 	}
-	LocationCtx location;
-	if (!findMatchingLocation(location, server, request.path)) {
-		sendError(clientSocket, 404);
+	const Server& server = _servers[serverIdx - 1]; // 0 indicates failure, 1 is the first server
+
+	size_t locationIdx;
+	if (!(locationIdx = findMatchingLocation(server, request.path))) {
+		sendError(clientSocket, 404); // TODO: @all: is 404 rlly correct?
 		return;
 	}
+	const LocationCtx& location = server.locations[locationIdx - 1];
 	
 	if (request.method == "GET")
 		serveStaticContent(clientSocket, request, location);
@@ -665,15 +683,15 @@ bool HttpServer::isListeningSocket(int fd) {
 }
 
 void HttpServer::handleReadyFds(const MultPlexFds& readyFds) {
-	int nReadyFds = static_cast<int>(readyFds.fdStates.size());
-	for (int i = 0; i < nReadyFds; ++i) {
+	size_t nReadyFds = readyFds.fdStates.size();
+	for (size_t i = 0; i < nReadyFds; ++i) {
 		int fd = multPlexFdToRawFd(readyFds, i);
-		if (readyFds.fdStates[static_cast<size_t>(i)] == FD_READABLE) {
+		if (readyFds.fdStates[i] == FD_READABLE) {
 			if (isListeningSocket(fd))
 				addNewClient(fd);
 			else
 				readFromClient(fd);
-		} else if (readyFds.fdStates[static_cast<size_t>(i)] == FD_WRITEABLE)
+		} else if (readyFds.fdStates[i] == FD_WRITEABLE)
 			writeToClient(fd);
 		else
 			throw std::logic_error("Cannot handle fd other than readable or writable at this step"); // TODO: @timo: proper logging
@@ -781,12 +799,12 @@ HttpServer::MultPlexFds HttpServer::getReadyFds(MultPlexFds& monitorFds) {
 	}
 }
 
-int HttpServer::multPlexFdToRawFd(const MultPlexFds& readyFds, int i) {
+int HttpServer::multPlexFdToRawFd(const MultPlexFds& readyFds, size_t i) {
 	switch (readyFds.multPlexType) {
 		case SELECT:
 			throw std::logic_error("Converting seleet fd type to raw fd not implemented");
 		case POLL:
-			return readyFds.pollFds[static_cast<size_t>(i)].fd;
+			return readyFds.pollFds[i].fd;
 		case EPOLL:
 			throw std::logic_error("Converting epoll fd type to raw fd not implemented");
 		default:
