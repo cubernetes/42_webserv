@@ -145,10 +145,10 @@ private:
 	HttpServer& operator=(HttpServer) { return *this; };
 
 	// setup
-	bool setup();
-	bool setupSocket(const string& ip, int port);
-	void initMimeTypes();
-	void initStatusTexts();
+	bool setupServers(const Config& config);
+	bool setupListeningSocket(const string& ip, int port);
+	void initMimeTypes(MimeTypes& mimeTypes);
+	void initStatusTexts(StatusTexts& statusTexts);
 
 	// Adding a client
 	void addNewClient(int listeningSocket);

@@ -42,8 +42,9 @@ HttpServer::~HttpServer() {
 
 HttpServer::HttpServer(const string& configPath) : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(Constants::httpVersionString), _rawConfig(readConfig(configPath)), _config(parseConfig(_rawConfig)), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers() {
 	TRACE_ARG_CTOR(const string&, configPath);
-	setup();
-	initMimeTypes();
+	initStatusTexts(_statusTexts);
+	initMimeTypes(_mimeTypes);
+	setupServers(_config);
 }
 
 HttpServer::operator string() const {
@@ -54,9 +55,9 @@ std::ostream& operator<<(std::ostream& os, const HttpServer& server) {
 	return os << static_cast<string>(server);
 }
 
-bool HttpServer::setup() {
-	for (ServerCtxs::const_iterator server = _config.second.begin();
-			server != _config.second.end(); ++server) {
+bool HttpServer::setupServers(const Config& config) {
+	for (ServerCtxs::const_iterator server = config.second.begin();
+			server != config.second.end(); ++server) {
 		Server serverConfig;
 		const Arguments hostPort = getFirstDirective(server->first, "listen");
 		struct addrinfo hints, *res;
@@ -80,7 +81,7 @@ bool HttpServer::setup() {
 		serverConfig.directives = server->first;
 		serverConfig.locations = server->second;
 		
-		if (!setupSocket(hostPort[0].c_str(), serverConfig.port))
+		if (!setupListeningSocket(hostPort[0].c_str(), serverConfig.port))
 			return false;
 			
 		_servers.push_back(serverConfig);
@@ -92,7 +93,7 @@ bool HttpServer::setup() {
 	return true;
 }
 
-bool HttpServer::setupSocket(const string& ip, int port) {
+bool HttpServer::setupListeningSocket(const string& ip, int port) {
 	(void)ip;
 	int listeningSocket = socket(AF_INET, SOCK_STREAM, 0); // TODO: @discuss: removed SOCK_NONBLOCK since we're doing I/O multiplexing, not nonblocking I/O (see other TODO's for more details)
 	_listeningSockets.push_back(listeningSocket);
@@ -511,43 +512,43 @@ void HttpServer::serveStaticContent(int clientSocket, const HttpRequest& request
 		sendError(clientSocket, 404); // sometimes it's also 403, or 500, but haven't figured out the pattern yet
 }
 
-void HttpServer::initMimeTypes() {
+void HttpServer::initMimeTypes(MimeTypes& mimeTypes) {
 
 	// Web content
-	_mimeTypes["html"] = "text/html";
-	_mimeTypes["htm"] = "text/html";
-	_mimeTypes["css"] = "text/css";
-	_mimeTypes["js"] = "application/javascript";
-	_mimeTypes["xml"] = "application/xml";
-	_mimeTypes["json"] = "application/json";
+	mimeTypes["html"] = "text/html";
+	mimeTypes["htm"] = "text/html";
+	mimeTypes["css"] = "text/css";
+	mimeTypes["js"] = "application/javascript";
+	mimeTypes["xml"] = "application/xml";
+	mimeTypes["json"] = "application/json";
 
 	// Text files
-	_mimeTypes["txt"] = "text/plain";
-	_mimeTypes["csv"] = "text/csv";
-	_mimeTypes["md"] = "text/markdown";
-	_mimeTypes["sh"] = "text/x-shellscript";
+	mimeTypes["txt"] = "text/plain";
+	mimeTypes["csv"] = "text/csv";
+	mimeTypes["md"] = "text/markdown";
+	mimeTypes["sh"] = "text/x-shellscript";
 
 	// Images
-	_mimeTypes["jpg"] = "image/jpeg";
-	_mimeTypes["jpeg"] = "image/jpeg";
-	_mimeTypes["png"] = "image/png";
-	_mimeTypes["gif"] = "image/gif";
-	_mimeTypes["svg"] = "image/svg+xml";
-	_mimeTypes["ico"] = "image/x-icon";
-	_mimeTypes["webp"] = "image/webp";
+	mimeTypes["jpg"] = "image/jpeg";
+	mimeTypes["jpeg"] = "image/jpeg";
+	mimeTypes["png"] = "image/png";
+	mimeTypes["gif"] = "image/gif";
+	mimeTypes["svg"] = "image/svg+xml";
+	mimeTypes["ico"] = "image/x-icon";
+	mimeTypes["webp"] = "image/webp";
 
 	// Documents
-	_mimeTypes["pdf"] = "application/pdf";
-	_mimeTypes["doc"] = "application/msword";
-	_mimeTypes["docx"] = "application/msword";
-	_mimeTypes["xls"] = "application/vnd.ms-excel";
-	_mimeTypes["xlsx"] = "application/vnd.ms-excel";
-	_mimeTypes["zip"] = "application/zip";
+	mimeTypes["pdf"] = "application/pdf";
+	mimeTypes["doc"] = "application/msword";
+	mimeTypes["docx"] = "application/msword";
+	mimeTypes["xls"] = "application/vnd.ms-excel";
+	mimeTypes["xlsx"] = "application/vnd.ms-excel";
+	mimeTypes["zip"] = "application/zip";
 
 	// Multimedia
-	_mimeTypes["mp3"] = "audio/mpeg";
-	_mimeTypes["mp4"] = "video/mp4";
-	_mimeTypes["webm"] = "video/webm";
+	mimeTypes["mp3"] = "audio/mpeg";
+	mimeTypes["mp4"] = "video/mp4";
+	mimeTypes["webm"] = "video/webm";
 
 	// ...
 }
@@ -565,71 +566,71 @@ string HttpServer::statusTextFromCode(int statusCode) {
 	return _statusTexts[statusCode];
 }
 
-void HttpServer::initStatusTexts() {
-	_statusTexts[100] = "Continue";
-	_statusTexts[101] = "Switching Protocols";
-	_statusTexts[102] = "Processing";
-	_statusTexts[103] = "Early Hints";
-	_statusTexts[200] = "OK";
-	_statusTexts[201] = "Created";
-	_statusTexts[202] = "Accepted";
-	_statusTexts[203] = "Non-Authoritative Information";
-	_statusTexts[204] = "No Content";
-	_statusTexts[205] = "Reset Content";
-	_statusTexts[206] = "Partial Content";
-	_statusTexts[207] = "Multi-Status";
-	_statusTexts[208] = "Already Reported";
-	_statusTexts[226] = "IM Used";
-	_statusTexts[300] = "Multiple Choices";
-	_statusTexts[301] = "Moved Permanently";
-	_statusTexts[302] = "Found";
-	_statusTexts[303] = "See Other";
-	_statusTexts[304] = "Not Modified";
-	_statusTexts[305] = "Use Proxy";
-	_statusTexts[306] = "Switch Proxy";
-	_statusTexts[307] = "Temporary Redirect";
-	_statusTexts[308] = "Permanent Redirect";
-	_statusTexts[404] = "error on Wikimedia";
-	_statusTexts[400] = "Bad Request";
-	_statusTexts[401] = "Unauthorized";
-	_statusTexts[402] = "Payment Required";
-	_statusTexts[403] = "Forbidden";
-	_statusTexts[404] = "Not Found";
-	_statusTexts[405] = "Method Not Allowed";
-	_statusTexts[406] = "Not Acceptable";
-	_statusTexts[407] = "Proxy Authentication Required";
-	_statusTexts[408] = "Request Timeout";
-	_statusTexts[409] = "Conflict";
-	_statusTexts[410] = "Gone";
-	_statusTexts[411] = "Length Required";
-	_statusTexts[412] = "Precondition Failed";
-	_statusTexts[413] = "Payload Too Large";
-	_statusTexts[414] = "URI Too Long";
-	_statusTexts[415] = "Unsupported Media Type";
-	_statusTexts[416] = "Range Not Satisfiable";
-	_statusTexts[417] = "Expectation Failed";
-	_statusTexts[418] = "I'm a teapot";
-	_statusTexts[421] = "Misdirected Request";
-	_statusTexts[422] = "Unprocessable Content";
-	_statusTexts[423] = "Locked";
-	_statusTexts[424] = "Failed Dependency";
-	_statusTexts[425] = "Too Early";
-	_statusTexts[426] = "Upgrade Required";
-	_statusTexts[428] = "Precondition Required";
-	_statusTexts[429] = "Too Many Requests";
-	_statusTexts[431] = "Request Header Fields Too Large";
-	_statusTexts[451] = "Unavailable For Legal Reasons";
-	_statusTexts[500] = "Internal Server Error";
-	_statusTexts[501] = "Not Implemented";
-	_statusTexts[502] = "Bad Gateway";
-	_statusTexts[503] = "Service Unavailable";
-	_statusTexts[504] = "Gateway Timeout";
-	_statusTexts[505] = "HTTP Version Not Supported";
-	_statusTexts[506] = "Variant Also Negotiates";
-	_statusTexts[507] = "Insufficient Storage";
-	_statusTexts[508] = "Loop Detected";
-	_statusTexts[510] = "Not Extended";
-	_statusTexts[511] = "Network Authentication Required";
+void HttpServer::initStatusTexts(StatusTexts& statusTexts) {
+	statusTexts[100] = "Continue";
+	statusTexts[101] = "Switching Protocols";
+	statusTexts[102] = "Processing";
+	statusTexts[103] = "Early Hints";
+	statusTexts[200] = "OK";
+	statusTexts[201] = "Created";
+	statusTexts[202] = "Accepted";
+	statusTexts[203] = "Non-Authoritative Information";
+	statusTexts[204] = "No Content";
+	statusTexts[205] = "Reset Content";
+	statusTexts[206] = "Partial Content";
+	statusTexts[207] = "Multi-Status";
+	statusTexts[208] = "Already Reported";
+	statusTexts[226] = "IM Used";
+	statusTexts[300] = "Multiple Choices";
+	statusTexts[301] = "Moved Permanently";
+	statusTexts[302] = "Found";
+	statusTexts[303] = "See Other";
+	statusTexts[304] = "Not Modified";
+	statusTexts[305] = "Use Proxy";
+	statusTexts[306] = "Switch Proxy";
+	statusTexts[307] = "Temporary Redirect";
+	statusTexts[308] = "Permanent Redirect";
+	statusTexts[404] = "error on Wikimedia";
+	statusTexts[400] = "Bad Request";
+	statusTexts[401] = "Unauthorized";
+	statusTexts[402] = "Payment Required";
+	statusTexts[403] = "Forbidden";
+	statusTexts[404] = "Not Found";
+	statusTexts[405] = "Method Not Allowed";
+	statusTexts[406] = "Not Acceptable";
+	statusTexts[407] = "Proxy Authentication Required";
+	statusTexts[408] = "Request Timeout";
+	statusTexts[409] = "Conflict";
+	statusTexts[410] = "Gone";
+	statusTexts[411] = "Length Required";
+	statusTexts[412] = "Precondition Failed";
+	statusTexts[413] = "Payload Too Large";
+	statusTexts[414] = "URI Too Long";
+	statusTexts[415] = "Unsupported Media Type";
+	statusTexts[416] = "Range Not Satisfiable";
+	statusTexts[417] = "Expectation Failed";
+	statusTexts[418] = "I'm a teapot";
+	statusTexts[421] = "Misdirected Request";
+	statusTexts[422] = "Unprocessable Content";
+	statusTexts[423] = "Locked";
+	statusTexts[424] = "Failed Dependency";
+	statusTexts[425] = "Too Early";
+	statusTexts[426] = "Upgrade Required";
+	statusTexts[428] = "Precondition Required";
+	statusTexts[429] = "Too Many Requests";
+	statusTexts[431] = "Request Header Fields Too Large";
+	statusTexts[451] = "Unavailable For Legal Reasons";
+	statusTexts[500] = "Internal Server Error";
+	statusTexts[501] = "Not Implemented";
+	statusTexts[502] = "Bad Gateway";
+	statusTexts[503] = "Service Unavailable";
+	statusTexts[504] = "Gateway Timeout";
+	statusTexts[505] = "HTTP Version Not Supported";
+	statusTexts[506] = "Variant Also Negotiates";
+	statusTexts[507] = "Insufficient Storage";
+	statusTexts[508] = "Loop Detected";
+	statusTexts[510] = "Not Extended";
+	statusTexts[511] = "Network Authentication Required";
 }
 
 string HttpServer::wrapInHtmlBody(const string& text) {
