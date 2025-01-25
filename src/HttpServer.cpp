@@ -94,7 +94,7 @@ void HttpServer::setupServers(const Config& config) {
 		server.port = getServerPort(*serverCtx);
 
 		setupListeningSocket(server);
-		cout << cmt("Server with names ") << repr(server.serverNames) << cmt(" is listening on ") << num(getServerIpStr(*serverCtx)) << num(":") << repr(server.port) << '\n';
+		cout << cmt("Server with names ") << repr(server.serverNames) << cmt(" is listening on ") << num(getServerIpStr(*serverCtx)) << num(":") << repr(ntohs(server.port)) << '\n';
 			
 		_servers.push_back(server);
 
@@ -150,11 +150,7 @@ void HttpServer::setupListeningSocket(const Server& server) {
 	_listeningSockets.push_back(listeningSocket);
 }
 
-size_t HttpServer::findMatchingServer(const string& host, const struct in_addr& addr, in_port_t port) const {
-	string requestedHost = host;
-	size_t colonPos = requestedHost.rfind(':');
-	if (colonPos != string::npos) 
-		requestedHost = requestedHost.substr(0, colonPos);
+size_t HttpServer::getIndexOfServerByHost(const string& requestedHost, const struct in_addr& addr, in_port_t port) const {
 	for (size_t i = 0; i < _servers.size(); ++i) {
 		const Server& server = _servers[i];
 		if (server.port == port && memcmp(&server.ip, &addr, sizeof(addr)) == 0) {
@@ -165,14 +161,29 @@ size_t HttpServer::findMatchingServer(const string& host, const struct in_addr& 
 			}
 		}
 	}
+	return 0;
+}
 
+size_t HttpServer::getIndexOfDefaultServer(const struct in_addr& addr, in_port_t port) const {
 	AddrPort addrPort(addr, port);
 	DefaultServers::const_iterator it = _defaultServers.find(addrPort);
 	if (it != _defaultServers.end()) {
 		return it->second + 1;
 	}
-
 	return 0;
+}
+
+size_t HttpServer::findMatchingServer(const string& host, const struct in_addr& addr, in_port_t port) const {
+	string requestedHost = host;
+	size_t colonPos = requestedHost.rfind(':');
+	if (colonPos != string::npos) 
+		requestedHost = requestedHost.substr(0, colonPos);
+
+	size_t idx = getIndexOfServerByHost(requestedHost, addr, port);
+	if (idx)
+		return idx;
+
+	return getIndexOfDefaultServer(addr, port);
 }
 
 void HttpServer::queueWrite(int clientSocket, const string& data) {

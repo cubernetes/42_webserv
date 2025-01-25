@@ -169,6 +169,8 @@ private:
 	HttpRequest parseHttpRequest(const char *buffer);
 	size_t findMatchingServer(const string& host, const struct in_addr& addr, in_port_t port) const;
 	size_t findMatchingLocation(const Server& serverConfig, const string& path) const;
+	size_t getIndexOfServerByHost(const string& requestedHost, const struct in_addr& addr, in_port_t port) const;
+	size_t getIndexOfDefaultServer(const struct in_addr& addr, in_port_t port) const;
 	bool validatePath(int clientSocket, const string& path);
 	bool handleDirectoryRedirect(int clientSocket, const HttpRequest& request, string& filePath, const string& defaultIndex, struct stat& fileStat);
 	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
