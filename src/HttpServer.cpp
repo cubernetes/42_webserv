@@ -103,7 +103,7 @@ bool HttpServer::setup() {
 
 bool HttpServer::setupSocket(const string& ip, int port) {
 	(void)ip;
-	int listeningSocket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	int listeningSocket = socket(AF_INET, SOCK_STREAM, 0); // TODO: @discuss: removed SOCK_NONBLOCK since we're doing I/O multiplexing, not nonblocking I/O (see other TODO's for more details)
 	_listeningSockets.push_back(listeningSocket);
 	if (listeningSocket < 0) {
 		Logger::logError("Failed to create socket");
@@ -191,24 +191,62 @@ void HttpServer::queueWrite(int clientSocket, const string& data) {
 	}
 }
 
-void HttpServer::writeToClient(int clientSocket) {
-
-	map<int, PendingWrite>::iterator it = _pendingWrites.find(clientSocket);
-	if (it == _pendingWrites.end()) {
-	// No pending writes, remove POLLOUT from events
-		for (size_t i = 0; i < _pollFds.size(); ++i) {
-			if (_pollFds[i].fd == clientSocket) {
-				_pollFds[i].events &= ~POLLOUT;
-				break;
-			}
+void HttpServer::stopMonitoringForPolloutEvents(MultPlexFds& monitorFds, int clientSocket) {
+	for (size_t i = 0; i < monitorFds.pollFds.size(); ++i) {
+		if (monitorFds.pollFds[i].fd == clientSocket) {
+			monitorFds.pollFds[i].events &= ~POLLOUT;
+			break;
 		}
-
-		if (_pendingCloses.find(clientSocket) != _pendingCloses.end()) {
-			_pendingCloses.erase(clientSocket);
-			removeClient(clientSocket);
-		}
-		return;
 	}
+}
+
+void HttpServer::terminatePendingCloses(int clientSocket) {
+	if (_pendingCloses.find(clientSocket) != _pendingCloses.end()) {
+		_pendingCloses.erase(clientSocket);
+		removeClient(clientSocket);
+	}
+}
+
+void HttpServer::stopMonitoringForWriteEvents(MultPlexFds& monitorFds, int clientSocket) {
+	switch (monitorFds.multPlexType) {
+		case SELECT:
+			throw std::logic_error("Stopping monitoring for write events for select type fds not implemented yet"); break;
+		case POLL:
+			stopMonitoringForPolloutEvents(monitorFds, clientSocket); break;
+		case EPOLL:
+			throw std::logic_error("Stopping monitoring for write events for epoll type fds not implemented yet"); break;
+		default:
+			throw std::logic_error("Stopping monitoring for write events for unknown type fds not implemented yet");
+	}
+}
+
+bool HttpServer::maybeTerminateConnection(PendingWrites::iterator it, int clientSocket) {
+	if (it == _pendingWrites.end()) {
+		// No pending writes, for POLL: remove POLLOUT from events
+		stopMonitoringForWriteEvents(_monitorFds, clientSocket);
+		// Also if this client's connection is pending to be closed, close it
+		terminatePendingCloses(clientSocket);
+		return true;
+	}
+	return false;
+}
+
+void HttpServer::terminateIfNoPendingData(PendingWrites::iterator& it, int clientSocket, ssize_t bytesSent) {
+	PendingWrite& pw = it->second;
+	pw.bytesSent += static_cast<size_t>(bytesSent);
+	
+	// Check whether we've sent everything
+	if (pw.bytesSent >= pw.data.length()) {
+		_pendingWrites.erase(it);
+		// for POLL: remove POLLOUT from events since we're done writing
+		stopMonitoringForWriteEvents(_monitorFds, clientSocket);
+	}
+}
+
+void HttpServer::writeToClient(int clientSocket) {
+	PendingWrites::iterator it = _pendingWrites.find(clientSocket);
+	if (maybeTerminateConnection(it, clientSocket))
+		return;
 
 	PendingWrite& pw = it->second;
 	const char* data = pw.data.c_str() + pw.bytesSent;
@@ -216,25 +254,11 @@ void HttpServer::writeToClient(int clientSocket) {
 	
 	ssize_t bytesSent = send(clientSocket, data, remaining, 0);
 	if (bytesSent < 0) {
-		if (errno != EAGAIN && errno != EWOULDBLOCK) {
-			removeClient(clientSocket);
-		}
+		removeClient(clientSocket);
 		return;
 	}
 	
-	pw.bytesSent += static_cast<size_t>(bytesSent);
-	
-	// Check if we've sent everything
-	if (pw.bytesSent >= pw.data.length()) {
-		_pendingWrites.erase(it);
-		// Rm POLLOUT from events since we're done writing
-		for (size_t i = 0; i < _pollFds.size(); ++i) {
-			if (_pollFds[i].fd == clientSocket) {
-				_pollFds[i].events &= ~POLLOUT;
-				break;
-			}
-		}
-	}
+	terminateIfNoPendingData(it, clientSocket, bytesSent);
 }
 
 void HttpServer::addClientSocketToPollFds(MultPlexFds& monitorFds, int clientSocket) {
@@ -639,7 +663,7 @@ string HttpServer::getMimeType(const string& path) {
 	
 	string ext = path.substr(dotPos + 1);
 	std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower); // a malicious MIME type could contain negative chars, leading to undefined behaviour with ::tolower, see https://stackoverflow.com/questions/5270780/what-does-the-mean-in-tolower
-	map<string, string>::const_iterator it = _mimeTypes.find(ext);
+	MimeTypes::const_iterator it = _mimeTypes.find(ext);
 	if (it != _mimeTypes.end())
 		return it->second; // MIME type found
 	return Constants::defaultMimeType; // MIME type not found

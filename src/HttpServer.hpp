@@ -109,7 +109,7 @@ public:
 
 	const vector<int>&				get_listeningSockets()	const { return _listeningSockets; }
 	const MultPlexFds&				get_monitorFds()		const { return _monitorFds; }
-	const vector<struct pollfd>&	get_pollFds()			const { return _pollFds; }
+	const PollFds&					get_pollFds()			const { return _pollFds; }
 	const string&					get_httpVersionString()	const { return _httpVersionString; }
 	const string&					get_rawConfig()			const { return _rawConfig; }
 	const Config&					get_config()			const { return _config; }
@@ -123,7 +123,7 @@ private:
 	//// private members ////
 	vector<int>				_listeningSockets;
 	MultPlexFds				_monitorFds;
-	vector<struct pollfd>&	_pollFds;
+	PollFds&				_pollFds;
 	const string			_httpVersionString;
 	const string			_rawConfig;
 	const Config			_config;
@@ -171,6 +171,9 @@ private:
 	void sendError(int clientSocket, int statusCode);
 	void sendString(int clientSocket, const string& payload, int statusCode = 200, const string& contentType = "text/html");
 	void sendFileContent(int clientSocket, const string& filePath);
+	void stopMonitoringForPolloutEvents(MultPlexFds& monitorFds, int clientSocket);
+	void stopMonitoringForWriteEvents(MultPlexFds& monitorFds, int clientSocket);
+	PendingWrite& updatePendingWrite(PendingWrite& pw);
 
 	// Removing a client
 	void removeClient(int clientSocket);
@@ -178,6 +181,9 @@ private:
 	void removePollFd(MultPlexFds& monitorFds, int fd);
 	void closeAndRemoveAllMultPlexFd(MultPlexFds& monitorFds);
 	void closeAndRemoveAllPollFd(MultPlexFds& monitorFds);
+	bool maybeTerminateConnection(PendingWrites::iterator it, int clientSocket);
+	void terminateIfNoPendingData(PendingWrites::iterator& it, int clientSocket, ssize_t bytesSent);
+	void terminatePendingCloses(int clientSocket);
 
 	// Monitor sockets
 	MultPlexFds getReadyFds(MultPlexFds& monitorFds);
