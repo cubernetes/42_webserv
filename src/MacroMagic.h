@@ -46,6 +46,7 @@
 #define EMPTY()
 #define DEFER(id) id EMPTY()
 #define DEFER2(...) __VA_ARGS__ DEFER(EMPTY)()
+#define DEFER3(...) __VA_ARGS__ DEFER2(EMPTY)()
 #define EXPAND(...) __VA_ARGS__
 
 #define EVAL(...) EVAL1(EVAL1(EVAL1(__VA_ARGS__)))

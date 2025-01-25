@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 
 #include "MacroMagic.h"
 
@@ -15,6 +16,14 @@ namespace Utils {
 	static inline vector<T>& getTmpVec() {
 		static vector<T> _;
 		return _;
+	}
+
+	// TODO: @timo: improve repr to specify no color
+	template <typename T>
+	static inline string SSTR(T x) {
+		std::ostringstream oss;
+		oss << std::dec << x;
+		return oss.str();
 	}
 }
 

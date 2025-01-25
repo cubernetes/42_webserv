@@ -6,50 +6,59 @@
 #include <set> 
 #include <string>
 #include <sys/poll.h>
+#include <sys/socket.h>
+#include <sys/select.h>
+#include <sys/epoll.h>
+#include <sys/stat.h>
 #include <vector>
 
 #include "Config.hpp"
+#include "Constants.hpp"
 
 using std::string;
+using std::map;
+using std::pair;
+using std::vector;
+using std::set;
+using Constants::MultPlexType;
 
 class HttpServer {
 public:
-	// Orthodox Canonical Form requirements
 	~HttpServer();
-	HttpServer();
-	HttpServer(const HttpServer&);
-	HttpServer& operator=(HttpServer);
-	void swap(HttpServer&); // copy swap idiom
-
-	// string conversion
+	HttpServer(const string& configPath);
 	operator string() const;
-	
-	// Core functionality
-	bool setup(const Config& config);
+
+	// entry point, will run forever unless interrupted by signals or exceptions
 	void run();
 
-	// Getters
-	int get_serverFd() const;
-	const std::vector<struct pollfd>& get_pollFds() const;
-	bool get_running() const;
-	const Config& get_config() const;
-	unsigned int get_id() const;
+	//// forward decls
+	struct ServerConfig;
+	struct AddrPortCompare;
+	struct PendingWrite;
+	enum FdState {
+		FD_READABLE,
+		FD_WRITEABLE,
+		FD_OTHER_STATE,
+	};
 
-private:
-	int							_serverFd;
-	std::vector<struct pollfd>	_pollFds;
-	bool						_running;
-	Config						_config;
+	//// typedefs
+	typedef pair<struct in_addr, int> AddrPort;
+	typedef map<AddrPort, ServerConfig, AddrPortCompare> DefaultServers;
+	typedef vector<int> SelectFds;
+	typedef vector<struct pollfd> PollFds;
+	typedef vector<struct epoll_event> EpollFds;
+	typedef vector<FdState> FdStates;
+	typedef map<string, string> MimeTypes;
+	typedef map<int, string> StatusTexts;
+	typedef map<int, PendingWrite> PendingWrites;
+	typedef set<int> PendingCloses;
 
-	// Instance tracking
-	unsigned int				_id;
-	static unsigned int			_idCntr;
-	std::map<string,string>		_mimeTypes;
+	//// structs and other constructs
 	struct HttpRequest {
-		string						method;
-		string						path;
-		string						httpVersion;
-		std::map<string, string>	headers;
+		string				method;
+		string				path;
+		string				httpVersion;
+		map<string, string>	headers;
 
 		HttpRequest() :
 			method(),
@@ -57,38 +66,122 @@ private:
 			httpVersion(),
 			headers() {}
 	};
-
 	struct PendingWrite {
 		string	data;
 		size_t	bytesSent;
 
-		PendingWrite() : data(), bytesSent(0) {}
-		PendingWrite(const string& d) : data(d), bytesSent(0) {}
+		PendingWrite() : data(), bytesSent() {}
+		PendingWrite(const string& d) : data(d), bytesSent() {}
 	};
+	struct ServerConfig {
+		struct in_addr	ip;
+		int				port;
+		vector<string> serverNames;
+		Directives directives; // TODO: @timo: make const ref
+		LocationCtxs locations; // TODO: @timo: make const ref
 
-	std::map<int, PendingWrite>	_pendingWrites;
-	std::set<int>				_pendingClose;
+		ServerConfig() : ip(), port(), serverNames(), directives(), locations() {}
+	};
+	struct AddrPortCompare {
+		bool operator()(const AddrPort& a,
+						const AddrPort& b) const {
+			if (memcmp(&a.first, &b.first, sizeof(struct in_addr)) < 0)
+				return true;
+			if (memcmp(&a.first, &b.first, sizeof(struct in_addr)) > 0)
+				return false;
+			return a.second < b.second;
+		}
+	};
+	struct MultPlexFds {
+		MultPlexType multPlexType;
 
-	bool setupSocket(const std::string& ip, int port);
-	void handleNewConnection();
-	void handleClientData(int clientFd);
-	void closeConnection(int clientFd);
-	void removePollFd(int fd);
+		fd_set selectFdSet;
+		SelectFds selectFds;
+
+		PollFds pollFds;
+
+		EpollFds epollFds;
+
+		FdStates fdStates;
+
+		MultPlexFds(MultPlexType initMultPlexType) : multPlexType(initMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() { FD_ZERO(&selectFdSet); }
+	//private:
+		MultPlexFds() : multPlexType(Constants::defaultMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() {}
+	}; // TODO: @timo: constructor maybe to initalize with the multPlexType?
+
+	const vector<int>&				get_listeningSockets()	const { return _listeningSockets; }
+	const MultPlexFds&				get_monitorFds()		const { return _monitorFds; }
+	const vector<struct pollfd>&	get_pollFds()			const { return _pollFds; }
+	const string&					get_httpVersionString()	const { return _httpVersionString; }
+	const string&					get_rawConfig()			const { return _rawConfig; }
+	const Config&					get_config()			const { return _config; }
+	const MimeTypes&				get_mimeTypes()			const { return _mimeTypes; }
+	const StatusTexts&				get_statusTexts()		const { return _statusTexts; }
+	const PendingWrites&			get_pendingWrites()		const { return _pendingWrites; }
+	const PendingCloses&			get_pendingCloses()		const { return _pendingCloses; }
+	const vector<ServerConfig>&		get_servers()			const { return _servers; }
+	const DefaultServers&			get_defaultServers()	const { return _defaultServers; }
+private:
+	//// private members
+	vector<int>				_listeningSockets;
+	MultPlexFds				_monitorFds;
+	vector<struct pollfd>&	_pollFds;
+	const string			_httpVersionString;
+	const string			_rawConfig;
+	const Config			_config;
+	MimeTypes				_mimeTypes;
+	StatusTexts				_statusTexts;
+	PendingWrites			_pendingWrites;
+	PendingCloses			_pendingCloses;
+	vector<ServerConfig>	_servers;
+	DefaultServers			_defaultServers;
+
+
+	//// private methods
+	HttpServer() : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers() {}; // HttpServer must always be constructed with a config
+	HttpServer(const HttpServer& other) : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers() { (void)other; }; // Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a server and its config
+	HttpServer& operator=(HttpServer) { return *this; }; // HttpServer cannot be assigned to
+	bool setup();
+	bool setupSocket(const string& ip, int port);
+
+	void addNewClient(int listeningSocket);
+	void readFromClient(int clientSocket);
+	void writeToClient(int clientSocket);
+	void removeClient(int clientSocket);
+
+	void removePollFd(int socket);
+	bool isListeningSocket(int socket);
 	HttpRequest parseHttpRequest(const char *buffer);
-	bool validateServerConfig(int clientFd, const ServerCtx& serverConfig, string& rootDir, string& defaultIndex);
-	bool validatePath(int clientFd, const string& path);
-	bool handleDirectoryRedirect(int clientFd, const HttpRequest& request, string& filePath, 
-									const string& defaultIndex, struct stat& fileStat);
-	void sendFileContent(int clientFd, const string& filePath);
-	void handleGetRequest(int clientFd, const HttpRequest& request);
-	void sendError(int clientFd, int statusCode, const string& statusText);
-	void sendText(int clientFd, const string& text);
+	bool validatePath(int clientSocket, const string& path);
+	bool handleDirectoryRedirect(int clientSocket, const HttpRequest& request, string& filePath, const string& defaultIndex, struct stat& fileStat);
+	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+	bool findMatchingServer(ServerConfig& serverConfig, const string& host, const struct in_addr& addr, int port) const;
+	bool findMatchingLocation(LocationCtx& location, const ServerConfig& serverConfig, const string& path) const;
+	string wrapInHtmlBody(const string& text);
+
+	void queueWrite(int clientSocket, const string& data);
+	void sendError(int clientSocket, int statusCode);
+	void sendString(int clientSocket, const string& payload, int statusCode = 200, const string& contentType = "text/html");
+	void sendFileContent(int clientSocket, const string& filePath);
+
 	void initMimeTypes();
 	string getMimeType(const string& path);
-	void queueWrite(int clientFd, const string& data);
-	void handleClientWrite(int clientFd);
+	void initStatusTexts();
+	string statusTextFromCode(int statusCode);
+
+	void handleReadyFds(const MultPlexFds& readyFds);
+	struct pollfd *getPollFds(const MultPlexFds& fds);
+	nfds_t getNumberOfPollFds(const MultPlexFds& fds);
+	void removeSelectFd(MultPlexFds& monitorFds, int fd);
+	void removePollFd(MultPlexFds& monitorFds, int fd);
+	void closeAndRemoveMultPlexFd(MultPlexFds& monitorFds, int fd);
+	void closeAndRemoveAllMultPlexFd(MultPlexFds& monitorFds);
+	void closeAndRemoveAllSelectFd(MultPlexFds& monitorFds);
+	void closeAndRemoveAllPollFd(MultPlexFds& monitorFds);
+	MultPlexFds getReadyPollFds(MultPlexFds& monitorFds, int nReady, struct pollfd *pollFds, nfds_t nPollFds);
+	MultPlexFds doPoll(MultPlexFds& monitorFds);
+	MultPlexFds getReadyFds(MultPlexFds& monitorFds);
+	int multPlexFdToRawFd(const MultPlexFds& readyFds, int i);
 };
 
-// global scope swap (aka ::swap), needed since friend keyword is forbidden :(
-void swap(HttpServer&, HttpServer&) /* noexcept */;
 std::ostream& operator<<(std::ostream&, const HttpServer&);

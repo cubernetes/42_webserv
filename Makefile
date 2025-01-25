@@ -21,7 +21,7 @@ MKDIR := /bin/mkdir -p
 CFLAGS += -O2
 CFLAGS += -Wall
 CFLAGS += -Wextra
-# CFLAGS += -Werror # TODO: @all: Add back
+CFLAGS += -Werror # TODO: @all: Add back
 CFLAGS += -Wshadow
 CFLAGS += -Wconversion
 CFLAGS += -Wunreachable-code
@@ -83,7 +83,6 @@ SRC += HttpServer.cpp
 SRC += Logger.cpp
 SRC += Reflection.cpp
 SRC += Repr.cpp
-SRC += Server.cpp
 SRC += Utils.cpp
 SRC += main.cpp # translation unit with int main(){} MUST be called main.cpp for unit tests to work, see object vars logic below
 
