@@ -1,5 +1,4 @@
 #include <string>
-#include <cstddef> // TODO: @timo: use either size_t or std::size_t everywhere
 
 #include "Constants.hpp"
 #include "Logger.hpp"

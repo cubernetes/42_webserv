@@ -7,8 +7,6 @@
 #include <string>
 #include <sys/poll.h>
 #include <sys/socket.h>
-#include <sys/select.h>
-#include <sys/epoll.h>
 #include <sys/stat.h>
 #include <vector>
 
@@ -31,7 +29,7 @@ public:
 	// entry point, will run forever unless interrupted by signals or exceptions
 	void run();
 
-	//// forward decls
+	//// forward decls ////
 	struct ServerConfig;
 	struct AddrPortCompare;
 	struct PendingWrite;
@@ -41,7 +39,7 @@ public:
 		FD_OTHER_STATE,
 	};
 
-	//// typedefs
+	//// typedefs ////
 	typedef pair<struct in_addr, int> AddrPort;
 	typedef map<AddrPort, ServerConfig, AddrPortCompare> DefaultServers;
 	typedef vector<int> SelectFds;
@@ -53,7 +51,7 @@ public:
 	typedef map<int, PendingWrite> PendingWrites;
 	typedef set<int> PendingCloses;
 
-	//// structs and other constructs
+	//// structs and other constructs ////
 	struct HttpRequest {
 		string				method;
 		string				path;
@@ -107,7 +105,7 @@ public:
 		MultPlexFds(MultPlexType initMultPlexType) : multPlexType(initMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() { FD_ZERO(&selectFdSet); }
 	//private:
 		MultPlexFds() : multPlexType(Constants::defaultMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() {}
-	}; // TODO: @timo: constructor maybe to initalize with the multPlexType?
+	};
 
 	const vector<int>&				get_listeningSockets()	const { return _listeningSockets; }
 	const MultPlexFds&				get_monitorFds()		const { return _monitorFds; }
@@ -122,7 +120,7 @@ public:
 	const vector<ServerConfig>&		get_servers()			const { return _servers; }
 	const DefaultServers&			get_defaultServers()	const { return _defaultServers; }
 private:
-	//// private members
+	//// private members ////
 	vector<int>				_listeningSockets;
 	MultPlexFds				_monitorFds;
 	vector<struct pollfd>&	_pollFds;
@@ -137,51 +135,66 @@ private:
 	DefaultServers			_defaultServers;
 
 
-	//// private methods
-	HttpServer() : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers() {}; // HttpServer must always be constructed with a config
-	HttpServer(const HttpServer& other) : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers() { (void)other; }; // Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a server and its config
-	HttpServer& operator=(HttpServer) { return *this; }; // HttpServer cannot be assigned to
+	//// private methods ////
+	// HttpServer must always be constructed with a config
+	HttpServer() : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers() {};
+	// Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a server and its config
+	HttpServer(const HttpServer& other) : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers() { (void)other; };
+	// HttpServer cannot be assigned to
+	HttpServer& operator=(HttpServer) { return *this; };
+
+	// setup
 	bool setup();
 	bool setupSocket(const string& ip, int port);
+	void initMimeTypes();
+	void initStatusTexts();
 
+	// Adding a client
 	void addNewClient(int listeningSocket);
-	void readFromClient(int clientSocket);
-	void writeToClient(int clientSocket);
-	void removeClient(int clientSocket);
+	void addClientSocketToPollFds(MultPlexFds& monitorFds, int clientSocket);
+	void addClientSocketToMonitorFds(MultPlexFds& monitorFds, int clientSocket);
 
-	void removePollFd(int socket);
-	bool isListeningSocket(int socket);
+	// Reading from a client
+	void readFromClient(int clientSocket);
+
+	// request handling/parsing
 	HttpRequest parseHttpRequest(const char *buffer);
+	bool findMatchingServer(ServerConfig& serverConfig, const string& host, const struct in_addr& addr, int port) const;
+	bool findMatchingLocation(LocationCtx& location, const ServerConfig& serverConfig, const string& path) const;
 	bool validatePath(int clientSocket, const string& path);
 	bool handleDirectoryRedirect(int clientSocket, const HttpRequest& request, string& filePath, const string& defaultIndex, struct stat& fileStat);
 	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
-	bool findMatchingServer(ServerConfig& serverConfig, const string& host, const struct in_addr& addr, int port) const;
-	bool findMatchingLocation(LocationCtx& location, const ServerConfig& serverConfig, const string& path) const;
-	string wrapInHtmlBody(const string& text);
 
+	// Writing to a client
+	void writeToClient(int clientSocket);
 	void queueWrite(int clientSocket, const string& data);
 	void sendError(int clientSocket, int statusCode);
 	void sendString(int clientSocket, const string& payload, int statusCode = 200, const string& contentType = "text/html");
 	void sendFileContent(int clientSocket, const string& filePath);
 
-	void initMimeTypes();
-	string getMimeType(const string& path);
-	void initStatusTexts();
-	string statusTextFromCode(int statusCode);
-
-	void handleReadyFds(const MultPlexFds& readyFds);
-	struct pollfd *getPollFds(const MultPlexFds& fds);
-	nfds_t getNumberOfPollFds(const MultPlexFds& fds);
-	void removeSelectFd(MultPlexFds& monitorFds, int fd);
-	void removePollFd(MultPlexFds& monitorFds, int fd);
+	// Removing a client
+	void removeClient(int clientSocket);
 	void closeAndRemoveMultPlexFd(MultPlexFds& monitorFds, int fd);
+	void removePollFd(MultPlexFds& monitorFds, int fd);
 	void closeAndRemoveAllMultPlexFd(MultPlexFds& monitorFds);
-	void closeAndRemoveAllSelectFd(MultPlexFds& monitorFds);
 	void closeAndRemoveAllPollFd(MultPlexFds& monitorFds);
-	MultPlexFds getReadyPollFds(MultPlexFds& monitorFds, int nReady, struct pollfd *pollFds, nfds_t nPollFds);
-	MultPlexFds doPoll(MultPlexFds& monitorFds);
+
+	// Monitor sockets
 	MultPlexFds getReadyFds(MultPlexFds& monitorFds);
+	MultPlexFds doPoll(MultPlexFds& monitorFds);
+	MultPlexFds getReadyPollFds(MultPlexFds& monitorFds, int nReady, struct pollfd *pollFds, nfds_t nPollFds);
+
+	// Multiplex I/O file descriptor helpers
+	void handleReadyFds(const MultPlexFds& readyFds);
+	struct pollfd *multPlexFdsToPollFds(const MultPlexFds& fds);
+	nfds_t getNumberOfPollFds(const MultPlexFds& fds);
 	int multPlexFdToRawFd(const MultPlexFds& readyFds, int i);
+
+	// helpers
+	string getMimeType(const string& path);
+	string statusTextFromCode(int statusCode);
+	string wrapInHtmlBody(const string& text);
+	bool isListeningSocket(int socket);
 };
 
 std::ostream& operator<<(std::ostream&, const HttpServer&);

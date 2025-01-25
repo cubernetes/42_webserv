@@ -33,7 +33,7 @@ using std::string;
 using Constants::SELECT;
 using Constants::POLL;
 using Constants::EPOLL;
-using Utils::SSTR;
+using Utils::STR;
 
 HttpServer::~HttpServer() {
 	TRACE_DTOR;
@@ -237,24 +237,41 @@ void HttpServer::writeToClient(int clientSocket) {
 	}
 }
 
+void HttpServer::addClientSocketToPollFds(MultPlexFds& monitorFds, int clientSocket) {
+	struct pollfd pfd;
+	pfd.fd = clientSocket;
+	pfd.events = POLLIN | POLLOUT;
+	pfd.revents = 0;
+	monitorFds.pollFds.push_back(pfd);
+}
+
+void HttpServer::addClientSocketToMonitorFds(MultPlexFds& monitorFds, int clientSocket) {
+	switch (monitorFds.multPlexType) {
+		case SELECT:
+			throw std::logic_error("Adding select type fds not implemented yet"); break;
+		case POLL:
+			addClientSocketToPollFds(monitorFds, clientSocket); break;
+		case EPOLL:
+			throw std::logic_error("Adding epoll type fds not implemented yet"); break;
+		default:
+			throw std::logic_error("Adding unknown type of fd not implemented");
+	}
+}
+
 void HttpServer::addNewClient(int listeningSocket) {
 	struct sockaddr_in clientAddr;
 	socklen_t clientLen = sizeof(clientAddr);
 	
 	int clientSocket = accept(listeningSocket, (struct sockaddr*)&clientAddr, &clientLen);
 	if (clientSocket < 0) {
-		if (errno != EWOULDBLOCK && errno != EAGAIN)
-			Logger::logError("Accept failed");
+		// Not checking EWOULDBLOCK/EAGAIN, since we're not implmementing nonblocking IO, but the mutually exclusive I/O multiplexing model
+		// subject forbids to check errno after and read or write, for this exact reason. accept is not mentioned, but it's the same idea
+		Logger::logError(string("accept failed: ") + strerror(errno));
 		return;
 	}
 	
-	struct pollfd pfd;
-	pfd.fd = clientSocket;
-	pfd.events = POLLIN | POLLOUT;
-	pfd.revents = 0;
-	_pollFds.push_back(pfd);
-	
-	cout << "New client connected. FD: " << clientSocket << std::endl;
+	addClientSocketToMonitorFds(_monitorFds, clientSocket);
+	Logger::logDebug("New client connected. FD: " + STR(clientSocket));
 }
 
 bool HttpServer::findMatchingLocation(LocationCtx& location, const ServerConfig& serverConfig, const string& path) const {
@@ -285,11 +302,13 @@ void HttpServer::readFromClient(int clientSocket) {
 	ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
 	
 	if (bytesRead <= 0) {
-		if (bytesRead == 0 || (bytesRead < 0 && errno != EWOULDBLOCK && errno != EAGAIN)) // TODO: @all: quote subject: "checking the value of errno is strictly forbidden after a read or write operation"
-																						  // recv/recvfrom and send/sendto are also read/write ops (just specialized for sockets).
-																						  // setting the fd to NONBLOCK and then checking whether errno is EWOULDBLOCK or EAGAIN is called the "nonblocking IO" model, which is forbidden
-																						  // namely, we have to implementing "I/O multiplexing". this video is really great: youtu.be/I5j9TBcqe_Q
+		if (bytesRead == 0)	// TODO: @all: quote subject: "checking the value of errno is strictly forbidden after a read or write operation"
+							// recv/recvfrom and send/sendto are also read/write ops (just specialized for sockets).
+							// setting the fd to NONBLOCK and then checking whether errno is EWOULDBLOCK or EAGAIN is called the "nonblocking IO" model, which is forbidden
+							// namely, we have to implementing "I/O multiplexing". this video is superb: youtu.be/I5j9TBcqe_Q
 			removeClient(clientSocket);
+		else
+			Logger::logError(string("recv failed: ") + strerror(errno));
 		return;
 	}
 	
@@ -327,7 +346,7 @@ void HttpServer::readFromClient(int clientSocket) {
 	if (request.method == "GET")
 		serveStaticContent(clientSocket, request, location);
 	else {
-		string response = _httpVersionString + " " + SSTR(501) + statusTextFromCode(501) + "\r\n"
+		string response = _httpVersionString + " " + STR(501) + statusTextFromCode(501) + "\r\n"
 					"Content-Length: 22\r\n"
 					"Connection: close\r\n"
 					"\r\n"
@@ -595,7 +614,7 @@ string HttpServer::wrapInHtmlBody(const string& text) {
 
 void HttpServer::sendError(int clientSocket, int statusCode) {
 	sendString(clientSocket, wrapInHtmlBody(
-		"<h1>" + SSTR(statusCode) + " " + statusTextFromCode(statusCode) + "</h1>"
+		"<h1>" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "</h1>"
 	), statusCode);
 }
 
@@ -646,26 +665,12 @@ void HttpServer::handleReadyFds(const MultPlexFds& readyFds) {
 	}
 }
 
-struct pollfd *HttpServer::getPollFds(const MultPlexFds& fds) {
+struct pollfd *HttpServer::multPlexFdsToPollFds(const MultPlexFds& fds) {
 	return (struct pollfd*)&fds.pollFds[0];
 }
 
 nfds_t HttpServer::getNumberOfPollFds(const MultPlexFds& fds) {
 	return static_cast<nfds_t>(fds.pollFds.size());
-}
-
-void HttpServer::removeSelectFd(MultPlexFds& monitorFds, int fd) {
-	FD_CLR(fd, &monitorFds.selectFdSet);
-}
-
-void HttpServer::closeAndRemoveAllSelectFd(MultPlexFds& monitorFds) {
-	for (int i = 0; i < FD_SETSIZE; ++i) {
-		if (FD_ISSET(i, &monitorFds.selectFdSet)) {
-			FD_CLR(i, &monitorFds.selectFdSet);
-			close(i);
-		}
-	}
-	FD_ZERO(&monitorFds.selectFdSet);
 }
 
 void HttpServer::removePollFd(MultPlexFds& monitorFds, int fd) {
@@ -691,7 +696,7 @@ void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds& monitorFds, int fd) {
 	close(fd); // TODO: @timo: guard every syscall
 	switch (monitorFds.multPlexType) {
 		case SELECT:
-			removeSelectFd(monitorFds, fd); break;
+			throw std::logic_error("Removing select type fds not implemented yet"); break;
 		case POLL:
 			removePollFd(monitorFds, fd); break;
 		case EPOLL:
@@ -704,13 +709,13 @@ void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds& monitorFds, int fd) {
 void HttpServer::closeAndRemoveAllMultPlexFd(MultPlexFds& monitorFds) {
 	switch (monitorFds.multPlexType) {
 		case SELECT:
-			closeAndRemoveAllSelectFd(monitorFds); break;
+			throw std::logic_error("Removing all select type fds not implemented yet"); break;
 		case POLL:
 			closeAndRemoveAllPollFd(monitorFds); break;
 		case EPOLL:
-			throw std::logic_error("Removing epoll type fds not implemented yet"); break;
+			throw std::logic_error("Removing all epoll type fds not implemented yet"); break;
 		default:
-			throw std::logic_error("Removing unknown type of fd not implemented");
+			throw std::logic_error("Removing all unknown types of fd not implemented");
 	}
 }
 
@@ -735,14 +740,14 @@ HttpServer::MultPlexFds HttpServer::getReadyPollFds(MultPlexFds& monitorFds, int
 }
 
 HttpServer::MultPlexFds HttpServer::doPoll(MultPlexFds& monitorFds) {
-		struct pollfd *pollFds = getPollFds(monitorFds);
+		struct pollfd *pollFds = multPlexFdsToPollFds(monitorFds);
 		nfds_t nPollFds = getNumberOfPollFds(monitorFds);
 		int nReady = poll(pollFds, nPollFds, Constants::multiplexTimeout);
 
 		if (nReady < 0) {
 			if (errno == EINTR) // TODO: @all: why is EINTR okay? What about the other codes? What about EAGAIN?
 				return MultPlexFds(POLL);
-			throw std::runtime_error(string("Poll failed: ") + strerror(errno)); // TODO: @timo: make Errors::...
+			throw std::runtime_error(string("poll failed: ") + strerror(errno)); // TODO: @timo: make Errors::...
 		}
 
 		return getReadyPollFds(monitorFds, nReady, pollFds, nPollFds);
@@ -764,11 +769,11 @@ HttpServer::MultPlexFds HttpServer::getReadyFds(MultPlexFds& monitorFds) {
 int HttpServer::multPlexFdToRawFd(const MultPlexFds& readyFds, int i) {
 	switch (readyFds.multPlexType) {
 		case SELECT:
-			return readyFds.selectFds[static_cast<size_t>(i)];
+			throw std::logic_error("Converting seleet fd type to raw fd not implemented");
 		case POLL:
 			return readyFds.pollFds[static_cast<size_t>(i)].fd;
 		case EPOLL:
-			return readyFds.epollFds[static_cast<size_t>(i)].data.fd;
+			throw std::logic_error("Converting epoll fd type to raw fd not implemented");
 		default:
 			throw std::logic_error("Converting unknown fd type to raw fd not implemented");
 	}

@@ -1,7 +1,6 @@
 #include <sstream>
 #include <utility>
 #include <string>
-#include <cstddef>
 
 #include "Reflection.hpp"
 #include "Logger.hpp"
@@ -11,7 +10,7 @@ using std::string;
 using std::swap;
 
 static inline string _replace(string s, const string& search, const string& replace) {
-	std::size_t pos = 0;
+	size_t pos = 0;
 	while ((pos = s.find(search, pos)) != string::npos) {
 		 s.replace(pos, search.length(), replace);
 		 pos += replace.length();

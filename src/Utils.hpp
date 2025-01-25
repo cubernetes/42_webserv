@@ -20,7 +20,7 @@ namespace Utils {
 
 	// TODO: @timo: improve repr to specify no color
 	template <typename T>
-	static inline string SSTR(T x) {
+	static inline string STR(T x) {
 		std::ostringstream oss;
 		oss << std::dec << x;
 		return oss.str();
