@@ -27,27 +27,33 @@ void swap(Logger& a, Logger& b) /* noexcept */ { a.swap(b); }
 
 // TODO: @timo: improve logging
 void Logger::logTrace(const std::string& msg) {
-	cerr << msg << endl;
+	if (Logger::trace())
+		cerr << msg << endl;
 }
 
 void Logger::logDebug(const std::string& msg) {
+	if (Logger::debug())
 	cerr << msg << endl;
 }
 
 void Logger::logInfo(const std::string& msg) {
+	if (Logger::info())
 	cerr << msg << endl;
 }
 
 void Logger::logWarning(const std::string& msg) {
-	cerr << msg << endl;
+	if (Logger::warn())
+		cerr << msg << endl;
 }
 
 void Logger::logError(const std::string& msg) {
-	cerr << msg << endl;
+	if (Logger::error())
+		cerr << msg << endl;
 }
 
 void Logger::logFatal(const std::string& msg) {
-	cerr << msg << endl;
+	if (Logger::fatal())
+		cerr << msg << endl;
 }
 
 bool Logger::trace() {

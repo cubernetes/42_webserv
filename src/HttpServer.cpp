@@ -26,6 +26,7 @@
 #include "Repr.hpp"
 #include "DirectoryIndexing.hpp"
 
+using std::runtime_error;
 using std::map;
 using std::cout;
 using std::vector;
@@ -55,9 +56,8 @@ std::ostream& operator<<(std::ostream& os, const HttpServer& server) {
 	return os << static_cast<string>(server);
 }
 
-bool HttpServer::setupServers(const Config& config) {
-	for (ServerCtxs::const_iterator server = config.second.begin();
-			server != config.second.end(); ++server) {
+void HttpServer::setupServers(const Config& config) {
+	for (ServerCtxs::const_iterator server = config.second.begin(); server != config.second.end(); ++server) {
 		Server serverConfig;
 		const Arguments hostPort = getFirstDirective(server->first, "listen");
 		struct addrinfo hints, *res;
@@ -66,8 +66,7 @@ bool HttpServer::setupServers(const Config& config) {
 		hints.ai_socktype = SOCK_STREAM;
 
 		if (getaddrinfo(hostPort[0].c_str(), NULL, &hints, &res) != 0) {
-			Logger::logError("Invalid IP address");
-			return false;
+			throw runtime_error("Invalid IP address for listen directive in server config");
 		}
 		serverConfig.ip = ((struct sockaddr_in*)res->ai_addr)->sin_addr;
 		freeaddrinfo(res);
@@ -81,8 +80,8 @@ bool HttpServer::setupServers(const Config& config) {
 		serverConfig.directives = server->first;
 		serverConfig.locations = server->second;
 		
-		if (!setupListeningSocket(hostPort[0].c_str(), serverConfig.port))
-			return false;
+		setupListeningSocket(hostPort[0].c_str(), serverConfig.port);
+		cout << cmt("Server with names ") << repr(serverConfig.serverNames) << cmt(" is listening on ") << num(hostPort[0]) << num(":") << repr(serverConfig.port) << '\n';
 			
 		_servers.push_back(serverConfig);
 
@@ -90,23 +89,20 @@ bool HttpServer::setupServers(const Config& config) {
 		if (_defaultServers.find(addr) == _defaultServers.end())
 			_defaultServers[addr] = _servers.back();
 	}
-	return true;
 }
 
-bool HttpServer::setupListeningSocket(const string& ip, int port) {
+void HttpServer::setupListeningSocket(const string& ip, int port) {
 	(void)ip;
 	int listeningSocket = socket(AF_INET, SOCK_STREAM, 0); // TODO: @discuss: removed SOCK_NONBLOCK since we're doing I/O multiplexing, not nonblocking I/O (see other TODO's for more details)
 	_listeningSockets.push_back(listeningSocket);
 	if (listeningSocket < 0) {
-		Logger::logError("Failed to create socket");
-		return false;
+		throw runtime_error("Failed to create socket");
 	}
 	
 	int opt = 1;
 	if (setsockopt(listeningSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-		Logger::logError("Failed to set socket options");
+		throw runtime_error("Failed to set socket options");
 		close(listeningSocket);
-		return false;
 	}
 	
 	struct sockaddr_in address;
@@ -114,30 +110,24 @@ bool HttpServer::setupListeningSocket(const string& ip, int port) {
 	if (port > 0 && port <= SHRT_MAX) {
 		address.sin_port = htons(static_cast<uint16_t>(port));
 	} else {
-		Logger::logError("Invalid port number");
-		return false;
+		throw runtime_error("Invalid port number");
 	}
 	address.sin_addr.s_addr = INADDR_ANY;
 	
 	if (bind(listeningSocket, (struct sockaddr*)&address, sizeof(address)) < 0) {
-		Logger::logError("Failed to bind socket");
+		throw runtime_error("Failed to bind socket");
 		close(listeningSocket);
-		return false;
 	}
 	
 	if (listen(listeningSocket, SOMAXCONN) < 0) {
-		Logger::logError("Failed to listen on socket");
+		throw runtime_error("Failed to listen on socket");
 		close(listeningSocket);
-		return false;
 	}
 	
 	struct pollfd pfd;
 	pfd.fd = listeningSocket;
 	pfd.events = POLLIN;
 	_monitorFds.pollFds.push_back(pfd);
-	
-	cout << "Server is listening on port " << port << std::endl;
-	return true;
 }
 
 bool HttpServer::findMatchingServer(Server& serverConfig, const string& host, const struct in_addr& addr, int port) const {
@@ -772,7 +762,7 @@ HttpServer::MultPlexFds HttpServer::doPoll(MultPlexFds& monitorFds) {
 		if (nReady < 0) {
 			if (errno == EINTR) // TODO: @all: why is EINTR okay? What about the other codes? What about EAGAIN?
 				return MultPlexFds(POLL);
-			throw std::runtime_error(string("poll failed: ") + strerror(errno)); // TODO: @timo: make Errors::...
+			throw runtime_error(string("poll failed: ") + strerror(errno)); // TODO: @timo: make Errors::...
 		}
 
 		return getReadyPollFds(monitorFds, nReady, pollFds, nPollFds);

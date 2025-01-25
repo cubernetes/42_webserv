@@ -145,8 +145,8 @@ private:
 	HttpServer& operator=(HttpServer) { return *this; };
 
 	// setup
-	bool setupServers(const Config& config);
-	bool setupListeningSocket(const string& ip, int port);
+	void setupServers(const Config& config);
+	void setupListeningSocket(const string& ip, int port);
 	void initMimeTypes(MimeTypes& mimeTypes);
 	void initStatusTexts(StatusTexts& statusTexts);
 
