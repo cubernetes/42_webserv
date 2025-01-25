@@ -235,10 +235,10 @@ CHAR_REPR(signed char);
 POST_REFLECT_MEMBER(struct pollfd, int, fd, short, events, short, revents);
 
 #include "HttpServer.hpp"
-POST_REFLECT_MEMBER(HttpServer::ServerConfig, struct in_addr, ip, int, port, vector<string>, serverNames, Directives, directives, LocationCtxs, locations);
+POST_REFLECT_MEMBER(HttpServer::Server, struct in_addr, ip, int, port, vector<string>, serverNames, Directives, directives, LocationCtxs, locations);
 POST_REFLECT_MEMBER(HttpServer::PendingWrite, string, data, size_t, bytesSent);
 POST_REFLECT_MEMBER(HttpServer::MultPlexFds, MultPlexType, multPlexType, HttpServer::SelectFds, selectFds, HttpServer::PollFds, pollFds, HttpServer::EpollFds, epollFds, HttpServer::FdStates, fdStates);
-POST_REFLECT_GETTER(HttpServer, vector<int>, _listeningSockets, HttpServer::MultPlexFds, _monitorFds, vector<struct pollfd>, _pollFds, string, _httpVersionString, string, _rawConfig, Config, _config, HttpServer::MimeTypes, _mimeTypes, HttpServer::StatusTexts, _statusTexts, HttpServer::PendingWrites, _pendingWrites, HttpServer::PendingCloses, _pendingCloses, vector<HttpServer::ServerConfig>, _servers, HttpServer::DefaultServers, _defaultServers);
+POST_REFLECT_GETTER(HttpServer, vector<int>, _listeningSockets, HttpServer::MultPlexFds, _monitorFds, HttpServer::PollFds, _pollFds, string, _httpVersionString, string, _rawConfig, Config, _config, HttpServer::MimeTypes, _mimeTypes, HttpServer::StatusTexts, _statusTexts, HttpServer::PendingWrites, _pendingWrites, HttpServer::PendingCloses, _pendingCloses, HttpServer::Servers, _servers, HttpServer::DefaultServers, _defaultServers);
 
 #include "CgiHandler.hpp"
 POST_REFLECT_GETTER(CgiHandler, string, _extension, string, _program);

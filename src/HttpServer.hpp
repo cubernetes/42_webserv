@@ -30,7 +30,7 @@ public:
 	void run();
 
 	//// forward decls ////
-	struct ServerConfig;
+	struct Server;
 	struct AddrPortCompare;
 	struct PendingWrite;
 	enum FdState {
@@ -41,8 +41,9 @@ public:
 
 	//// typedefs ////
 	typedef pair<struct in_addr, int> AddrPort;
-	typedef map<AddrPort, ServerConfig, AddrPortCompare> DefaultServers;
+	typedef map<AddrPort, Server, AddrPortCompare> DefaultServers;
 	typedef vector<int> SelectFds;
+	typedef vector<Server> Servers;
 	typedef vector<struct pollfd> PollFds;
 	typedef vector<struct epoll_event> EpollFds;
 	typedef vector<FdState> FdStates;
@@ -71,14 +72,14 @@ public:
 		PendingWrite() : data(), bytesSent() {}
 		PendingWrite(const string& d) : data(d), bytesSent() {}
 	};
-	struct ServerConfig {
+	struct Server {
 		struct in_addr	ip;
 		int				port;
 		vector<string> serverNames;
 		Directives directives; // TODO: @timo: make const ref
 		LocationCtxs locations; // TODO: @timo: make const ref
 
-		ServerConfig() : ip(), port(), serverNames(), directives(), locations() {}
+		Server() : ip(), port(), serverNames(), directives(), locations() {}
 	};
 	struct AddrPortCompare {
 		bool operator()(const AddrPort& a,
@@ -117,7 +118,7 @@ public:
 	const StatusTexts&				get_statusTexts()		const { return _statusTexts; }
 	const PendingWrites&			get_pendingWrites()		const { return _pendingWrites; }
 	const PendingCloses&			get_pendingCloses()		const { return _pendingCloses; }
-	const vector<ServerConfig>&		get_servers()			const { return _servers; }
+	const Servers&					get_servers()			const { return _servers; }
 	const DefaultServers&			get_defaultServers()	const { return _defaultServers; }
 private:
 	//// private members ////
@@ -131,7 +132,7 @@ private:
 	StatusTexts				_statusTexts;
 	PendingWrites			_pendingWrites;
 	PendingCloses			_pendingCloses;
-	vector<ServerConfig>	_servers;
+	Servers					_servers;
 	DefaultServers			_defaultServers;
 
 
@@ -159,8 +160,8 @@ private:
 
 	// request handling/parsing
 	HttpRequest parseHttpRequest(const char *buffer);
-	bool findMatchingServer(ServerConfig& serverConfig, const string& host, const struct in_addr& addr, int port) const;
-	bool findMatchingLocation(LocationCtx& location, const ServerConfig& serverConfig, const string& path) const;
+	bool findMatchingServer(Server& serverConfig, const string& host, const struct in_addr& addr, int port) const;
+	bool findMatchingLocation(LocationCtx& location, const Server& serverConfig, const string& path) const;
 	bool validatePath(int clientSocket, const string& path);
 	bool handleDirectoryRedirect(int clientSocket, const HttpRequest& request, string& filePath, const string& defaultIndex, struct stat& fileStat);
 	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
@@ -171,8 +172,6 @@ private:
 	void sendError(int clientSocket, int statusCode);
 	void sendString(int clientSocket, const string& payload, int statusCode = 200, const string& contentType = "text/html");
 	void sendFileContent(int clientSocket, const string& filePath);
-	void stopMonitoringForPolloutEvents(MultPlexFds& monitorFds, int clientSocket);
-	void stopMonitoringForWriteEvents(MultPlexFds& monitorFds, int clientSocket);
 	PendingWrite& updatePendingWrite(PendingWrite& pw);
 
 	// Removing a client
@@ -185,10 +184,15 @@ private:
 	void terminateIfNoPendingData(PendingWrites::iterator& it, int clientSocket, ssize_t bytesSent);
 	void terminatePendingCloses(int clientSocket);
 
-	// Monitor sockets
+	// Monitor sockets (the blocking part)
 	MultPlexFds getReadyFds(MultPlexFds& monitorFds);
 	MultPlexFds doPoll(MultPlexFds& monitorFds);
 	MultPlexFds getReadyPollFds(MultPlexFds& monitorFds, int nReady, struct pollfd *pollFds, nfds_t nPollFds);
+
+	// Handle monitoring state for socket (i.e. for POLL, add/remove the POLLOUT event, etc.)
+	void stopMonitoringForWriteEvents(MultPlexFds& monitorFds, int clientSocket);
+	void startMonitoringForWriteEvents(MultPlexFds& monitorFds, int clientSocket);
+	void updatePollEvents(MultPlexFds& monitorFds, int clientSocket, short events, bool add);
 
 	// Multiplex I/O file descriptor helpers
 	void handleReadyFds(const MultPlexFds& readyFds);

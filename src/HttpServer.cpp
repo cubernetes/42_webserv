@@ -37,15 +37,6 @@ using Utils::STR;
 
 HttpServer::~HttpServer() {
 	TRACE_DTOR;
-	// for (int i = 0; i < _listeningSockets.size(); ++i) {
-	// 	if (_listeningSockets[i] >= 0)
-	// 		close(_listeningSockets[i]);
-	// } // TODO: @timo: remove, already handled below
-	
-	// for (int i = 0, fd; i < static_cast<int>(_pollFds.size()); ++i)
-	// 	if ((fd = _pollFds[i].fd) >= 0)
-	// 		close(fd); // TODO: @timo: remove, also already handled below
-
 	closeAndRemoveAllMultPlexFd(_monitorFds);
 }
 
@@ -66,7 +57,7 @@ std::ostream& operator<<(std::ostream& os, const HttpServer& server) {
 bool HttpServer::setup() {
 	for (ServerCtxs::const_iterator server = _config.second.begin();
 			server != _config.second.end(); ++server) {
-		ServerConfig serverConfig;
+		Server serverConfig;
 		const Arguments hostPort = getFirstDirective(server->first, "listen");
 		struct addrinfo hints, *res;
 		std::memset(&hints, 0, sizeof(hints));
@@ -148,12 +139,12 @@ bool HttpServer::setupSocket(const string& ip, int port) {
 	return true;
 }
 
-bool HttpServer::findMatchingServer(ServerConfig& serverConfig, const string& host, const struct in_addr& addr, int port) const {
+bool HttpServer::findMatchingServer(Server& serverConfig, const string& host, const struct in_addr& addr, int port) const {
 	string serverName = host;
 	size_t colonPos = serverName.find(':');
 	if (colonPos != string::npos) 
 		serverName = serverName.substr(0, colonPos);
-	for (vector<ServerConfig>::const_iterator it = _servers.begin();
+	for (Servers::const_iterator it = _servers.begin();
 			it != _servers.end(); ++it) {
 		if (it->port == port && memcmp(&it->ip, &addr, sizeof(struct in_addr)) == 0) {
 			for (vector<string>::const_iterator name = it->serverNames.begin();
@@ -177,24 +168,20 @@ bool HttpServer::findMatchingServer(ServerConfig& serverConfig, const string& ho
 }
 
 void HttpServer::queueWrite(int clientSocket, const string& data) {
-
 	if (_pendingWrites.find(clientSocket) == _pendingWrites.end())
 		_pendingWrites[clientSocket] = PendingWrite(data);
 	else
 		_pendingWrites[clientSocket].data += data;
-	
-	for (size_t i = 0; i < _pollFds.size(); ++i) {
-		if (_pollFds[i].fd == clientSocket) {
-			_pollFds[i].events |= POLLOUT;
-			break ;
-		}
-	}
+	startMonitoringForWriteEvents(_monitorFds, clientSocket);
 }
 
-void HttpServer::stopMonitoringForPolloutEvents(MultPlexFds& monitorFds, int clientSocket) {
+void HttpServer::updatePollEvents(MultPlexFds& monitorFds, int clientSocket, short events, bool add) {
 	for (size_t i = 0; i < monitorFds.pollFds.size(); ++i) {
 		if (monitorFds.pollFds[i].fd == clientSocket) {
-			monitorFds.pollFds[i].events &= ~POLLOUT;
+			if (add)
+				monitorFds.pollFds[i].events |= events;
+			else
+				monitorFds.pollFds[i].events &= ~events;
 			break;
 		}
 	}
@@ -207,12 +194,25 @@ void HttpServer::terminatePendingCloses(int clientSocket) {
 	}
 }
 
+void HttpServer::startMonitoringForWriteEvents(MultPlexFds& monitorFds, int clientSocket) {
+	switch (monitorFds.multPlexType) {
+		case SELECT:
+			throw std::logic_error("Starting monitoring for write events for select type fds not implemented yet"); break;
+		case POLL:
+			updatePollEvents(monitorFds, clientSocket, POLLOUT, true); break;
+		case EPOLL:
+			throw std::logic_error("Starting monitoring for write events for epoll type fds not implemented yet"); break;
+		default:
+			throw std::logic_error("Starting monitoring for write events for unknown type fds not implemented yet");
+	}
+}
+
 void HttpServer::stopMonitoringForWriteEvents(MultPlexFds& monitorFds, int clientSocket) {
 	switch (monitorFds.multPlexType) {
 		case SELECT:
 			throw std::logic_error("Stopping monitoring for write events for select type fds not implemented yet"); break;
 		case POLL:
-			stopMonitoringForPolloutEvents(monitorFds, clientSocket); break;
+			updatePollEvents(monitorFds, clientSocket, POLLOUT, false); break;
 		case EPOLL:
 			throw std::logic_error("Stopping monitoring for write events for epoll type fds not implemented yet"); break;
 		default:
@@ -298,7 +298,7 @@ void HttpServer::addNewClient(int listeningSocket) {
 	Logger::logDebug("New client connected. FD: " + STR(clientSocket));
 }
 
-bool HttpServer::findMatchingLocation(LocationCtx& location, const ServerConfig& serverConfig, const string& path) const {
+bool HttpServer::findMatchingLocation(LocationCtx& location, const Server& serverConfig, const string& path) const {
 	int bestIdx = -1;
 	int bestScore = -1;
 	for (int i = 0; i < static_cast<int>(serverConfig.locations.size()); ++i) {
@@ -356,7 +356,7 @@ void HttpServer::readFromClient(int clientSocket) {
 			host = host.substr(0, colonPos);
 	}
 
-	ServerConfig server;
+	Server server;
 	if (!findMatchingServer(server, host, addr.sin_addr, port)) {
 		sendError(clientSocket, 404);
 		return;
