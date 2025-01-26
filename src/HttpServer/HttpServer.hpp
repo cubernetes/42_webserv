@@ -177,7 +177,8 @@ private:
 	PendingCloses			_pendingCloses;
 	Servers					_servers;
 	DefaultServers			_defaultServers;
-	map<int, CGIProcess>	_cgiProcesses;
+	static const int		CLIENT_TIMEOUT = 5;
+	std::map<int, time_t>	_clientLastActivity;	map<int, CGIProcess>	_cgiProcesses;
 
 
 	//// private methods ////
@@ -270,6 +271,11 @@ private:
 	string statusTextFromCode(int statusCode);
 	string wrapInHtmlBody(const string& text);
 	bool isListeningSocket(int socket);
+
+	//timeout check
+	void updateClientActivity(int clientSocket);
+	void checkForInactiveClients();
+	static void timeoutHandler(int clientSocket);
 };
 
 std::ostream& operator<<(std::ostream&, const HttpServer&);
