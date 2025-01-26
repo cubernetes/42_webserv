@@ -103,9 +103,10 @@ static string getErrorPagePath(int statusCode, const LocationCtx& location) {
 }
 
 bool HttpServer::sendErrorPage(int clientSocket, int statusCode, const LocationCtx& location) {
-	string errorPagePath = getFirstDirective(location.second, "root")[0] + getErrorPagePath(statusCode, location);
-	if (errorPagePath.empty())
+	string errorPageLocation = getErrorPagePath(statusCode, location);
+	if (errorPageLocation.empty())
 		return false;
+	string errorPagePath = getFirstDirective(location.second, "root")[0] + errorPageLocation;
 	std::ifstream file(errorPagePath.c_str());
 	if (!file)
 		return false;
