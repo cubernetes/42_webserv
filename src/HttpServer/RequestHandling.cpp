@@ -65,7 +65,7 @@ void HttpServer::handleRequest(int clientSocket, const HttpRequest& request, con
 			string extension = (*ext)[0];
 			string program = ext->size() > 1 ? (*ext)[1] : "/usr/bin/python3";
 			
-			CgiHandler handler(extension, program);
+			CgiHandler handler(*this, extension, program);
 			if (handler.canHandle(request.path)) {
 				handler.execute(clientSocket, request, location);
 				return;

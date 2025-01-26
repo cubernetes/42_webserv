@@ -146,6 +146,9 @@ public:
 	const PendingCloses&			get_pendingCloses()		const { return _pendingCloses; }
 	const Servers&					get_servers()			const { return _servers; }
 	const DefaultServers&			get_defaultServers()	const { return _defaultServers; }
+
+	void sendError(int clientSocket, int statusCode, const LocationCtx *const location = NULL);
+
 private:
 	//// private members ////
 	vector<int>				_listeningSockets;
@@ -213,7 +216,6 @@ private:
 	// Writing to a client
 	void writeToClient(int clientSocket);
 	void queueWrite(int clientSocket, const string& data);
-	void sendError(int clientSocket, int statusCode, const LocationCtx *const location = NULL);
 	void sendString(int clientSocket, const string& payload, int statusCode = 200, const string& contentType = "text/html");
 	bool sendErrorPage(int clientSocket, int statusCode, const LocationCtx& location);
 	bool sendFileContent(int clientSocket, const string& filePath, const LocationCtx& location, int statusCode = 200, const string& contentType = "");

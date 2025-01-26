@@ -1,8 +1,10 @@
 #pragma once /* CgiHandler.hpp */
 
-#include <map>
-#include <ostream>
-#include <string>
+#include <signal.h>
+#include <sstream>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
 #include "HttpServer.hpp"
 
 using std::string;
@@ -10,8 +12,7 @@ using std::string;
 class CgiHandler {
 public:
 	~CgiHandler();
-	CgiHandler();
-	CgiHandler(const string& extension, const string& program);
+	CgiHandler(HttpServer& server, const string& extension, const string& program);
 	CgiHandler(const CgiHandler& other);
 	CgiHandler& operator=(CgiHandler);
 	void swap(CgiHandler&); // copy swap idiom
@@ -25,13 +26,16 @@ public:
 	bool canHandle(const string& path) const;
 	void execute(int clientSocket, const HttpServer::HttpRequest& request, 
 			const LocationCtx& location);
+	bool processCGIResponse(const string& response, int clientSocket);
+	bool validateHeaders(const string& headers);
 private:
+	HttpServer& _server;
 	string _extension;
 	string _program;
 
+	void exportEnvironment(const std::map<string, string>& env);
 	std::map<string, string> setupEnvironment(const HttpServer::HttpRequest& request, 
 											const LocationCtx& location);
-	void exportEnvironment(const std::map<string, string>& env);
 };
 
 void swap(CgiHandler&, CgiHandler&) /* noexcept */;

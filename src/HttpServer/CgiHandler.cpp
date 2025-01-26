@@ -1,10 +1,3 @@
-#include <algorithm>
-#include <cstdlib>
-#include <sstream>
-#include <stdexcept>
-#include <sys/wait.h>
-#include <unistd.h>
-
 #include "CgiHandler.hpp"
 #include "ReprCgi.hpp"
 
@@ -16,18 +9,13 @@ CgiHandler::~CgiHandler() {
 	TRACE_DTOR;
 }
 
-CgiHandler::CgiHandler() :
-	_extension(),
-	_program() {
-	TRACE_DEFAULT_CTOR;
-}
-
-CgiHandler::CgiHandler(const string& extension, const string& program) 
-	: _extension(extension), _program(program) {
+CgiHandler::CgiHandler(HttpServer& server, const string& extension, const string& program) 
+	: _server(server), _extension(extension), _program(program) {
 	TRACE_ARG_CTOR(string, extension, string, program);
 }
 
 CgiHandler::CgiHandler(const CgiHandler& other) :
+	_server(other._server),
 	_extension(other._extension),
 	_program(other._program) {
 	TRACE_COPY_CTOR;
@@ -124,18 +112,77 @@ void CgiHandler::exportEnvironment(const std::map<string, string>& env) {
 	}
 }
 
+bool CgiHandler::processCGIResponse(const string& response, int clientSocket) {
+	size_t headerEnd = response.find("\r\n\r\n");
+	if (headerEnd == string::npos) {
+		headerEnd = response.find("\n\n");
+		if (headerEnd == string::npos) {
+			return false;
+		}
+	}
+
+	string headers = response.substr(0, headerEnd);
+	string body = response.substr(headerEnd + (response[headerEnd + 1] == '\n' ? 2 : 4));
+
+	// Basic header validation
+	if (!validateHeaders(headers)) {
+		return false;
+	}
+
+	std::ostringstream fullResponse;
+	fullResponse << "HTTP/1.1 200 OK\r\n";
+	
+	if (headers.find("Content-Length:") == string::npos) {
+		fullResponse << "Content-Length: " << body.length() << "\r\n";
+	}
+	
+	if (headers.find("Content-Type:") == string::npos) {
+		fullResponse << "Content-Type: text/html\r\n";
+	}
+
+	fullResponse << headers << "\r\n\r\n" << body;
+	send(clientSocket, fullResponse.str().c_str(), fullResponse.str().length(), 0);
+	return true;
+}
+
+bool CgiHandler::validateHeaders(const string& headers) {
+	std::istringstream iss(headers);
+	string line;
+	while (std::getline(iss, line)) {
+		if (line.empty() || line == "\r") continue;
+		
+		// Basic header format validation
+		if (line.find(':') == string::npos) return false;
+		
+		// Check for potentially dangerous headers
+		if (line.find("Status:") == 0) {
+			string status = line.substr(7);
+			int statusCode = std::atoi(status.c_str());
+			if (statusCode < 100 || statusCode > 599) return false;
+		}
+	}
+	return true;
+}
+
+
 void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& request,
 						const LocationCtx& location) {
-	
+
 	std::map<string, string> env = setupEnvironment(request, location);
 	string scriptPath = env["SCRIPT_FILENAME"];
 	string rootPath = getFirstDirective(location.second, "root")[0];
+
+	// Validate script permissions
+	if (access(scriptPath.c_str(), X_OK) != 0) {
+		_server.sendError(clientSocket, 403, &location);
+		return;
+	}
 
 	int pipeFd[2];
 	if (pipe(pipeFd) < 0) {
 		throw std::runtime_error("Failed to create pipe for CGI");
 	}
-	
+
 	pid_t pid = fork();
 	if (pid < 0) {
 		close(pipeFd[0]);
@@ -143,7 +190,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 		throw std::runtime_error("Fork failed for CGI execution");
 	}
 
-	if (pid == 0) {  // Child process
+	if (pid == 0) {
 
 		close(pipeFd[0]);
 		dup2(pipeFd[1], STDOUT_FILENO);
@@ -152,9 +199,20 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 		if (chdir(rootPath.c_str()) < 0) {
 			exit(1);
 		}
+
+		// Set resource limits
+		struct rlimit rlim;
+		rlim.rlim_cur = 30; // 30 seconds CPU time
+		rlim.rlim_max = 30;
+		setrlimit(RLIMIT_CPU, &rlim);
+
+		rlim.rlim_cur = 100 * 1024 * 1024; // 100MB memory limit
+		rlim.rlim_max = 100 * 1024 * 1024;
+		setrlimit(RLIMIT_AS, &rlim);
+		
 		exportEnvironment(env);
 
-		// for some reason if i specify relative before it doesn't work at all
+		// for some reason if relative specified before it doesn't work at all
 		if (Utils::isPrefix(rootPath + "/", scriptPath)) {
 			scriptPath = scriptPath.substr(rootPath.length() + 1);
 		}
@@ -173,8 +231,17 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 	char buffer[4096];
 	string response;
 	ssize_t bytesRead;
+	unsigned long totalSize = 0;
+	const size_t maxSize = 10 * 1024 * 1024; // 10MB output limit
 	
 	while ((bytesRead = read(pipeFd[0], buffer, sizeof(buffer) - 1)) > 0) {
+		totalSize += static_cast<unsigned long>(bytesRead); 
+		if (totalSize > maxSize) {
+			kill(pid, SIGTERM);
+			close(pipeFd[0]);
+			_server.sendError(clientSocket, 500, &location);
+			return;
+		}
 		buffer[bytesRead] = '\0';
 		response += buffer;
 	}
@@ -182,40 +249,13 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 	close(pipeFd[0]);
 
 	int status;
-	waitpid(pid, &status, 0);
-
-	if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
-		size_t headerEnd = response.find("\r\n\r\n");
-		if (headerEnd == string::npos) {
-			headerEnd = response.find("\n\n");
-		}
-
-		std::ostringstream fullResponse;
-		fullResponse << "HTTP/1.1 200 OK\r\n";
-		
-		if (headerEnd != string::npos) {
-			string headers = response.substr(0, headerEnd);
-			string body = response.substr(headerEnd + 4);
-			
-			if (headers.find("Content-Length:") == string::npos) {
-				fullResponse << "Content-Length: " << body.length() << "\r\n";
-			}
-			
-			fullResponse << headers << "\r\n\r\n" << body;
-		} else {
-			fullResponse << "Content-Type: text/plain\r\n"
-						<< "Content-Length: " << response.length() << "\r\n\r\n"
-						<< response;
-		}
-
-		send(clientSocket, fullResponse.str().c_str(), fullResponse.str().length(), 0);
-	} else {
-		std::ostringstream errorResponse;
-		errorResponse << "HTTP/1.1 500 Internal Server Error\r\n"
-					 << "Content-Type: text/plain\r\n"
-					 << "Content-Length: 21\r\n\r\n"
-					 << "CGI execution failed\n";
-		
-		send(clientSocket, errorResponse.str().c_str(), errorResponse.str().length(), 0);
+	if (waitpid(pid, &status, 0) == -1 || WIFSIGNALED(status) || WEXITSTATUS(status) != 0) {
+		_server.sendError(clientSocket, 500, &location);
+		return;
+	}
+	// Process CGI output and validate headers
+	if (!processCGIResponse(response, clientSocket)) {
+		_server.sendError(clientSocket, 502, &location);
+		return;
 	}
 }
