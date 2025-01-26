@@ -94,7 +94,9 @@ void HttpServer::setupServers(const Config& config) {
 		server.port = getServerPort(*serverCtx);
 
 		setupListeningSocket(server);
-		cout << cmt("Server with names ") << repr(server.serverNames) << cmt(" is listening on ") << num(getServerIpStr(*serverCtx)) << num(":") << repr(ntohs(server.port)) << '\n';
+		cout << cmt("Server with names ") << repr(server.serverNames)
+			<< cmt(" is listening on ") << num(getServerIpStr(*serverCtx))
+			<< num(":") << repr(ntohs(server.port)) << '\n';
 			
 		_servers.push_back(server);
 
@@ -105,7 +107,7 @@ void HttpServer::setupServers(const Config& config) {
 }
 
 int HttpServer::createTcpListenSocket() {
-	int listeningSocket = socket(AF_INET, SOCK_STREAM, 0); // TODO: @discuss: removed SOCK_NONBLOCK since we're doing I/O multiplexing, not nonblocking I/O (see other TODO's for more details)
+	int listeningSocket = socket(AF_INET, SOCK_STREAM, 0);
 	if (listeningSocket < 0)
 		throw runtime_error("Failed to create socket");
 	
@@ -269,7 +271,7 @@ void HttpServer::writeToClient(int clientSocket) {
 
 	PendingWrite& pw = it->second;
 	const char* data = pw.data.c_str() + pw.bytesSent;
-	size_t remaining = std::min(Constants::chunkSize, pw.data.length() - pw.bytesSent); // TODO: @discuss: we don't want to send 10GB responses, that'll block the server for everyone; TODO: @discuss: is `chunkSize` the correct term?
+	size_t remaining = std::min(Constants::chunkSize, pw.data.length() - pw.bytesSent);
 	
 	ssize_t bytesSent = send(clientSocket, data, remaining, 0);
 	if (bytesSent < 0) {
@@ -307,8 +309,6 @@ void HttpServer::addNewClient(int listeningSocket) {
 	
 	int clientSocket = accept(listeningSocket, (struct sockaddr*)&clientAddr, &clientLen);
 	if (clientSocket < 0) {
-		// Not checking EWOULDBLOCK/EAGAIN, since we're not implmementing nonblocking IO, but the mutually exclusive I/O multiplexing model
-		// subject forbids to check errno after and read or write, for this exact reason. accept is not mentioned, but it's the same idea
 		Logger::logError(string("accept failed: ") + strerror(errno));
 		return;
 	}
@@ -317,17 +317,20 @@ void HttpServer::addNewClient(int listeningSocket) {
 	Logger::logDebug("New client connected. FD: " + STR(clientSocket));
 }
 
+// TODO: @all: is this algorithm correct?
 size_t HttpServer::findMatchingLocation(const Server& server, const string& path) const {
 	int bestIdx = -1;
 	int bestScore = -1;
 	for (size_t i = 0; i < server.locations.size(); ++i) {
 		LocationCtx loc = server.locations[i];
 		const string& locPath = loc.first;
-		pair<string::const_iterator, string::const_iterator> matcher = std::mismatch(locPath.begin(), locPath.end(), path.begin());
-		int currentScore = static_cast<int>(std::distance(locPath.begin(), matcher.first));
-		if (currentScore > bestScore) {
-			bestScore = currentScore;
-			bestIdx = static_cast<int>(i);
+		if (Utils::isPrefix(locPath, path)) {
+			pair<string::const_iterator, string::const_iterator> matcher = std::mismatch(locPath.begin(), locPath.end(), path.begin());
+			int currentScore = static_cast<int>(std::distance(locPath.begin(), matcher.first));
+			if (currentScore > bestScore) {
+				bestScore = currentScore;
+				bestIdx = static_cast<int>(i);
+			}
 		}
 	}
 	if (bestIdx >= 0) {
@@ -339,65 +342,116 @@ size_t HttpServer::findMatchingLocation(const Server& server, const string& path
 	return 0;
 }
 
-void HttpServer::readFromClient(int clientSocket) {
-	char buffer[CONSTANTS_CHUNK_SIZE];
-	ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer), 0);
+ssize_t HttpServer::recvToBuffer(int clientSocket, char *buffer, size_t bufSiz) {
+	ssize_t bytesRead = recv(clientSocket, buffer, bufSiz, 0);
 	
 	if (bytesRead <= 0) {
-		if (bytesRead == 0)	// TODO: @all: quote subject: "checking the value of errno is strictly forbidden after a read or write operation"
-							// recv/recvfrom and send/sendto are also read/write ops (just specialized for sockets).
-							// setting the fd to NONBLOCK and then checking whether errno is EWOULDBLOCK or EAGAIN is called the "nonblocking IO" model, which is forbidden
-							// namely, we have to implementing "I/O multiplexing". this video is superb: youtu.be/I5j9TBcqe_Q
+		if (bytesRead == 0)
 			removeClient(clientSocket);
 		else
 			Logger::logError(string("recv failed: ") + strerror(errno));
-		return;
+		return 0;
 	}
 	
 	buffer[bytesRead] = '\0';
-	HttpRequest request = parseHttpRequest(buffer);
+	return bytesRead;
+}
 
+string HttpServer::getHost(const HttpRequest& request) {
+	string host;
+	if (request.headers.find("Host") != request.headers.end()) {
+		if (request.headers.find("Host") != request.headers.end()) {
+			host = request.headers.at("Host");
+			size_t colonPos = host.find(':');
+			if (colonPos != string::npos)
+				host.substr(0, colonPos);
+		}
+	}
+	return host;
+}
+
+struct sockaddr_in HttpServer::getSockaddrIn(int clientSocket) {
 	struct sockaddr_in addr;
 	socklen_t addrLen = sizeof(addr);
 	if (getsockname(clientSocket, (struct sockaddr*)&addr, &addrLen) < 0) {
+		int prev_errno = errno;
 		sendError(clientSocket, 500);
-		return;
+		throw runtime_error(string("getsockname failed: ") + strerror(prev_errno));
 	}
-	
-	// Get host from request headers
-	string host;
-	if (request.headers.find("Host") != request.headers.end()) {
-		host = request.headers.at("Host");
-		size_t colonPos = host.find(':');
-		if (colonPos != string::npos)
-			host = host.substr(0, colonPos);
-	}
+	return addr;
+}
 
+const LocationCtx& HttpServer::requestToLocation(int clientSocket, const HttpRequest& request) {
+	struct sockaddr_in addr = getSockaddrIn(clientSocket);
+
+	// Get host from request headers
+	string host = getHost(request);
+
+	// find server by matching against host, addr, and port
 	size_t serverIdx;
 	if (!(serverIdx = findMatchingServer(host, addr.sin_addr, addr.sin_port))) {
 		sendError(clientSocket, 404); // TODO: @all: is 404 rlly correct?
-		return;
+		throw runtime_error(string("couldn't find a server for hostname '") + host + "' and addr:port being " + STR(ntohl(addr.sin_addr.s_addr)) + ":" + STR(ntohs(addr.sin_port)));
 	}
-	const Server& server = _servers[serverIdx - 1]; // 0 indicates failure, 1 is the first server
+	const Server& server = _servers[serverIdx - 1]; // serverIdx=0 indicates failure, so 1 is the first server
 
+	// find location by matching against request uri
 	size_t locationIdx;
 	if (!(locationIdx = findMatchingLocation(server, request.path))) {
 		sendError(clientSocket, 404); // TODO: @all: is 404 rlly correct?
-		return;
+		throw runtime_error(string("couldn't find a location for URI '") + request.path + "'");
 	}
-	const LocationCtx& location = server.locations[locationIdx - 1];
-	
+	return server.locations[locationIdx - 1]; // TODO: @all: we need a default location at "/" that has all the server's directives
+}
+
+bool HttpServer::requestIsForCgi(const HttpRequest& request, const LocationCtx& location) {
+	if (!directiveExists(location.second, "cgi_dir"))
+		return false;
+	string uri = request.path;
+	string cgi_dir = getFirstDirective(location.second, "cgi_dir")[0];
+	if (!Utils::isPrefix(cgi_dir, uri))
+		return false;
+	return true;
+}
+
+void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
 	if (request.method == "GET")
 		serveStaticContent(clientSocket, request, location);
+	else if (request.method == "POST")
+		sendString(clientSocket, "POST for file upload not implemented yet\n");
+	else if (request.method == "DELETE")
+		sendString(clientSocket, "DELETE for file deletion not implemented yet\n");
+	else if (request.method == "4242")
+		sendString(clientSocket, ansi::rgbP("Follow the white rabbit\a\n", 140, 21, 61));
 	else {
-		string response = _httpVersionString + " " + STR(501) + statusTextFromCode(501) + "\r\n"
-					"Content-Length: 22\r\n"
-					"Connection: close\r\n"
-					"\r\n"
-					"Method not implemented\n";
+		sendError(clientSocket, 405);
+	}
+}
 
-		send(clientSocket, response.c_str(), response.length(), 0);
-		removeClient(clientSocket);
+void HttpServer::handleRequest(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
+	if (requestIsForCgi(request, location))
+		sendString(clientSocket, "Cgi not implemented yet\n");
+	else
+		handleRequestInternally(clientSocket, request, location);
+}
+
+void HttpServer::readFromClient(int clientSocket) {
+	char buffer[CONSTANTS_CHUNK_SIZE];
+	if (!recvToBuffer(clientSocket, buffer, CONSTANTS_CHUNK_SIZE))
+		return;
+
+	HttpRequest request = parseHttpRequest(buffer);
+	
+	bool bound = false; // hack courtesy of https://stackoverflow.com/a/43016806
+	try {
+		const LocationCtx& location = requestToLocation(clientSocket, request);
+		bound = true;
+		handleRequest(clientSocket, request, location);
+	} catch (const runtime_error& err) {
+		if (bound) throw; // runtime_error because of handleRequest
+		// couldn't find a server, or location, or couldn't get sockname, which shouldn't be fatal so we return
+		Logger::logError(err.what());
+		return;
 	}
 }
 
@@ -653,12 +707,12 @@ void HttpServer::initStatusTexts(StatusTexts& statusTexts) {
 }
 
 string HttpServer::wrapInHtmlBody(const string& text) {
-	return "<html><body>" + text + "</body></html>";
+	return "<html>\r\n\t<body>\r\n\t\t" + text + "\r\n\t</body>\r\n</html>\r\n";
 }
 
 void HttpServer::sendError(int clientSocket, int statusCode) {
 	sendString(clientSocket, wrapInHtmlBody(
-		"<h1>" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "</h1>"
+		"<h1>\r\n\t\t\t" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "\r\n\t\t</h1>"
 	), statusCode);
 }
 

@@ -11,6 +11,7 @@ using std::string;
 
 namespace Utils {
 	string parseArgs(int ac, char **av);
+	bool isPrefix(string prefix, string longerString);
 
 	template<typename T>
 	static inline vector<T>& getTmpVec() {

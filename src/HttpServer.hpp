@@ -164,6 +164,8 @@ private:
 
 	// Reading from a client
 	void readFromClient(int clientSocket);
+	ssize_t recvToBuffer(int clientSocket, char *buffer, size_t bufSiz);
+	string getHost(const HttpRequest& request);
 
 	// request handling/parsing
 	HttpRequest parseHttpRequest(const char *buffer);
@@ -171,9 +173,16 @@ private:
 	size_t findMatchingLocation(const Server& serverConfig, const string& path) const;
 	size_t getIndexOfServerByHost(const string& requestedHost, const struct in_addr& addr, in_port_t port) const;
 	size_t getIndexOfDefaultServer(const struct in_addr& addr, in_port_t port) const;
+	const LocationCtx& requestToLocation(int clientSocket, const HttpRequest& request);
 	bool validatePath(int clientSocket, const string& path);
 	bool handleDirectoryRedirect(int clientSocket, const HttpRequest& request, string& filePath, const string& defaultIndex, struct stat& fileStat);
 	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+	void handleRequest(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+	void handleRequestInternally(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+	struct sockaddr_in getSockaddrIn(int clientSocket);
+
+	// CGI
+	bool requestIsForCgi(const HttpRequest& request, const LocationCtx& location);
 
 	// Writing to a client
 	void writeToClient(int clientSocket);

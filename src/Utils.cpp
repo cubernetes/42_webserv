@@ -1,5 +1,7 @@
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <algorithm>
 
 #include "Utils.hpp"
 #include "Constants.hpp"
@@ -16,4 +18,12 @@ string Utils::parseArgs(int ac, char** av) {
 		throw std::runtime_error(Errors::DegenerateArgv(ac, av));
 	}
 	throw std::runtime_error(Errors::WrongArgs(ac));
+}
+
+// https://stackoverflow.com/a/7913978
+bool Utils::isPrefix(string prefix, string longerString) {
+	std::pair<string::const_iterator, string::const_iterator> matcher = std::mismatch(prefix.begin(), prefix.end(), longerString.begin());
+	if (matcher.first == prefix.end())
+		return true;
+	return false;
 }
