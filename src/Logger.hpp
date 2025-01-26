@@ -11,8 +11,6 @@ public:
 	Logger& operator=(Logger);
 	void swap(Logger& other);
 	
-	static void logexception(const std::exception& exception);
-	static void logerror(const std::string& msg);
 	static const int TRACE = 0;
 	static const int DEBUG = 1;
 	static const int INFO  = 2;
@@ -25,6 +23,12 @@ public:
 	static bool warn();
 	static bool error();
 	static bool fatal();
+	static void logTrace(const std::string& msg);
+	static void logDebug(const std::string& msg);
+	static void logInfo(const std::string& msg);
+	static void logWarning(const std::string& msg);
+	static void logError(const std::string& msg);
+	static void logFatal(const std::string& msg);
 };
 
 void swap(Logger&, Logger&) /* noexcept */;
@@ -35,6 +39,7 @@ void swap(Logger&, Logger&) /* noexcept */;
 #include <string>
 
 #include "Repr.hpp"
+#include "MacroMagic.h"
 
 using std::cout;
 
@@ -60,16 +65,41 @@ using std::cout;
 		} \
 	} while (false)
 
-#define TRACE_DEFAULT_CTOR do { \
+#define GEN_NAMES_FIRST(type, name) \
+	<< #type << " " << #name
+
+#define GEN_NAMES(type, name) \
+	<< punct(", ") << #type << " " << #name
+
+#define GEN_REPRS_FIRST(_, name) \
+	<< (Constants::kwargLogs ? cmt(#name) : "") << (Constants::kwargLogs ? cmt("=") : "") << ::repr(name) 
+
+#define GEN_REPRS(_, name) \
+	<< punct(", ") << (Constants::kwargLogs ? cmt(#name) : "") << (Constants::kwargLogs ? cmt("=") : "") << ::repr(name)
+
+#define TRACE_ARG_CTOR(...) do { \
 		if (Logger::trace()) { \
 			std::ostringstream oss; \
 			if (Constants::jsonTrace) \
-				oss << "{\"event\":\"default constructor\",\"this object\":" << ::repr(*this) << "}\n"; \
+				IF(IS_EMPTY(__VA_ARGS__)) \
+				( \
+					oss << "{\"event\":\"default constructor\",\"this object\":" << ::repr(*this) << "}\n"; \
+					, \
+					oss << "{\"event\":\"(" EXPAND(DEFER(GEN_NAMES_FIRST)(HEAD2(__VA_ARGS__))) FOR_EACH_PAIR(GEN_NAMES, TAIL2(__VA_ARGS__)) << ") constructor\",\"this object\":" << ::repr(*this) << "}\n"; \
+				) \
 			else \
-				oss << kwrd(getClass(*this)) + punct("() -> ") << ::repr(*this) << '\n'; \
+				IF(IS_EMPTY(__VA_ARGS__)) \
+				( \
+					oss << kwrd(getClass(*this)) + punct("() -> ") << ::repr(*this) << '\n'; \
+					, \
+					oss << kwrd(getClass(*this)) + punct("(") EXPAND(DEFER(GEN_REPRS_FIRST)(HEAD2(__VA_ARGS__))) FOR_EACH_PAIR(GEN_REPRS, TAIL2(__VA_ARGS__)) << punct(") -> ") << ::repr(*this) << '\n'; \
+				) \
 			cout << oss.str() << std::flush; \
 		} \
 	} while (false)
+
+#define TRACE_DEFAULT_CTOR \
+	TRACE_ARG_CTOR()
 
 #define TRACE_DTOR do { \
 		if (Logger::trace()) { \

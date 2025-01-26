@@ -25,13 +25,35 @@ void Logger::swap(Logger& other) /* noexcept */ {
 void swap(Logger& a, Logger& b) /* noexcept */ { a.swap(b); }
 // end of boilerplate
 
-
-void Logger::logexception(const std::exception& exception) { // TODO: @timo: make camelCase
-	cerr << exception.what() << endl;
+// TODO: @timo: improve logging
+void Logger::logTrace(const std::string& msg) {
+	if (Logger::trace())
+		cerr << msg << endl;
 }
 
-void Logger::logerror(const std::string& msg) { // TODO: @timo: make camelCase
+void Logger::logDebug(const std::string& msg) {
+	if (Logger::debug())
 	cerr << msg << endl;
+}
+
+void Logger::logInfo(const std::string& msg) {
+	if (Logger::info())
+	cerr << msg << endl;
+}
+
+void Logger::logWarning(const std::string& msg) {
+	if (Logger::warn())
+		cerr << msg << endl;
+}
+
+void Logger::logError(const std::string& msg) {
+	if (Logger::error())
+		cerr << msg << endl;
+}
+
+void Logger::logFatal(const std::string& msg) {
+	if (Logger::fatal())
+		cerr << msg << endl;
 }
 
 bool Logger::trace() {

@@ -4,8 +4,10 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <set>
 #include <utility>
 #include <sys/poll.h>
+#include <netinet/in.h>
 
 #include "Constants.hpp"
 #include "Ansi.hpp"
@@ -24,6 +26,7 @@
 using std::string;
 using std::vector;
 using std::map;
+using std::set;
 using std::multimap;
 using std::pair;
 using ansi::rgb;
@@ -155,6 +158,20 @@ struct ReprWrapper<char*> {
 	}
 };
 
+// print generic pointers
+template <typename T> 
+struct ReprWrapper<T*> {
+	static inline string
+	repr(const T* const& value, bool json = false) {
+		std::ostringstream oss;
+		oss << value;
+		if (json)
+			return oss.str();
+		else
+			return num(oss.str());
+	}
+};
+
 // TODO: @timo: escape for char literal
 #define CHAR_REPR(T) template <> \
 	struct ReprWrapper<T> { \
@@ -188,6 +205,7 @@ CHAR_REPR(signed char);
 		FOR_EACH_PAIR(MAKE_REPR_FN, __VA_ARGS__) \
 		static inline string \
 		repr(const clsId& value, bool json = false) { \
+			(void)value; \
 			static ReprWrapper<clsId> singleton; \
 			FOR_EACH_PAIR(MAKE_ASSIGN_GETTER, __VA_ARGS__) \
 			Members members; \
@@ -206,6 +224,7 @@ CHAR_REPR(signed char);
 		FOR_EACH_PAIR(MAKE_REPR_FN, __VA_ARGS__) \
 		static inline string \
 		repr(const clsId& value, bool json = false) { \
+			(void)value; \
 			static ReprWrapper<clsId> singleton; \
 			FOR_EACH_PAIR(MAKE_ASSIGN_MEMBER, __VA_ARGS__) \
 			Members members; \
@@ -216,11 +235,17 @@ CHAR_REPR(signed char);
 
 POST_REFLECT_MEMBER(struct pollfd, int, fd, short, events, short, revents);
 
-#include "HttpServer.hpp"
-POST_REFLECT_GETTER(HttpServer, int, _serverFd, vector<struct pollfd>, _pollFds, bool, _running, Config, _config, unsigned int, _id);
+struct in_port_t_helper {
+	in_port_t port;
+	in_port_t_helper(in_port_t p) : port(p) { }
+	in_port_t_helper() : port() { }
+};
 
-#include "Server.hpp"
-POST_REFLECT_GETTER(Server, unsigned int, _exitStatus, string, _rawConfig, Config, _config, HttpServer, _http, unsigned int, _id);
+#include "HttpServer.hpp"
+POST_REFLECT_MEMBER(HttpServer::Server, struct in_addr, ip, struct in_port_t_helper, port, vector<string>, serverNames, Directives, directives, LocationCtxs, locations);
+POST_REFLECT_MEMBER(HttpServer::PendingWrite, string, data, size_t, bytesSent);
+POST_REFLECT_MEMBER(HttpServer::MultPlexFds, MultPlexType, multPlexType, HttpServer::SelectFds, selectFds, HttpServer::PollFds, pollFds, HttpServer::EpollFds, epollFds, HttpServer::FdStates, fdStates);
+POST_REFLECT_GETTER(HttpServer, vector<int>, _listeningSockets, HttpServer::MultPlexFds, _monitorFds, HttpServer::PollFds, _pollFds, string, _httpVersionString, string, _rawConfig, Config, _config, HttpServer::MimeTypes, _mimeTypes, HttpServer::StatusTexts, _statusTexts, HttpServer::PendingWrites, _pendingWrites, HttpServer::PendingCloses, _pendingCloses, HttpServer::Servers, _servers, HttpServer::DefaultServers, _defaultServers);
 
 #include "CgiHandler.hpp"
 POST_REFLECT_GETTER(CgiHandler, string, _extension, string, _program);
@@ -260,7 +285,7 @@ struct ReprWrapper<vector<T> > {
 template <typename K, typename V>
 struct ReprWrapper<map<K, V> > {
 	static inline string
-	repr(const map<K, V>& m, bool json = false) {
+	repr(const map<K, V>& value, bool json = false) {
 		std::ostringstream oss;
 		if (json)
 			oss << "{";
@@ -269,7 +294,45 @@ struct ReprWrapper<map<K, V> > {
 		else
 			oss << punct("{");
 		int i = 0;
-		for (typename map<K, V>::const_iterator it = m.begin(); it != m.end(); ++it) {
+		for (typename map<K, V>::const_iterator it = value.begin(); it != value.end(); ++it) {
+			if (i != 0) {
+				if (json)
+					oss << ", ";
+				else
+					oss << punct(", ");
+			}
+			oss << ReprWrapper<K>::repr(it->first, json);
+			if (json)
+				oss << ": ";
+			else
+				oss << punct(": ");
+			oss << ReprWrapper<V>::repr(it->second, json);
+			++i;
+		}
+		if (json)
+			oss << "}";
+		else if (Constants::verboseLogs)
+			oss << punct("})");
+		else
+			oss << punct("}");
+		return oss.str();
+	}
+};
+
+// for map with comparison function
+template <typename K, typename V, typename C>
+struct ReprWrapper<map<K, V, C> > {
+	static inline string
+	repr(const map<K, V, C>& value, bool json = false) {
+		std::ostringstream oss;
+		if (json)
+			oss << "{";
+		else if (Constants::verboseLogs)
+			oss << kwrd("std") + punct("::") + kwrd("map") + punct("({");
+		else
+			oss << punct("{");
+		int i = 0;
+		for (typename map<K, V, C>::const_iterator it = value.begin(); it != value.end(); ++it) {
 			if (i != 0) {
 				if (json)
 					oss << ", ";
@@ -298,7 +361,7 @@ struct ReprWrapper<map<K, V> > {
 template <typename K, typename V>
 struct ReprWrapper<multimap<K, V> > {
 	static inline string
-	repr(const multimap<K, V>& m, bool json = false) {
+	repr(const multimap<K, V>& value, bool json = false) {
 		std::ostringstream oss;
 		if (json)
 			oss << "{";
@@ -307,7 +370,7 @@ struct ReprWrapper<multimap<K, V> > {
 		else
 			oss << punct("{");
 		int i = 0;
-		for (typename multimap<K, V>::const_iterator it = m.begin(); it != m.end(); ++it) {
+		for (typename multimap<K, V>::const_iterator it = value.begin(); it != value.end(); ++it) {
 			if (i != 0) {
 				if (json)
 					oss << ", ";
@@ -336,7 +399,7 @@ struct ReprWrapper<multimap<K, V> > {
 template <typename F, typename S>
 struct ReprWrapper<pair<F, S> > {
 	static inline string
-	repr(const pair<F, S>& p, bool json = false) {
+	repr(const pair<F, S>& value, bool json = false) {
 		std::ostringstream oss;
 		if (json)
 			oss << "[";
@@ -344,12 +407,143 @@ struct ReprWrapper<pair<F, S> > {
 			oss << kwrd("std") + punct("::") + kwrd("pair") + punct("(");
 		else
 			oss << punct("(");
-		oss << ReprWrapper<F>::repr(p.first, json) << (json ? ", " : punct(", ")) << ReprWrapper<S>::repr(p.second, json);
+		oss << ReprWrapper<F>::repr(value.first, json) << (json ? ", " : punct(", ")) << ReprWrapper<S>::repr(value.second, json);
 		if (json)
 			oss << "]";
 		else
 		oss << punct(")");
 		return oss.str();
+	}
+};
+
+// for set
+template <typename T>
+struct ReprWrapper<set<T> > {
+	static inline string
+	repr(const set<T>& value, bool json = false) {
+		std::ostringstream oss;
+		if (json)
+			oss << "[";
+		else if (Constants::verboseLogs)
+			oss << kwrd("std") + punct("::") + kwrd("set") + punct("({");
+		else
+			oss << punct("{");
+		int i = -1;
+		for (typename set<T>::const_iterator it = value.begin(); it != value.end(); ++it) {
+			if (++i != 0) {
+				if (json)
+					oss << ", ";
+				else
+					oss << punct(", ");
+			}
+			oss << ReprWrapper<T>::repr(*it, json);
+		}
+		if (json)
+			oss << "]";
+		else if (Constants::verboseLogs)
+			oss << punct("})");
+		else
+			oss << punct("}");
+		return oss.str();
+	}
+};
+
+// for struct in_addr
+template <>
+struct ReprWrapper<struct in_addr> {
+	static inline string
+	repr(const struct in_addr& value, bool json = false) {
+		union { struct { char first; char second; char third; char fourth; }; uint32_t s_addr; } addr;
+		addr.s_addr = value.s_addr;
+		std::ostringstream oss;
+		std::ostringstream oss_final;
+		oss << (int)addr.first << '.';
+		oss << (int)addr.second << '.';
+		oss << (int)addr.third << '.';
+		oss << (int)addr.fourth;
+		oss_final << kwrd("struct in_addr") << punct("(");
+		if (json)
+			oss_final << oss.str();
+		else
+			oss_final << num(oss.str());
+		oss_final << punct(")");
+		return oss_final.str();
+	}
+};
+
+// for struct in_port_t_helper
+template <>
+struct ReprWrapper<struct in_port_t_helper> {
+	static inline string
+	repr(const struct in_port_t_helper& value, bool json = false) {
+		std::ostringstream oss;
+		oss << ntohs(value.port);
+		if (json)
+			return oss.str();
+		else
+			return num(oss.str());
+	}
+};
+
+#include <sys/epoll.h>
+// for struct epoll_event
+template <>
+struct ReprWrapper<struct epoll_event> {
+	static inline string
+	repr(const struct epoll_event& value, bool json = false) {
+		(void)value;
+		std::ostringstream oss;
+		oss << "epoll_event(...)";
+		if (json)
+			return oss.str();
+		else
+			return kwrd(oss.str());
+	}
+};
+
+// for enum MultPlexType
+template <>
+struct ReprWrapper<MultPlexType> {
+	static inline string
+	repr(const MultPlexType& value, bool json = false) {
+		std::ostringstream oss;
+		switch (value) {
+			case Constants::SELECT:
+				oss << "SELECT"; break;
+			case Constants::POLL:
+				oss << "POLL"; break;
+			case Constants::EPOLL:
+				oss << "EPOLL"; break;
+			default:
+				oss << "UNKNOWN"; break;
+		}
+		if (json)
+			return oss.str();
+		else
+			return num(oss.str());
+	}
+};
+
+// for enum FdState
+template <>
+struct ReprWrapper<HttpServer::FdState> {
+	static inline string
+	repr(const HttpServer::FdState& value, bool json = false) {
+		std::ostringstream oss;
+		switch (value) {
+			case HttpServer::FD_READABLE:
+				oss << "READABLE"; break;
+			case HttpServer::FD_WRITEABLE:
+				oss << "WRITABLE"; break;
+			case HttpServer::FD_OTHER_STATE:
+				oss << "OTHER_STATE"; break;
+			default:
+				oss << "UNKNOWN_STATE"; break;
+		}
+		if (json)
+			return oss.str();
+		else
+			return num(oss.str());
 	}
 };
 
@@ -359,11 +553,16 @@ static inline std::ostream& operator<<(std::ostream& os, const vector<T>& val) {
 
 template<typename K, typename V>
 static inline std::ostream& operator<<(std::ostream& os, const map<K, V>& val) { return os << repr(val, Constants::jsonTrace); }
+template<typename K, typename V, typename C>
+static inline std::ostream& operator<<(std::ostream& os, const map<K, V, C>& val) { return os << repr(val, Constants::jsonTrace); }
 
 template<typename K, typename V>
 static inline std::ostream& operator<<(std::ostream& os, const multimap<K, V>& val) { return os << repr(val, Constants::jsonTrace); }
 
 template<typename F, typename S>
 static inline std::ostream& operator<<(std::ostream& os, const pair<F, S>& val) { return os << repr(val, Constants::jsonTrace); }
+
+template<typename T>
+static inline std::ostream& operator<<(std::ostream& os, const set<T>& val) { return os << repr(val, Constants::jsonTrace); }
 
 static inline std::ostream& operator<<(std::ostream& os, const struct pollfd& val) { return os << repr(val, Constants::jsonTrace); }

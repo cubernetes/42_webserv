@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 
 #include "MacroMagic.h"
 
@@ -10,11 +11,23 @@ using std::string;
 
 namespace Utils {
 	string parseArgs(int ac, char **av);
+	bool isPrefix(string prefix, string longerString);
+	string strToLower(const string& str);
+	char decodeTwoHexChars(const char _c1, const char _c2);
+	bool isHexDigitNoCase(const char c);
 
 	template<typename T>
 	static inline vector<T>& getTmpVec() {
 		static vector<T> _;
 		return _;
+	}
+
+	// TODO: @timo: improve repr to specify no color
+	template <typename T>
+	static inline string STR(T x) {
+		std::ostringstream oss;
+		oss << std::dec << x;
+		return oss.str();
 	}
 }
 

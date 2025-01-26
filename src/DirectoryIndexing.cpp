@@ -37,7 +37,7 @@ static void iterateOverDirEntries(Entries& entries, struct dirent*& entry, const
 	string entryPath = path + "/" + entry->d_name;
 	struct stat st;
 	if (stat(entryPath.c_str(), &st) == -1) {
-		Logger::logerror("indexDirectory: Failed to stat file " + entryPath + ": " + std::strerror(errno));
+		Logger::logError("indexDirectory: Failed to stat file " + entryPath + ": " + std::strerror(errno));
 		return;
 	}
 	string nameField = entry->d_name;
@@ -52,7 +52,7 @@ static void iterateOverDirEntries(Entries& entries, struct dirent*& entry, const
 string indexDirectory(string location, string path) {
 	DIR* dir = opendir(path.c_str());
 	if (!dir) {
-		Logger::logerror("indexDirectory: Failed to open directory " + path); // TODO: @timo: make logging proper
+		Logger::logError("indexDirectory: Failed to open directory " + path); // TODO: @timo: make logging proper
 		return "Couldn't get directory contents"; // not perfect, should throw 404 or smth
 	}
 
