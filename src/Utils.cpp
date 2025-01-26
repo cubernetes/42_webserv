@@ -27,3 +27,36 @@ bool Utils::isPrefix(string prefix, string longerString) {
 		return true;
 	return false;
 }
+
+string Utils::strToLower(const string& str) {
+	string newStr = str;
+	std::transform(newStr.begin(), newStr.end(), newStr.begin(), ::tolower);
+	return newStr;
+}
+
+char Utils::decodeTwoHexChars(const char _c1, const char _c2) {
+	const char c1 = static_cast<char>(::tolower(_c1));
+	const char c2 = static_cast<char>(::tolower(_c2));
+	char v1, v2;
+	if ('0' <= c1 && c1 <= '9')
+		v1 = c1 - '0';
+	else
+		v1 = c1 - 'a' + 10;
+	if ('0' <= c2 && c2 <= '9')
+		v2 = c2 - '0';
+	else
+		v2 = c2 - 'a' + 10;
+	return static_cast<char>(v1 * 16 + v2);
+}
+
+bool Utils::isHexDigitNoCase(const char c) {
+	if (('0' <= c && c <= '9')
+		|| c == 'a' || c == 'A'
+		|| c == 'b' || c == 'B'
+		|| c == 'c' || c == 'C'
+		|| c == 'd' || c == 'D'
+		|| c == 'e' || c == 'E'
+		|| c == 'f' || c == 'F')
+		return true;
+	return false;
+}

@@ -153,11 +153,12 @@ void HttpServer::setupListeningSocket(const Server& server) {
 }
 
 size_t HttpServer::getIndexOfServerByHost(const string& requestedHost, const struct in_addr& addr, in_port_t port) const {
+	string requestedHostLower = Utils::strToLower(requestedHost);
 	for (size_t i = 0; i < _servers.size(); ++i) {
 		const Server& server = _servers[i];
 		if (server.port == port && memcmp(&server.ip, &addr, sizeof(addr)) == 0) {
 			for (size_t j = 0; j < server.serverNames.size(); ++j) {
-				if (requestedHost == server.serverNames[i]) {
+				if (requestedHostLower == Utils::strToLower(server.serverNames[j])) { // see https://datatracker.ietf.org/doc/html/rfc2616#section-3.2.3
 					return i + 1;
 				}
 			}
@@ -418,11 +419,11 @@ void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& re
 	if (request.method == "GET")
 		serveStaticContent(clientSocket, request, location);
 	else if (request.method == "POST")
-		sendString(clientSocket, "POST for file upload not implemented yet\n");
+		sendString(clientSocket, "POST for file upload not implemented yet\r\n");
 	else if (request.method == "DELETE")
-		sendString(clientSocket, "DELETE for file deletion not implemented yet\n");
+		sendString(clientSocket, "DELETE for file deletion not implemented yet\r\n");
 	else if (request.method == "4242")
-		sendString(clientSocket, ansi::rgbP("Follow the white rabbit\a\n", 140, 21, 61));
+		sendString(clientSocket, repr(*this) + '\n');
 	else {
 		sendError(clientSocket, 405);
 	}
@@ -430,7 +431,7 @@ void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& re
 
 void HttpServer::handleRequest(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
 	if (requestIsForCgi(request, location))
-		sendString(clientSocket, "Cgi not implemented yet\n");
+		sendString(clientSocket, "Cgi not implemented yet\r\n");
 	else
 		handleRequestInternally(clientSocket, request, location);
 }
@@ -455,8 +456,68 @@ void HttpServer::readFromClient(int clientSocket) {
 	}
 }
 
-HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer) {
+string HttpServer::percentDecode(const string& str) {
+	std::ostringstream oss;
+	for (size_t i = 0; i < str.length(); ++i) {
+		if (str[i] != '%') {
+			oss << str[i];
+			continue;
+		}
+		if (i + 2 >= str.length()) {
+			oss << str[i];
+			continue;
+		}
+		if (!Utils::isHexDigitNoCase(str[i + 1]) || !Utils::isHexDigitNoCase(str[i + 2])) {
+			oss << str[i];
+			continue;
+		}
+		if (str[i + 1] == '0' && str[i + 2] == '0') {
+			oss << str[i];
+			continue;
+		}
+		oss << Utils::decodeTwoHexChars(str[i + 1], str[i + 2]);
+		i += 2;
+	}
+	return oss.str();
+}
 
+string HttpServer::resolveDots(const string& str) {
+	std::stringstream ss(str);
+	string part;
+	vector<string> parts;
+
+	while (std::getline(ss, part, '/')) {
+		if (part == "")
+			continue;
+		else if (part == ".")
+			continue;
+		else if (part == "..") {
+			if (!parts.empty())
+				parts.pop_back();
+		} else
+			parts.push_back(part);
+	}
+	if (part == "")
+		parts.push_back(part);
+	std::ostringstream oss;
+	for (size_t i = 0; i < parts.size(); ++i) {
+		oss << "/" << parts[i];
+	}
+	return oss.str();
+}
+
+string HttpServer::canonicalizePath(const string& path) {
+	if (path.empty()) // see https://datatracker.ietf.org/doc/html/rfc2616#section-3.2.3
+		return "/";
+	string newPath = path;
+	if (newPath[0] != '/')
+		newPath = "/" + newPath;
+	newPath = percentDecode(newPath);
+	newPath = resolveDots(newPath);
+	return newPath;
+}
+
+HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer) {
 	HttpRequest request;
 	std::istringstream requestStream(buffer);
 	string line;
@@ -465,6 +526,7 @@ HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer) {
 
 	std::istringstream requestLine(line);
 	requestLine	>> request.method >> request.path >> request.httpVersion;
+	request.path = canonicalizePath(request.path);
 
 	while (std::getline(requestStream, line) && line != "\r") {
 		size_t colonPos = line.find(':');
@@ -479,40 +541,23 @@ HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer) {
 	return request;
 }
 
-bool HttpServer::validatePath(int clientSocket, const string& path) {
-		if (path.find("..") != string::npos || 
-			path.find("//") != string::npos || 
-			path[0] != '/' || 
-			path.find(':') != string::npos) {
-			sendError(clientSocket, 403);
-			return false;
-		}
-		return true;
-}
-
 void HttpServer::removeClient(int clientSocket) {
 	closeAndRemoveMultPlexFd(_monitorFds, clientSocket);
 }
 
-bool HttpServer::handleDirectoryRedirect(int clientSocket, const HttpRequest& request, string& filePath, 
-								const string& defaultIndex, struct stat& fileStat) {
-		if (request.path[request.path.length() - 1] != '/') {
-			string redirectUrl = request.path + "/";
+bool HttpServer::handleDirectoryRedirect(int clientSocket, const string& uri) {
+		if (uri[uri.length() - 1] != '/') {
+			string redirectUri = uri + "/";
 			std::ostringstream response;
-			response << _httpVersionString << " " << 301 << statusTextFromCode(301) << "\r\n"
-					<< "Location: " << redirectUrl << "\r\n"
+			response << _httpVersionString << " " << 301 << " " << statusTextFromCode(301) << "\r\n"
+					<< "Location: " << redirectUri << "\r\n"
 					<< "Connection: close\r\n\r\n";
 			string responseStr = response.str();
 			send(clientSocket, responseStr.c_str(), responseStr.length(), 0);
 			removeClient(clientSocket);
-			return false;
+			return true;
 		}
-		filePath += defaultIndex;
-		if (stat(filePath.c_str(), &fileStat) == -1) {
-			sendError(clientSocket, 404);
-			return false;
-		}
-		return true;
+		return false;
 }
 
 void HttpServer::sendFileContent(int clientSocket, const string& filePath) {
@@ -527,7 +572,7 @@ void HttpServer::sendFileContent(int clientSocket, const string& filePath) {
 		file.seekg(0, std::ios::beg);
 
 		std::ostringstream headers;
-		headers << _httpVersionString << " " << 200 << statusTextFromCode(200) << "\r\n"
+		headers << _httpVersionString << " " << 200 << " " << statusTextFromCode(200) << "\r\n"
 				<< "Content-Length: " << fileSize << "\r\n"
 				<< "Content-Type: " << getMimeType(filePath) << "\r\n"
 				<< "Connection: close\r\n\r\n";
@@ -542,47 +587,79 @@ void HttpServer::sendFileContent(int clientSocket, const string& filePath) {
 		_pendingCloses.insert(clientSocket);
 }
 
-void HttpServer::serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
-	if (!validatePath(clientSocket, request.path))
-		return;
-	string rootDir = getFirstDirective(location.second, "root")[0];
-	string defaultIndex = getFirstDirective(location.second, "index")[0];
-	struct stat fileStat;
-	string filePath = rootDir + request.path;
-	int fileExists = stat(filePath.c_str(), &fileStat) == 0;
-
-	if (filePath[filePath.length() - 1] == '/') {
-		struct stat indexFileStat;
-		string indexPath = filePath + defaultIndex;
-
-		if (stat(indexPath.c_str(), &indexFileStat) == -1) {
-			if (getFirstDirective(location.second, "autoindex")[0] == "off") {
-				sendError(clientSocket, 403);
-				return;
-			}
-			if (fileExists)
-				sendString(clientSocket, indexDirectory(request.path, filePath));
-			sendError(clientSocket, 404);
-			return;
-		}
-		filePath = indexPath;
-		fileExists = stat(filePath.c_str(), &fileStat) == 0;
+// TODO: @timo: precompute indexes and validate so that they don't contain slashes
+bool HttpServer::handleIndexes(int clientSocket, const string& diskPath, const HttpRequest& request, const LocationCtx& location) {
+	ArgResults res = getAllDirectives(location.second, "index");
+	Arguments indexes;
+	for (ArgResults::const_iterator args = res.begin(); args != res.end(); ++args) {
+		indexes.insert(indexes.end(), args->begin(), args->end());
 	}
+	for (Arguments::const_iterator index = indexes.begin(); index != indexes.end(); ++index) {
+		string indexPath = diskPath + *index;
+		HttpRequest newRequest = request;
+		newRequest.path += *index;
+		if (handleUriWithoutSlash(clientSocket, indexPath, newRequest, false))
+			return true;
+	}
+	return false;
+}
+
+void HttpServer::handleUriWithSlash(int clientSocket, const string& diskPath, const HttpRequest& request, const LocationCtx& location, bool sendErrorMsg) {
+	struct stat fileStat;
+	int fileExists = stat(diskPath.c_str(), &fileStat) == 0;
 
 	if (!fileExists) {
-		sendError(clientSocket, 404);
+		if (sendErrorMsg)
+			sendError(clientSocket, 404);
+		return;
+	} else if (!S_ISDIR(fileStat.st_mode)) {
+		if (sendErrorMsg)
+			sendError(clientSocket, 404);
+		return;
+	} else {
+		if (handleIndexes(clientSocket, diskPath, request, location))
+			return;
+		else if (getFirstDirective(location.second, "autoindex")[0] == "off") {
+			if (sendErrorMsg)
+				sendError(clientSocket, 403);
+			return;
+		}
+		sendString(clientSocket, indexDirectory(request.path, diskPath));
 		return;
 	}
+}
 
-	if (S_ISDIR(fileStat.st_mode)) {
-		if (!handleDirectoryRedirect(clientSocket, request, filePath, defaultIndex, fileStat))
-			return;
+bool HttpServer::handleUriWithoutSlash(int clientSocket, const string& diskPath, const HttpRequest& request, bool sendErrorMsg) {
+	struct stat fileStat;
+	int fileExists = stat(diskPath.c_str(), &fileStat) == 0;
+
+	if (!fileExists) {
+		if (sendErrorMsg)
+			sendError(clientSocket, 404);
+		return false;
+	} else if (S_ISDIR(fileStat.st_mode)) {
+		if (!handleDirectoryRedirect(clientSocket, request.path)) {
+			if (sendErrorMsg)
+				sendError(clientSocket, 404);
+			return false;
+		}
+		return true;
+	} else if (S_ISREG(fileStat.st_mode)) {
+		sendFileContent(clientSocket, diskPath);
+		return true;
 	}
-
-	if (S_ISREG(fileStat.st_mode))
-		sendFileContent(clientSocket, filePath);
-	else
+	if (sendErrorMsg)
 		sendError(clientSocket, 404); // sometimes it's also 403, or 500, but haven't figured out the pattern yet
+	return false;
+}
+
+void HttpServer::serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
+	string diskPath = getFirstDirective(location.second, "root")[0] + request.path;
+
+	if (diskPath[diskPath.length() - 1] == '/')
+		handleUriWithSlash(clientSocket, diskPath, request, location);
+	else
+		(void)handleUriWithoutSlash(clientSocket, diskPath, request);
 }
 
 void HttpServer::initMimeTypes(MimeTypes& mimeTypes) {

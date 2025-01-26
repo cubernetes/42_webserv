@@ -167,19 +167,28 @@ private:
 	ssize_t recvToBuffer(int clientSocket, char *buffer, size_t bufSiz);
 	string getHost(const HttpRequest& request);
 
-	// request handling/parsing
+	// request parsing
 	HttpRequest parseHttpRequest(const char *buffer);
 	size_t findMatchingServer(const string& host, const struct in_addr& addr, in_port_t port) const;
 	size_t findMatchingLocation(const Server& serverConfig, const string& path) const;
 	size_t getIndexOfServerByHost(const string& requestedHost, const struct in_addr& addr, in_port_t port) const;
 	size_t getIndexOfDefaultServer(const struct in_addr& addr, in_port_t port) const;
 	const LocationCtx& requestToLocation(int clientSocket, const HttpRequest& request);
-	bool validatePath(int clientSocket, const string& path);
-	bool handleDirectoryRedirect(int clientSocket, const HttpRequest& request, string& filePath, const string& defaultIndex, struct stat& fileStat);
-	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+	struct sockaddr_in getSockaddrIn(int clientSocket);
+	string canonicalizePath(const string& path);
+	string percentDecode(const string& str);
+	string resolveDots(const string& str);
+
+	// request handling
 	void handleRequest(int clientSocket, const HttpRequest& request, const LocationCtx& location);
 	void handleRequestInternally(int clientSocket, const HttpRequest& request, const LocationCtx& location);
-	struct sockaddr_in getSockaddrIn(int clientSocket);
+	
+	// static file serving
+	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+	bool handleUriWithoutSlash(int clientSocket, const string& diskPath, const HttpRequest& request, bool sendErrorMsg = true);
+	void handleUriWithSlash(int clientSocket, const string& diskPath, const HttpRequest& request, const LocationCtx& location, bool sendErrorMsg = true);
+	bool handleIndexes(int clientSocket, const string& diskPath, const HttpRequest& request, const LocationCtx& location);
+	bool handleDirectoryRedirect(int clientSocket, const string& uri);
 
 	// CGI
 	bool requestIsForCgi(const HttpRequest& request, const LocationCtx& location);

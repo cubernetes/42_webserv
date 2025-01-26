@@ -7,6 +7,7 @@
 #include <set>
 #include <utility>
 #include <sys/poll.h>
+#include <netinet/in.h>
 
 #include "Constants.hpp"
 #include "Ansi.hpp"
@@ -234,8 +235,14 @@ CHAR_REPR(signed char);
 
 POST_REFLECT_MEMBER(struct pollfd, int, fd, short, events, short, revents);
 
+struct in_port_t_helper {
+	in_port_t port;
+	in_port_t_helper(in_port_t p) : port(p) { }
+	in_port_t_helper() : port() { }
+};
+
 #include "HttpServer.hpp"
-POST_REFLECT_MEMBER(HttpServer::Server, struct in_addr, ip, int, port, vector<string>, serverNames, Directives, directives, LocationCtxs, locations);
+POST_REFLECT_MEMBER(HttpServer::Server, struct in_addr, ip, struct in_port_t_helper, port, vector<string>, serverNames, Directives, directives, LocationCtxs, locations);
 POST_REFLECT_MEMBER(HttpServer::PendingWrite, string, data, size_t, bytesSent);
 POST_REFLECT_MEMBER(HttpServer::MultPlexFds, MultPlexType, multPlexType, HttpServer::SelectFds, selectFds, HttpServer::PollFds, pollFds, HttpServer::EpollFds, epollFds, HttpServer::FdStates, fdStates);
 POST_REFLECT_GETTER(HttpServer, vector<int>, _listeningSockets, HttpServer::MultPlexFds, _monitorFds, HttpServer::PollFds, _pollFds, string, _httpVersionString, string, _rawConfig, Config, _config, HttpServer::MimeTypes, _mimeTypes, HttpServer::StatusTexts, _statusTexts, HttpServer::PendingWrites, _pendingWrites, HttpServer::PendingCloses, _pendingCloses, HttpServer::Servers, _servers, HttpServer::DefaultServers, _defaultServers);
@@ -441,7 +448,6 @@ struct ReprWrapper<set<T> > {
 	}
 };
 
-#include <netinet/in.h>
 // for struct in_addr
 template <>
 struct ReprWrapper<struct in_addr> {
@@ -462,6 +468,20 @@ struct ReprWrapper<struct in_addr> {
 			oss_final << num(oss.str());
 		oss_final << punct(")");
 		return oss_final.str();
+	}
+};
+
+// for struct in_port_t_helper
+template <>
+struct ReprWrapper<struct in_port_t_helper> {
+	static inline string
+	repr(const struct in_port_t_helper& value, bool json = false) {
+		std::ostringstream oss;
+		oss << ntohs(value.port);
+		if (json)
+			return oss.str();
+		else
+			return num(oss.str());
 	}
 };
 

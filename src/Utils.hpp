@@ -12,6 +12,9 @@ using std::string;
 namespace Utils {
 	string parseArgs(int ac, char **av);
 	bool isPrefix(string prefix, string longerString);
+	string strToLower(const string& str);
+	char decodeTwoHexChars(const char _c1, const char _c2);
+	bool isHexDigitNoCase(const char c);
 
 	template<typename T>
 	static inline vector<T>& getTmpVec() {
