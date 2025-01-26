@@ -8,14 +8,11 @@ NAME := webserv
 EXT := cpp
 TEST := c2_unit_tests
 UNIT_TEST_DIR := tests/unit_tests
-MAKEFLAGS += -rR # no default rules/variables
-.SUFFIXES:
-
 
 # tools
-#CXX ?= c++
-CXX ?= clang++ # TODO: @all: make sure it compiles with this
-#CXX ?= g++     # TODO: @all: make sure it compiles with this as well, although not super necessary
+#CXX := c++
+CXX := clang++ # TODO: @all: make sure it compiles with this
+#CXX := g++     # TODO: @all: make sure it compiles with this as well, although not super necessary
 RM := /bin/rm -f
 MKDIR := /bin/mkdir -p
 

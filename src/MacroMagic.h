@@ -21,10 +21,10 @@
 #define BITAND_1(y) y
 
 #define INC(x) PRIMITIVE_CAT(INC_, x)
-#include "dec_macros.h"
+#include "DecMacros.h"
 
 #define DEC(x) PRIMITIVE_CAT(DEC_, x)
-#include "inc_macros.h"
+#include "IncMacros.h"
 
 #define CHECK_N(x, n, ...) n
 #define CHECK_(...) CHECK_N(__VA_ARGS__, 0,)
