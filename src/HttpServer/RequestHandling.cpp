@@ -48,7 +48,7 @@ void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& re
 	else if (request.method == "4242")
 		sendString(clientSocket, repr(*this) + '\n');
 	else {
-		sendError(clientSocket, 405);
+		sendError(clientSocket, 405, &location);
 	}
 }
 

@@ -64,7 +64,7 @@ public:
 	};
 
 	//// typedefs ////
-	typedef pair<struct in_addr, int> AddrPort;
+	typedef pair<struct in_addr, in_port_t> AddrPort;
 	typedef map<AddrPort, size_t, AddrPortCompare> DefaultServers;
 	typedef vector<int> SelectFds;
 	typedef vector<Server> Servers;
@@ -202,7 +202,7 @@ private:
 	
 	// static file serving
 	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
-	bool handleUriWithoutSlash(int clientSocket, const string& diskPath, const HttpRequest& request, bool sendErrorMsg = true);
+	bool handleUriWithoutSlash(int clientSocket, const string& diskPath, const HttpRequest& request, const LocationCtx& location, bool sendErrorMsg = true);
 	void handleUriWithSlash(int clientSocket, const string& diskPath, const HttpRequest& request, const LocationCtx& location, bool sendErrorMsg = true);
 	bool handleIndexes(int clientSocket, const string& diskPath, const HttpRequest& request, const LocationCtx& location);
 	bool handleDirectoryRedirect(int clientSocket, const string& uri);
@@ -213,9 +213,10 @@ private:
 	// Writing to a client
 	void writeToClient(int clientSocket);
 	void queueWrite(int clientSocket, const string& data);
-	void sendError(int clientSocket, int statusCode);
+	void sendError(int clientSocket, int statusCode, const LocationCtx *const location = NULL);
 	void sendString(int clientSocket, const string& payload, int statusCode = 200, const string& contentType = "text/html");
-	void sendFileContent(int clientSocket, const string& filePath);
+	bool sendErrorPage(int clientSocket, int statusCode, const LocationCtx& location);
+	bool sendFileContent(int clientSocket, const string& filePath, const LocationCtx& location, int statusCode = 200, const string& contentType = "");
 	PendingWrite& updatePendingWrite(PendingWrite& pw);
 
 	// Removing a client

@@ -56,11 +56,12 @@ void HttpServer::writeToClient(int clientSocket) {
 	terminateIfNoPendingData(it, clientSocket, bytesSent);
 }
 
-void HttpServer::sendFileContent(int clientSocket, const string& filePath) {
+// note, be careful sending errors from this function, as it could lead to infinite recursion! (the error sending function uses this function)
+bool HttpServer::sendFileContent(int clientSocket, const string& filePath, const LocationCtx& location, int statusCode, const string& contentType) {
 		std::ifstream file(filePath.c_str(), std::ifstream::binary);
 		if (!file) {
-			sendError(clientSocket, 403);
-			return;
+			sendError(clientSocket, 403, &location);
+			return false;
 		}
 
 		file.seekg(0, std::ios::end);
@@ -68,9 +69,9 @@ void HttpServer::sendFileContent(int clientSocket, const string& filePath) {
 		file.seekg(0, std::ios::beg);
 
 		std::ostringstream headers;
-		headers << _httpVersionString << " " << 200 << " " << statusTextFromCode(200) << "\r\n"
+		headers << _httpVersionString << " " << statusCode << " " << statusTextFromCode(statusCode) << "\r\n"
 				<< "Content-Length: " << fileSize << "\r\n"
-				<< "Content-Type: " << getMimeType(filePath) << "\r\n"
+				<< "Content-Type: " << (contentType.empty() ? getMimeType(filePath) : contentType) << "\r\n"
 				<< "Connection: close\r\n\r\n";
 
 		queueWrite(clientSocket, headers.str());
@@ -81,16 +82,39 @@ void HttpServer::sendFileContent(int clientSocket, const string& filePath) {
 		if (file.gcount() > 0)
 			queueWrite(clientSocket, string(buffer, static_cast<size_t>(file.gcount())));
 		_pendingCloses.insert(clientSocket);
+		return true;
 }
 
 string HttpServer::wrapInHtmlBody(const string& text) {
 	return "<html>\r\n\t<body>\r\n\t\t" + text + "\r\n\t</body>\r\n</html>\r\n";
 }
 
-void HttpServer::sendError(int clientSocket, int statusCode) {
-	sendString(clientSocket, wrapInHtmlBody(
-		"<h1>\r\n\t\t\t" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "\r\n\t\t</h1>"
-	), statusCode);
+static string getErrorPagePath(int statusCode, const LocationCtx& location) {
+	ArgResults allErrPageDirectives = getAllDirectives(location.second, "error_page");
+	for (ArgResults::const_iterator errPages = allErrPageDirectives.begin(); errPages != allErrPageDirectives.end(); ++errPages) {
+		Arguments::const_iterator code = errPages->begin(), before = --errPages->end();
+		for(; code != before; ++code) {
+			if (atoi(code->c_str()) == statusCode) {
+				return errPages->back();
+			}
+		}
+	}
+	return "";
+}
+
+bool HttpServer::sendErrorPage(int clientSocket, int statusCode, const LocationCtx& location) {
+	string errorPagePath = getFirstDirective(location.second, "root")[0] + getErrorPagePath(statusCode, location);
+	if (errorPagePath.empty())
+		return false;
+	std::ifstream file(errorPagePath.c_str());
+	if (!file)
+		return false;
+	return sendFileContent(clientSocket, errorPagePath, location, statusCode);
+}
+
+void HttpServer::sendError(int clientSocket, int statusCode, const LocationCtx *const location) {
+	if (location == NULL || !sendErrorPage(clientSocket, statusCode, *location))
+		sendString(clientSocket, wrapInHtmlBody("<h1>\r\n\t\t\t" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "\r\n\t\t</h1>"), statusCode);
 }
 
 void HttpServer::sendString(int clientSocket, const string& payload, int statusCode, const string& contentType) {

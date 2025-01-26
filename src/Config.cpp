@@ -14,14 +14,24 @@
 using std::string;
 using std::runtime_error;
 
-static inline void updateIfNotExists(Directives& directives, const string& directive, const string& value) {
+static inline void addIfNotExists(Directives& directives, const string& directive, const string& value) {
 	if (directives.find(directive) == directives.end())
 		directives.insert(std::make_pair(directive, VEC(string, value)));
 }
 
-static inline void updateIfNotExistsVec(Directives& directives, const string& directive, const Arguments& value) {
+static inline void add(Directives& directives, const string& directive, const string& value) {
+	directives.insert(std::make_pair(directive, VEC(string, value)));
+}
+
+static inline void addIfNotExistsVec(Directives& directives, const string& directive, const Arguments& value) {
 	if (directives.find(directive) == directives.end())
 		directives.insert(std::make_pair(directive, value));
+}
+
+static inline void addVecs(Directives& directives, const string& directive, const ArgResults& values) {
+	for (ArgResults::const_iterator result = values.begin(); result != values.end(); ++result) {
+		directives.insert(std::make_pair(directive, *result));
+	}
 }
 
 bool directiveExists(const Directives& directives, const string& directive) {
@@ -50,51 +60,57 @@ ArgResults getAllDirectives(const Directives& directives, const string& directiv
 
 static inline void takeFromParentOrSet(Directives& directives, Directives& parentDirectives, const string& directive, const string& value) {
 	if (parentDirectives.find(directive) == parentDirectives.end())
-		updateIfNotExists(directives, directive, value);
+		addIfNotExists(directives, directive, value);
 	else
-		updateIfNotExistsVec(directives, directive, getFirstDirective(parentDirectives, directive));
+		addIfNotExistsVec(directives, directive, getFirstDirective(parentDirectives, directive));
+}
+
+static inline void takeMultipleFromParentAndAdd(Directives& directives, Directives& parentDirectives, const string& directive, const string& value) {
+	add(directives, directive, value);
+	addVecs(directives, directive, getAllDirectives(parentDirectives, directive));
 }
 
 static inline void takeFromParent(Directives& directives, Directives& parentDirectives, const string& directive) {
 	if (parentDirectives.find(directive) != parentDirectives.end())
-		updateIfNotExistsVec(directives, directive, getFirstDirective(parentDirectives, directive));
+		addIfNotExistsVec(directives, directive, getFirstDirective(parentDirectives, directive));
+}
+
+static inline void takeMultipleFromParent(Directives& directives, Directives& parentDirectives, const string& directive) {
+	addVecs(directives, directive, getAllDirectives(parentDirectives, directive));
 }
 
 static inline void populateDefaultHttpDirectives(Directives& directives) {
-	updateIfNotExists(directives, "autoindex", "off");
-	updateIfNotExists(directives, "cgi_dir", "cgi-bin");
-	updateIfNotExists(directives, "client_max_body_size", "1m");
-	updateIfNotExists(directives, "index", "index.html");
-	updateIfNotExists(directives, "root", "html");
-	updateIfNotExists(directives, "upload_dir", "");
+	addIfNotExists(directives, "autoindex", "off");
+	addIfNotExists(directives, "client_max_body_size", "1m");
+	addIfNotExists(directives, "index", "index.html");
+	addIfNotExists(directives, "root", "html");
+	addIfNotExists(directives, "upload_dir", "");
 }
 
 static inline void populateDefaultServerDirectives(Directives& directives, Directives& httpDirectives) {
+	takeMultipleFromParentAndAdd(directives, httpDirectives, "index", "index.html");
 	takeFromParentOrSet(directives, httpDirectives, "autoindex", "off");
-	takeFromParentOrSet(directives, httpDirectives, "cgi_dir", "cgi-bin");
 	takeFromParentOrSet(directives, httpDirectives, "client_max_body_size", "1m");
-	takeFromParentOrSet(directives, httpDirectives, "index", "index.html");
 	takeFromParentOrSet(directives, httpDirectives, "root", "html");
 	takeFromParentOrSet(directives, httpDirectives, "upload_dir", "");
 
-	takeFromParent(directives, httpDirectives, "error_page");
-	takeFromParent(directives, httpDirectives, "cgi_ext");
+	takeMultipleFromParent(directives, httpDirectives, "error_page");
+	takeMultipleFromParent(directives, httpDirectives, "cgi_ext");
 	takeFromParent(directives, httpDirectives, "cgi_dir");
 
-	updateIfNotExists(directives, "listen", "*:8000");
-	updateIfNotExists(directives, "server_name", "");
+	addIfNotExists(directives, "listen", "*:8000");
+	addIfNotExists(directives, "server_name", "");
 }
 
 static inline void populateDefaultLocationDirectives(Directives& directives, Directives& serverDirectives) {
+	takeMultipleFromParentAndAdd(directives, serverDirectives, "index", "index.html");
 	takeFromParentOrSet(directives, serverDirectives, "autoindex", "off");
-	takeFromParentOrSet(directives, serverDirectives, "cgi_dir", "cgi-bin");
 	takeFromParentOrSet(directives, serverDirectives, "client_max_body_size", "1m");
-	takeFromParentOrSet(directives, serverDirectives, "index", "index.html");
 	takeFromParentOrSet(directives, serverDirectives, "root", "html");
 	takeFromParentOrSet(directives, serverDirectives, "upload_dir", "");
 
-	takeFromParent(directives, serverDirectives, "error_page");
-	takeFromParent(directives, serverDirectives, "cgi_ext");
+	takeMultipleFromParent(directives, serverDirectives, "error_page");
+	takeMultipleFromParent(directives, serverDirectives, "cgi_ext");
 	takeFromParent(directives, serverDirectives, "cgi_dir");
 }
 

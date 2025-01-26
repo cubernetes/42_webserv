@@ -58,7 +58,19 @@ static void listenSocket(int listeningSocket) {
 	}
 }
 
+static bool alreadyListening(const HttpServer::Server& server, const HttpServer::Servers& servers) {
+	for (HttpServer::Servers::const_iterator otherServer = servers.begin(); otherServer != servers.end(); ++otherServer) {
+		struct in_addr otherAddr = otherServer->ip;
+		in_port_t otherPort = otherServer->port;
+		if (std::memcmp(&otherAddr, &server.ip, sizeof(otherAddr)) == 0 && server.port == otherPort)
+			return true;
+	}
+	return false;
+}
+
 void HttpServer::setupListeningSocket(const Server& server) {
+	if (alreadyListening(server, _servers))
+		return;
 	int listeningSocket = createTcpListenSocket();
 	
 	bindSocket(listeningSocket, server);

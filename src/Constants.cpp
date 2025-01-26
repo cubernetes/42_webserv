@@ -10,7 +10,7 @@ namespace Constants {
 	const size_t chunkSize = CONSTANTS_CHUNK_SIZE;
 	const string defaultConfPath = "conf/default.conf";
 	const char commentSymbol = '#';
-	const int logLevel = Logger::DEBUG; // doesn't NEED to be const tho
+	const int logLevel = Logger::INFO; // doesn't NEED to be const tho
 	const bool kwargLogs = true; // doesn't NEED to be const tho
 	const bool verboseLogs = false; // doesn't NEED to be const tho
 	const bool jsonTrace = false; // doesn't NEED to be const tho

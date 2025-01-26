@@ -239,12 +239,12 @@ static inline bool checkAutoindex(const string& ctx, const string& directive, Ar
 
 static inline bool checkErrorPage(const string& ctx, const string& directive, const Arguments& arguments) {
 	if (directive == "error_page") {
-		ensureArity(ctx, directive, arguments, 1, -1);
-		Arguments::const_iterator argument = arguments.begin(), before = --arguments.end();
-		for (; argument != before; ++argument) {
-			ensureStatusCode(ctx, directive, *argument);
+		ensureArity(ctx, directive, arguments, 2, -1);
+		size_t i;
+		for (i = 0; i < arguments.size() - 1; ++i) {
+			ensureStatusCode(ctx, directive, arguments[i]);
 		}
-		ensureNotEmpty(ctx, directive, *(++argument));
+		ensureNotEmpty(ctx, directive, arguments[i]);
 		return true;
 	}
 	return false;
@@ -287,7 +287,7 @@ static void checkHttpDirectives(Directives& directives) {
 		CHECKFN      ("http", checkCgiDir);
 		CHECKFN_MULTI("http", checkCgiExt);
 		CHECKFN      ("http", checkClientMaxBodySize);
-		CHECKFN      ("http", checkErrorPage);
+		CHECKFN_MULTI("http", checkErrorPage);
 		CHECKFN_MULTI("http", checkIndex);
 		CHECKFN      ("http", checkRoot);
 		CHECKFN      ("http", checkUploadDir);
@@ -306,7 +306,7 @@ static void checkServerDirectives(Directives& directives) {
 		CHECKFN      ("server", checkCgiDir);
 		CHECKFN_MULTI("server", checkCgiExt);
 		CHECKFN      ("server", checkClientMaxBodySize);
-		CHECKFN      ("server", checkErrorPage);
+		CHECKFN_MULTI("server", checkErrorPage);
 		CHECKFN_MULTI("server", checkIndex);
 		CHECKFN      ("server", checkListen);
 		CHECKFN      ("server", checkRoot);
@@ -328,7 +328,7 @@ static void checkLocationDirectives(Directives& directives) {
 		CHECKFN      ("location", checkCgiDir);
 		CHECKFN_MULTI("location", checkCgiExt);
 		CHECKFN      ("location", checkClientMaxBodySize);
-		CHECKFN      ("location", checkErrorPage);
+		CHECKFN_MULTI("location", checkErrorPage);
 		CHECKFN_MULTI("location", checkIndex);
 		CHECKFN      ("location", checkLimitExcept);
 		CHECKFN      ("location", checkReturn);
