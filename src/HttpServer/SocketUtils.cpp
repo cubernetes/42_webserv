@@ -7,7 +7,7 @@ bool HttpServer::isListeningSocket(int fd) {
 int HttpServer::multPlexFdToRawFd(const MultPlexFds& readyFds, size_t i) {
 	switch (readyFds.multPlexType) {
 		case SELECT:
-			throw std::logic_error("Converting seleet fd type to raw fd not implemented");
+			throw std::logic_error("Converting select fd type to raw fd not implemented");
 		case POLL:
 			return readyFds.pollFds[i].fd;
 		case EPOLL:
