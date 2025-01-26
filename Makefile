@@ -8,6 +8,9 @@ NAME := webserv
 EXT := cpp
 TEST := c2_unit_tests
 UNIT_TEST_DIR := tests/unit_tests
+MAKEFLAGS += -rR # no default rules/variables
+.SUFFIXES:
+
 
 # tools
 #CXX ?= c++
@@ -40,7 +43,7 @@ endif
 CXXFLAGS :=
 CXXFLAGS += -Weffc++
 
-CPPFLAGS := -Isrc
+CPPFLAGS := -Isrc -Isrc/HttpServer
 
 # LDFLAGS := # Don't reset CFLAGS, as the coverage helper scripts in this repo need to adjust CFLAGS
 
@@ -71,6 +74,22 @@ endif
 # sources
 SRC :=
 
+vpath %.$(EXT) src/HttpServer
+SRC += AddingClientSockets.cpp
+SRC += EventMonitoring.cpp
+SRC += GetRequestHandling.cpp
+SRC += HttpServer.cpp
+SRC += InitMimeTypes.cpp
+SRC += InitStatusTexts.cpp
+SRC += LocationMatching.cpp
+SRC += RemovingClientSockets.cpp
+SRC += RequestHandling.cpp
+SRC += ResponseSending.cpp
+SRC += Setup.cpp
+SRC += SocketManagement.cpp
+SRC += SocketUtils.cpp
+SRC += UriCanonicalization.cpp
+
 vpath %.$(EXT) src
 SRC += Ansi.cpp
 SRC += CgiHandler.cpp
@@ -79,7 +98,6 @@ SRC += Constants.cpp
 SRC += DirectiveValidation.cpp
 SRC += DirectoryIndexing.cpp
 SRC += Errors.cpp
-SRC += HttpServer.cpp
 SRC += Logger.cpp
 SRC += Reflection.cpp
 SRC += Repr.cpp

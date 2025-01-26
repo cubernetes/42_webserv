@@ -2,23 +2,47 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
+#include <cstring>
+#include <ctype.h>
+#include <errno.h>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <limits.h>
 #include <map>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <ostream>
 #include <set> 
+#include <stdexcept>
 #include <string>
+#include <sys/epoll.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <unistd.h>
+#include <utility>
 #include <vector>
 
 #include "Config.hpp"
 #include "Constants.hpp"
+#include "Config.hpp"
+#include "Utils.hpp"
+#include "DirectoryIndexing.hpp"
 
-using std::string;
+using Constants::MultPlexType;
+using Constants::EPOLL;
+using Constants::POLL;
+using Constants::SELECT;
+using Utils::STR;
+using std::cout;
 using std::map;
 using std::pair;
-using std::vector;
+using std::runtime_error;
 using std::set;
-using Constants::MultPlexType;
+using std::string;
+using std::vector;
 
 class HttpServer {
 public:
@@ -80,6 +104,7 @@ public:
 		const Arguments& serverNames;
 
 		Server(const Directives& _directives, const LocationCtxs& _locations, const Arguments& _serverNames) : ip(), port(), directives(_directives), locations(_locations), serverNames(_serverNames) {}
+		Server(const Server& other) : ip(other.ip), port(other.port), directives(other.directives), locations(other.locations), serverNames(other.serverNames) {}
 		Server& operator=(const Server& other) { (void)other; return *this; }
 	};
 	struct AddrPortCompare {
@@ -148,14 +173,6 @@ private:
 	// Setup
 	void setupServers(const Config& config);
 	void setupListeningSocket(const Server& server);
-	void initMimeTypes(MimeTypes& mimeTypes);
-	void initStatusTexts(StatusTexts& statusTexts);
-	string getServerIpStr(const ServerCtx& serverCtx);
-	struct in_addr getServerIp(const ServerCtx& serverCtx);
-	in_port_t getServerPort(const ServerCtx& serverCtx);
-	int createTcpListenSocket();
-	void bindSocket(int listeningSocket, const Server& server);
-	void listenSocket(int listeningSocket);
 
 	// Adding a client
 	void addNewClient(int listeningSocket);
@@ -165,10 +182,10 @@ private:
 	// Reading from a client
 	void readFromClient(int clientSocket);
 	ssize_t recvToBuffer(int clientSocket, char *buffer, size_t bufSiz);
-	string getHost(const HttpRequest& request);
 
 	// request parsing
 	HttpRequest parseHttpRequest(const char *buffer);
+	void parseHeaders(std::istringstream& requestStream, string& line, HttpRequest& request);
 	size_t findMatchingServer(const string& host, const struct in_addr& addr, in_port_t port) const;
 	size_t findMatchingLocation(const Server& serverConfig, const string& path) const;
 	size_t getIndexOfServerByHost(const string& requestedHost, const struct in_addr& addr, in_port_t port) const;
@@ -235,3 +252,8 @@ private:
 };
 
 std::ostream& operator<<(std::ostream&, const HttpServer&);
+
+void initMimeTypes(HttpServer::MimeTypes& mimeTypes);
+void initStatusTexts(HttpServer::StatusTexts& statusTexts);
+
+#include "Logger.hpp"
