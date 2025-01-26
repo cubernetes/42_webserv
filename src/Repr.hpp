@@ -247,9 +247,6 @@ POST_REFLECT_MEMBER(HttpServer::PendingWrite, string, data, size_t, bytesSent);
 POST_REFLECT_MEMBER(HttpServer::MultPlexFds, MultPlexType, multPlexType, HttpServer::SelectFds, selectFds, HttpServer::PollFds, pollFds, HttpServer::EpollFds, epollFds, HttpServer::FdStates, fdStates);
 POST_REFLECT_GETTER(HttpServer, vector<int>, _listeningSockets, HttpServer::MultPlexFds, _monitorFds, HttpServer::PollFds, _pollFds, string, _httpVersionString, string, _rawConfig, Config, _config, HttpServer::MimeTypes, _mimeTypes, HttpServer::StatusTexts, _statusTexts, HttpServer::PendingWrites, _pendingWrites, HttpServer::PendingCloses, _pendingCloses, HttpServer::Servers, _servers, HttpServer::DefaultServers, _defaultServers);
 
-#include "CgiHandler.hpp"
-POST_REFLECT_GETTER(CgiHandler, string, _extension, string, _program);
-
 // for vector
 template <typename T>
 struct ReprWrapper<vector<T> > {

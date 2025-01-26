@@ -1,4 +1,5 @@
 #include "HttpServer.hpp"
+#include "CgiHandler.hpp"
 
 bool HttpServer::requestIsForCgi(const HttpRequest& request, const LocationCtx& location) {
 	if (!directiveExists(location.second, "cgi_dir"))
@@ -53,10 +54,30 @@ void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& re
 }
 
 void HttpServer::handleRequest(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
-	if (requestIsForCgi(request, location))
-		sendString(clientSocket, "Cgi not implemented yet\r\n");
-	else
+	if (!requestIsForCgi(request, location)) {
 		handleRequestInternally(clientSocket, request, location);
+		return;
+	}
+	try {
+		// Get CGI configuration
+		ArgResults cgiExts = getAllDirectives(location.second, "cgi_ext");
+		for (ArgResults::const_iterator ext = cgiExts.begin(); ext != cgiExts.end(); ++ext) {
+			string extension = (*ext)[0];
+			string program = ext->size() > 1 ? (*ext)[1] : "/usr/bin/python3";
+			
+			CgiHandler handler(extension, program);
+			if (handler.canHandle(request.path)) {
+				handler.execute(clientSocket, request, location);
+				return;
+			}
+		}
+		
+		// No matching CGI handler found
+		sendError(clientSocket, 404, &location);
+	} catch (const std::exception& e) {
+		Logger::logError(string("CGI execution failed: ") + e.what());
+		sendError(clientSocket, 500, &location);
+	}
 }
 
 ssize_t HttpServer::recvToBuffer(int clientSocket, char *buffer, size_t bufSiz) {
