@@ -163,7 +163,7 @@ fclean: clean
 	$(RM) $(TEST)
 
 re: fclean
-	make all
+	$(MAKE) all
 
 # This allows $(NAME) to be run using either an absolute, relative or no path.
 # You can pass arguments like this: make run ARGS="hello ' to this world ! ' ."
@@ -182,33 +182,33 @@ valrun: all
 		$(ARGS)
 
 rerun: re
-	make run
+	$(MAKE) run
 
 leakcheck: re
-	make valrun
+	$(MAKE) valrun
 
 unit_tests: all_c2
 	./$(TEST)
 
 reunit_tests: fclean
-	make unit_tests
+	$(MAKE) unit_tests
 
 llvmcov:
 	./tools/llvmcov.sh
 
 rellvmcov: fclean
-	make llvmcov
+	$(MAKE) llvmcov
 
 lcov:
 	./tools/lcov.sh
 
 relcov: fclean
-	make lcov
+	$(MAKE) lcov
 
 gcovr:
 	./tools/gcovr.sh
 
 regcovr: fclean
-	make gcovr
+	$(MAKE) gcovr
 
 .PHONY: all clean fclean re run rerun leakcheck unit_tests reunit_tests llvmcov rellvmcov lcov relcov gcovr regcovr
