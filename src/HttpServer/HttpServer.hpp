@@ -134,6 +134,18 @@ public:
 		MultPlexFds() : multPlexType(Constants::defaultMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() {}
 	};
 
+	struct CGIProcess {
+		pid_t pid;
+		int pipe_fd;
+		string response;
+		unsigned long totalSize;
+		int clientSocket;
+		const LocationCtx* location;
+		
+		CGIProcess(pid_t p, int fd, int client, const LocationCtx* loc) : 
+			pid(p), pipe_fd(fd), response(), totalSize(0), clientSocket(client), location(loc) {}
+};
+
 	const vector<int>&				get_listeningSockets()	const { return _listeningSockets; }
 	const MultPlexFds&				get_monitorFds()		const { return _monitorFds; }
 	const PollFds&					get_pollFds()			const { return _pollFds; }
@@ -146,7 +158,8 @@ public:
 	const PendingCloses&			get_pendingCloses()		const { return _pendingCloses; }
 	const Servers&					get_servers()			const { return _servers; }
 	const DefaultServers&			get_defaultServers()	const { return _defaultServers; }
-
+	map<int, CGIProcess>& 			get_CGIProcesses()		{ return _cgiProcesses; }
+	MultPlexFds&					get_MonitorFds()		{ return _monitorFds; }
 	void sendError(int clientSocket, int statusCode, const LocationCtx *const location = NULL);
 
 private:
@@ -163,6 +176,7 @@ private:
 	PendingCloses			_pendingCloses;
 	Servers					_servers;
 	DefaultServers			_defaultServers;
+	map<int, CGIProcess>	_cgiProcesses;
 
 
 	//// private methods ////
@@ -212,6 +226,7 @@ private:
 
 	// CGI
 	bool requestIsForCgi(const HttpRequest& request, const LocationCtx& location);
+	void handleCGIRead(int fd);
 
 	// Writing to a client
 	void writeToClient(int clientSocket);

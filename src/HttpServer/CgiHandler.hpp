@@ -26,8 +26,8 @@ public:
 	bool canHandle(const string& path) const;
 	void execute(int clientSocket, const HttpServer::HttpRequest& request, 
 			const LocationCtx& location);
-	bool processCGIResponse(const string& response, int clientSocket);
-	bool validateHeaders(const string& headers);
+	static bool processCGIResponse(const string& response, int clientSocket);
+	static bool validateHeaders(const string& headers);
 private:
 	HttpServer& _server;
 	string _extension;

@@ -11,6 +11,56 @@ bool HttpServer::requestIsForCgi(const HttpRequest& request, const LocationCtx& 
 	return true;
 }
 
+void HttpServer::handleCGIRead(int fd) {
+
+	std::map<int, CGIProcess>::iterator it = _cgiProcesses.find(fd);
+	if (it == _cgiProcesses.end()) {
+		// CGI process is not found
+		sendError(fd, 502, NULL);
+		return;
+	}
+
+	CGIProcess& process = it->second;
+	char buffer[CONSTANTS_CHUNK_SIZE];
+
+	ssize_t bytesRead = read(fd, buffer, sizeof(buffer) - 1);
+	if (bytesRead < 0) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return;
+		kill(process.pid, SIGTERM);
+		sendError(process.clientSocket, 502, process.location);
+		closeAndRemoveMultPlexFd(_monitorFds, fd);
+		_cgiProcesses.erase(fd);
+		return;
+	}
+
+	if (bytesRead == 0) { // EOF - CGI process finished writing
+		int status;
+		waitpid(process.pid, &status, WNOHANG);
+
+		if (!process.response.empty())
+			CgiHandler::processCGIResponse(process.response, process.clientSocket);
+		else
+			sendError(process.clientSocket, 502, process.location);
+
+		closeAndRemoveMultPlexFd(_monitorFds, fd);
+		_cgiProcesses.erase(fd);
+		return;
+	}
+
+	process.totalSize += static_cast<unsigned long>(bytesRead);
+	if (process.totalSize > 10 * 1024 * 1024) { // 10MB limit
+		kill(process.pid, SIGTERM);
+		sendError(process.clientSocket, 502, process.location);
+		closeAndRemoveMultPlexFd(_monitorFds, fd);
+		_cgiProcesses.erase(fd);
+		return;
+	}
+
+	buffer[bytesRead] = '\0';
+	process.response += buffer;
+}
+
 void HttpServer::parseHeaders(std::istringstream& requestStream, string& line, HttpRequest& request) {
 	while (std::getline(requestStream, line) && line != "\r") { // TODO: @all: headers might be very hard to parse (multiline, etc) // RFC should really be the reference
 		size_t colonPos = line.find(':');
@@ -96,10 +146,15 @@ ssize_t HttpServer::recvToBuffer(int clientSocket, char *buffer, size_t bufSiz) 
 }
 
 void HttpServer::readFromClient(int clientSocket) {
+
+	if (_cgiProcesses.find(clientSocket) != _cgiProcesses.end()) {
+		handleCGIRead(clientSocket);
+		return;
+	}
+
 	char buffer[CONSTANTS_CHUNK_SIZE];
 	if (!recvToBuffer(clientSocket, buffer, CONSTANTS_CHUNK_SIZE))
 		return;
-
 	HttpRequest request = parseHttpRequest(buffer);
 	
 	bool bound = false; // hack courtesy of https://stackoverflow.com/a/43016806

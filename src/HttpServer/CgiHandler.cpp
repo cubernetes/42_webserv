@@ -4,6 +4,8 @@
 using std::swap;
 using std::string;
 
+extern char **environ;
+
 // De- & Constructors
 CgiHandler::~CgiHandler() {
 	TRACE_DTOR;
@@ -180,37 +182,27 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 		return;
 	}
 
-	int pipeFd[2];
-	if (pipe(pipeFd) < 0) {
-		throw std::runtime_error("Failed to create pipe for CGI");
+	int sockets[2];
+	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, sockets) < 0) {
+		throw std::runtime_error("Failed to create socket pair for CGI");
 	}
 
 	pid_t pid = fork();
 	if (pid < 0) {
-		close(pipeFd[0]);
-		close(pipeFd[1]);
+		close(sockets[0]);
+		close(sockets[1]);
 		throw std::runtime_error("Fork failed for CGI execution");
 	}
 
 	if (pid == 0) {
 
-		close(pipeFd[0]);
-		dup2(pipeFd[1], STDOUT_FILENO);
-		close(pipeFd[1]);
+		close(sockets[0]);
+		dup2(sockets[1], STDOUT_FILENO);
+		close(sockets[1]);
 
 		if (chdir(rootPath.c_str()) < 0) {
 			exit(1);
 		}
-
-		// Set resource limits
-		struct rlimit rlim;
-		rlim.rlim_cur = 30; // 30 seconds CPU time
-		rlim.rlim_max = 30;
-		setrlimit(RLIMIT_CPU, &rlim);
-
-		rlim.rlim_cur = 100 * 1024 * 1024; // 100MB memory limit
-		rlim.rlim_max = 100 * 1024 * 1024;
-		setrlimit(RLIMIT_AS, &rlim);
 		
 		exportEnvironment(env);
 
@@ -224,40 +216,23 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 			const_cast<char*>(scriptPath.c_str()),
 			NULL
 		};
-		execv(args[0], args);
+		execve(args[0], args, environ);
 		exit(1);
 	}
 
-	close(pipeFd[1]);
+	close(sockets[1]);
 
-	char buffer[4096];
-	string response;
-	ssize_t bytesRead;
-	unsigned long totalSize = 0;
-	const size_t maxSize = 10 * 1024 * 1024; // 10MB output limit
-	
-	while ((bytesRead = read(pipeFd[0], buffer, sizeof(buffer) - 1)) > 0) {
-		totalSize += static_cast<unsigned long>(bytesRead); 
-		if (totalSize > maxSize) {
-			kill(pid, SIGTERM);
-			close(pipeFd[0]);
-			_server.sendError(clientSocket, 500, &location);
-			return;
-		}
-		buffer[bytesRead] = '\0';
-		response += buffer;
-	}
-	
-	close(pipeFd[0]);
+	std::map<int, HttpServer::CGIProcess>& cgiProcesses = _server.get_CGIProcesses();
+	std::pair<std::map<int, HttpServer::CGIProcess>::iterator, bool> result;
+	result = cgiProcesses.insert(std::make_pair(sockets[0], HttpServer::CGIProcess(pid, sockets[0], clientSocket, &location)));
 
-	int status;
-	if (waitpid(pid, &status, 0) == -1 || WIFSIGNALED(status) || WEXITSTATUS(status) != 0) {
-		_server.sendError(clientSocket, 500, &location);
-		return;
+	if (!result.second) {
+		// If key already exists, update the existing entry
+		result.first->second = HttpServer::CGIProcess(pid, sockets[0], clientSocket, &location);
 	}
-	// Process CGI output and validate headers
-	if (!processCGIResponse(response, clientSocket)) {
-		_server.sendError(clientSocket, 502, &location);
-		return;
-	}
+
+	struct pollfd pfd;
+	pfd.fd = sockets[0];
+	pfd.events = POLLIN;
+	_server.get_MonitorFds().pollFds.push_back(pfd);
 }
