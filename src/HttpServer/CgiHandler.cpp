@@ -67,7 +67,7 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
 	// Find any path info after the script name
 	size_t scriptEnd = request.path.rfind(".py");
 	if (scriptEnd != string::npos) {
-		scriptEnd += 3;
+		scriptEnd += 3; // TODO: @all decide yay or nay
 		env["PATH_INFO"] = (scriptEnd < request.path.length()) ? request.path.substr(scriptEnd) : "";
 	} else {
 		env["PATH_INFO"] = "";
@@ -108,6 +108,8 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
 void CgiHandler::exportEnvironment(const std::map<string, string>& env) {
 	for (std::map<string, string>::const_iterator it = env.begin(); 
 		 it != env.end(); ++it) {
+		if (it->first.empty() || it->first.find('=' != string::npos))
+			continue;
 		setenv(it->first.c_str(), it->second.c_str(), 1);
 	}
 }
