@@ -27,7 +27,7 @@ void HttpServer::handleCGIRead(int fd) {
 	if (bytesRead < 0) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK)
 			return;
-		kill(process.pid, SIGTERM);
+		kill(process.pid, SIGKILL);
 		sendError(process.clientSocket, 502, process.location);
 		closeAndRemoveMultPlexFd(_monitorFds, fd);
 		_cgiProcesses.erase(fd);
@@ -52,7 +52,7 @@ void HttpServer::handleCGIRead(int fd) {
 	process.totalSize += static_cast<unsigned long>(bytesRead);
 
 	if (process.totalSize > 10 * 1024 * 1024) { // 10MB limit
-		kill(process.pid, SIGTERM);
+		kill(process.pid, SIGKILL);
 		sendError(process.clientSocket, 413, process.location);
 		closeAndRemoveMultPlexFd(_monitorFds, fd);
 		_cgiProcesses.erase(fd);
@@ -81,7 +81,7 @@ void HttpServer::handleCGIRead(int fd) {
 			queueWrite(process.clientSocket, fullResponse.str());
 			process.response.clear();
 		} else if (process.response.length() > 8192) { // Headers too long
-			kill(process.pid, SIGTERM);
+			kill(process.pid, SIGKILL);
 			sendError(process.clientSocket, 502, process.location);
 			closeAndRemoveMultPlexFd(_monitorFds, fd);
 			_cgiProcesses.erase(fd);
