@@ -1,7 +1,7 @@
 import os
 import sys
 
-print("Content-Type: text/html\r\n\r")
+print("Content-Type: text/html\r\n\r\n")
 print("<html><body>")
 print("<h1>CGI Test</h1>")
 print("<p>Environment variables:</p>")

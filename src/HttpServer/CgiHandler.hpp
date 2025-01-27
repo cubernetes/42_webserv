@@ -1,5 +1,6 @@
 #pragma once /* CgiHandler.hpp */
 
+#include <fcntl.h>
 #include <signal.h>
 #include <sstream>
 #include <sys/time.h>

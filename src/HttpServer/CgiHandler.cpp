@@ -187,6 +187,10 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 		throw std::runtime_error("Failed to create socket pair for CGI");
 	}
 
+	 // Make both ends non-blocking
+	fcntl(sockets[0], F_SETFL, O_NONBLOCK);
+	fcntl(sockets[1], F_SETFL, O_NONBLOCK);
+	
 	pid_t pid = fork();
 	if (pid < 0) {
 		close(sockets[0]);

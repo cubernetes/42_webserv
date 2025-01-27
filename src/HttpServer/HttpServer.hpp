@@ -141,9 +141,10 @@ public:
 		unsigned long totalSize;
 		int clientSocket;
 		const LocationCtx* location;
+		bool headersSent;
 		
 		CGIProcess(pid_t p, int fd, int client, const LocationCtx* loc) : 
-			pid(p), pipe_fd(fd), response(), totalSize(0), clientSocket(client), location(loc) {}
+			pid(p), pipe_fd(fd), response(), totalSize(0), clientSocket(client), location(loc), headersSent(false) {}
 };
 
 	const vector<int>&				get_listeningSockets()	const { return _listeningSockets; }

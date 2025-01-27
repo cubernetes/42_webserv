@@ -38,27 +38,58 @@ void HttpServer::handleCGIRead(int fd) {
 		int status;
 		waitpid(process.pid, &status, WNOHANG);
 
-		if (!process.response.empty())
-			CgiHandler::processCGIResponse(process.response, process.clientSocket);
-		else
+		if (!process.headersSent) 
 			sendError(process.clientSocket, 502, process.location);
+		else if (!process.response.empty())
+			queueWrite(process.clientSocket, process.response);
 
-		closeAndRemoveMultPlexFd(_monitorFds, fd);
-		_cgiProcesses.erase(fd);
-		return;
-	}
-
-	process.totalSize += static_cast<unsigned long>(bytesRead);
-	if (process.totalSize > 10 * 1024 * 1024) { // 10MB limit
-		kill(process.pid, SIGTERM);
-		sendError(process.clientSocket, 502, process.location);
 		closeAndRemoveMultPlexFd(_monitorFds, fd);
 		_cgiProcesses.erase(fd);
 		return;
 	}
 
 	buffer[bytesRead] = '\0';
-	process.response += buffer;
+	process.totalSize += static_cast<unsigned long>(bytesRead);
+
+	if (process.totalSize > 10 * 1024 * 1024) { // 10MB limit
+		kill(process.pid, SIGTERM);
+		sendError(process.clientSocket, 413, process.location);
+		closeAndRemoveMultPlexFd(_monitorFds, fd);
+		_cgiProcesses.erase(fd);
+		return;
+	}
+	
+	if (!process.headersSent) {
+		process.response += string(buffer, static_cast<size_t>(bytesRead));
+		size_t headerEnd = process.response.find("\r\n\r\n");
+		if (headerEnd != string::npos) {
+			// Found headers, prepare full response with HTTP/1.1
+			string headers = process.response.substr(0, headerEnd);
+			string body = process.response.substr(headerEnd + 4);
+			
+			std::ostringstream fullResponse;
+			fullResponse << "HTTP/1.1 200 OK\r\n";
+			
+			// Add Content-Type if not present
+			if (headers.find("Content-Type:") == string::npos) {
+				fullResponse << "Content-Type: text/html\r\n";
+			}
+			
+			fullResponse << headers << "\r\n\r\n" << body;
+			
+			process.headersSent = true;
+			queueWrite(process.clientSocket, fullResponse.str());
+			process.response.clear();
+		} else if (process.response.length() > 8192) { // Headers too long
+			kill(process.pid, SIGTERM);
+			sendError(process.clientSocket, 502, process.location);
+			closeAndRemoveMultPlexFd(_monitorFds, fd);
+			_cgiProcesses.erase(fd);
+			return;
+		}
+	} else {
+		queueWrite(process.clientSocket, string(buffer, static_cast<size_t>(bytesRead)));
+	}
 }
 
 void HttpServer::parseHeaders(std::istringstream& requestStream, string& line, HttpRequest& request) {
