@@ -140,7 +140,7 @@ void HttpServer::handleRequest(int clientSocket, const HttpRequest& request, con
 		return;
 	}
 	try {
-		// Get CGI configuration
+		// Get CGI configuration TODO: @sonia do the executeDirectly case
 		ArgResults cgiExts = getAllDirectives(location.second, "cgi_ext");
 		for (ArgResults::const_iterator ext = cgiExts.begin(); ext != cgiExts.end(); ++ext) {
 			string extension = (*ext)[0];
