@@ -68,12 +68,9 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
 
 	// Find any path info after the script name
 	size_t scriptEnd = request.path.rfind(".py");
-	if (scriptEnd != string::npos) {
-		scriptEnd += 3; // TODO: @all decide yay or nay
-		env["PATH_INFO"] = (scriptEnd < request.path.length()) ? request.path.substr(scriptEnd) : "";
-	} else {
-		env["PATH_INFO"] = "";
-	}
+	env["PATH_INFO"] = (scriptEnd != string::npos && scriptEnd + 3 < request.path.length()) 
+		? request.path.substr(scriptEnd + 3) 
+		: "/";
 	
 	env["GATEWAY_INTERFACE"] = "CGI/1.1";
 	env["SERVER_PROTOCOL"] = "HTTP/1.1";
