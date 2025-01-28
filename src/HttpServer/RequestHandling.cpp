@@ -1,4 +1,5 @@
 #include "HttpServer.hpp"
+#include "CgiHandler.hpp"
 
 bool HttpServer::requestIsForCgi(const HttpRequest& request, const LocationCtx& location) {
 	if (!directiveExists(location.second, "cgi_dir"))
@@ -8,6 +9,87 @@ bool HttpServer::requestIsForCgi(const HttpRequest& request, const LocationCtx& 
 	if (!Utils::isPrefix(cgi_dir, uri))
 		return false;
 	return true;
+}
+
+void HttpServer::handleCGIRead(int fd) {
+
+	std::map<int, CGIProcess>::iterator it = _cgiProcesses.find(fd);
+	if (it == _cgiProcesses.end()) {
+		// CGI process is not found
+		sendError(fd, 502, NULL);
+		return;
+	}
+
+	CGIProcess& process = it->second;
+	char buffer[CONSTANTS_CHUNK_SIZE];
+
+	ssize_t bytesRead = read(fd, buffer, sizeof(buffer) - 1);
+	if (bytesRead < 0) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return;
+		kill(process.pid, SIGKILL);
+		sendError(process.clientSocket, 502, process.location);
+		closeAndRemoveMultPlexFd(_monitorFds, fd);
+		_cgiProcesses.erase(fd);
+		return;
+	}
+
+	if (bytesRead == 0) { // EOF - CGI process finished writing
+		int status;
+		waitpid(process.pid, &status, WNOHANG);
+
+		if (!process.headersSent) 
+			sendError(process.clientSocket, 502, process.location);
+		else if (!process.response.empty())
+			queueWrite(process.clientSocket, process.response);
+
+		closeAndRemoveMultPlexFd(_monitorFds, fd);
+		_cgiProcesses.erase(fd);
+		return;
+	}
+
+	buffer[bytesRead] = '\0';
+	process.totalSize += static_cast<unsigned long>(bytesRead);
+
+	if (process.totalSize > 10 * 1024 * 1024) { // 10MB limit
+		kill(process.pid, SIGKILL);
+		sendError(process.clientSocket, 413, process.location);
+		closeAndRemoveMultPlexFd(_monitorFds, fd);
+		_cgiProcesses.erase(fd);
+		return;
+	}
+	
+	if (!process.headersSent) {
+		process.response += string(buffer, static_cast<size_t>(bytesRead));
+		size_t headerEnd = process.response.find("\r\n\r\n");
+		if (headerEnd != string::npos) {
+			// Found headers, prepare full response with HTTP/1.1
+			string headers = process.response.substr(0, headerEnd);
+			string body = process.response.substr(headerEnd + 4);
+			
+			std::ostringstream fullResponse;
+			fullResponse << "HTTP/1.1 200 OK\r\n";
+			
+			// Add Content-Type if not present
+			if (headers.find("Content-Type:") == string::npos) {
+				fullResponse << "Content-Type: text/html\r\n";
+			}
+			
+			fullResponse << headers << "\r\n\r\n" << body;
+			
+			process.headersSent = true;
+			queueWrite(process.clientSocket, fullResponse.str());
+			process.response.clear();
+		} else if (process.response.length() > 8192) { // Headers too long
+			kill(process.pid, SIGKILL);
+			sendError(process.clientSocket, 502, process.location);
+			closeAndRemoveMultPlexFd(_monitorFds, fd);
+			_cgiProcesses.erase(fd);
+			return;
+		}
+	} else {
+		queueWrite(process.clientSocket, string(buffer, static_cast<size_t>(bytesRead)));
+	}
 }
 
 void HttpServer::parseHeaders(std::istringstream& requestStream, string& line, HttpRequest& request) {
@@ -53,10 +135,30 @@ void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& re
 }
 
 void HttpServer::handleRequest(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
-	if (requestIsForCgi(request, location))
-		sendString(clientSocket, "Cgi not implemented yet\r\n");
-	else
+	if (!requestIsForCgi(request, location)) {
 		handleRequestInternally(clientSocket, request, location);
+		return;
+	}
+	try {
+		// Get CGI configuration TODO: @sonia do the executeDirectly case
+		ArgResults cgiExts = getAllDirectives(location.second, "cgi_ext");
+		for (ArgResults::const_iterator ext = cgiExts.begin(); ext != cgiExts.end(); ++ext) {
+			string extension = (*ext)[0];
+			string program = ext->size() > 1 ? (*ext)[1] : "/usr/bin/python3";
+			
+			CgiHandler handler(*this, extension, program);
+			if (handler.canHandle(request.path)) {
+				handler.execute(clientSocket, request, location);
+				return;
+			}
+		}
+		
+		// No matching CGI handler found
+		sendError(clientSocket, 404, &location);
+	} catch (const std::exception& e) {
+		Logger::logError(string("CGI execution failed: ") + e.what());
+		sendError(clientSocket, 500, &location);
+	}
 }
 
 ssize_t HttpServer::recvToBuffer(int clientSocket, char *buffer, size_t bufSiz) {
@@ -75,10 +177,15 @@ ssize_t HttpServer::recvToBuffer(int clientSocket, char *buffer, size_t bufSiz) 
 }
 
 void HttpServer::readFromClient(int clientSocket) {
+
+	if (_cgiProcesses.find(clientSocket) != _cgiProcesses.end()) {
+		handleCGIRead(clientSocket);
+		return;
+	}
+
 	char buffer[CONSTANTS_CHUNK_SIZE];
 	if (!recvToBuffer(clientSocket, buffer, CONSTANTS_CHUNK_SIZE))
 		return;
-
 	HttpRequest request = parseHttpRequest(buffer);
 	
 	bool bound = false; // hack courtesy of https://stackoverflow.com/a/43016806
