@@ -113,6 +113,7 @@ bool HttpServer::sendErrorPage(int clientSocket, int statusCode, const LocationC
 	return sendFileContent(clientSocket, errorPagePath, location, statusCode);
 }
 
+// pass NULL as location if errorPages should not be served
 void HttpServer::sendError(int clientSocket, int statusCode, const LocationCtx *const location) {
 	if (location == NULL || !sendErrorPage(clientSocket, statusCode, *location))
 		sendString(clientSocket, wrapInHtmlBody("<h1>\r\n\t\t\t" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "\r\n\t\t</h1>"), statusCode);

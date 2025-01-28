@@ -28,7 +28,7 @@ CFLAGS += -Wconversion
 CFLAGS += -Wunreachable-code
 CFLAGS += -std=c++98
 CFLAGS += -MMD
-#CFLAGS += -pedantic # Mhhhh maybe don't put this flag, see `-Wno-...' flag below :) # TODO: @all: Remove this and comment to the left
+#CFLAGS += -pedantic # Mhhhh don't put this flag, see `-Wno-...' flag below :) # TODO: @all: Remove this and comment to the left
 #CFLAGS += -Wno-variadic-macros # C++98 doesn't have variadic macros. Also, emtpy macro argument are UB. But yeahhhh we don't have to be pedantic :))
 
 CFLAGS += -fdiagnostics-color=always

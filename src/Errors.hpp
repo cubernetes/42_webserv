@@ -30,6 +30,7 @@ namespace Errors {
 		const string InvalidDirectiveArgumentCount(const string& ctx, const string& directive, int count, int min, int max);
 		const string UnknownDirective(const string& ctx, const string& directive);
 		const string ZeroServers();
+		const string DirectiveArgumentInvalidHttpUri(const string& ctx, const string& directive, const string& argument);
+		const string DirectiveArgumentInvalidDoubleQuotedString(const string& ctx, const string& directive, const string& argument);
 	}
 }
-

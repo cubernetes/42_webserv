@@ -315,7 +315,7 @@ Config parseConfig(string rawConfig) {
 
 	updateDefaults(config);
 
-	checkDirectives(config);
+	DirectiveValidation::checkDirectives(config);
 
 	if (config.second.empty())
 		throw runtime_error(Errors::Config::ZeroServers());

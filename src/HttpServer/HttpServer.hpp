@@ -166,7 +166,7 @@ public:
 	const DefaultServers&			get_defaultServers()	const { return _defaultServers; }
 	map<int, CGIProcess>& 			get_CGIProcesses()		{ return _cgiProcesses; }
 	MultPlexFds&					get_MonitorFds()		{ return _monitorFds; }
-	void sendError(int clientSocket, int statusCode, const LocationCtx *const location = NULL);
+	void sendError(int clientSocket, int statusCode, const LocationCtx *const location);
 
 private:
 	//// private members ////
@@ -225,6 +225,8 @@ private:
 	void handleRequestInternally(int clientSocket, const HttpRequest& request, const LocationCtx& location);
 	bool methodAllowed(const HttpRequest& request, const LocationCtx& location);
 	void handleDelete(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+	void rewriteRequest(int clientSocket, int statusCode, const string& urlOrText, const LocationCtx& location);
+	void redirectClient(int clientSocket, const string& newUri, int statusCode = 301);
 	
 	// static file serving
 	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);

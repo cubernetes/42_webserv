@@ -6,10 +6,12 @@
 #include <deque>
 #include <string>
 
-typedef std::vector<std::string> Arguments;
-typedef std::pair<std::string, Arguments> Directive;
-typedef std::multimap<std::string, Arguments> Directives;
-typedef std::pair<std::string, Directives> LocationCtx;
+using std::string;
+
+typedef std::vector<string> Arguments;
+typedef std::pair<string, Arguments> Directive;
+typedef std::multimap<string, Arguments> Directives;
+typedef std::pair<string, Directives> LocationCtx;
 typedef std::vector<LocationCtx> LocationCtxs;
 typedef std::pair<Directives, LocationCtxs> ServerCtx;
 typedef std::vector<ServerCtx> ServerCtxs;
@@ -27,12 +29,12 @@ enum TokenType {
 };
 typedef enum TokenType TokenType;
 
-typedef std::pair<TokenType, std::string> Token;
+typedef std::pair<TokenType, string> Token;
 typedef std::deque<Token> Tokens;
 
-std::string readConfig(std::string configPath);
-Config parseConfig(std::string rawConfig);
+string readConfig(string configPath);
+Config parseConfig(string rawConfig);
 
-bool directiveExists(const Directives& directives, const std::string& directive);
-const Arguments& getFirstDirective(const Directives& directives, const std::string& directive);
-ArgResults getAllDirectives(const Directives& directives, const std::string& directive);
+bool directiveExists(const Directives& directives, const string& directive);
+const Arguments& getFirstDirective(const Directives& directives, const string& directive);
+ArgResults getAllDirectives(const Directives& directives, const string& directive);

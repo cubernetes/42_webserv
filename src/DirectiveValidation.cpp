@@ -11,7 +11,9 @@
 #include <algorithm>
 #include <climits>
 #include <arpa/inet.h>
+#include <netdb.h>
 
+#include "DirectiveValidation.hpp"
 #include "Config.hpp"
 #include "Errors.hpp"
 #include "Constants.hpp"
@@ -48,6 +50,99 @@ static inline void ensureOneOfStrings(const string& ctx, const string& directive
 static inline void ensureNotEmpty(const string& ctx, const string& directive, const string& argument) {
 	if (argument.empty())
 		throw runtime_error(Errors::Config::DirectiveArgumentEmpty(ctx, directive));
+}
+
+static inline bool evenNumberOfBackslashes(const string& str, size_t endingAt) {
+	int count = 0;
+	for (int i = static_cast<int>(endingAt); i >= 0; --i) {
+		if (str[static_cast<size_t>(i)] == '\\')
+			++count;
+		else
+			break;
+	}
+	return count % 2 == 0;
+}
+
+bool DirectiveValidation::isDoubleQuoted(const string& str) {
+	if (str[0] != '"')
+		return false;
+	size_t i;
+	for (i = 1; i < str.length() - 1; ++i) {
+		if (str[i] == '"' && evenNumberOfBackslashes(str, i - 1))
+			return false;
+	}
+	if (str[i] != '"')
+		return false;
+	return true;
+}
+
+bool DirectiveValidation::isHttpUri(const string& str) {
+	size_t len = Utils::isPrefix("http://", str) ? 7 :
+					Utils::isPrefix("https://", str) ? 8 : 0;
+	if (len == 0)
+		return false;
+	string withoutScheme = str.substr(len);
+	string domain = withoutScheme.substr(0, withoutScheme.find('/'));
+	struct addrinfo hints, *res;
+	std::memset(&hints, 0, sizeof(hints));
+	hints.ai_family = PF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	int success = getaddrinfo(domain.c_str(), NULL, &hints, &res) == 0;
+	if (success)
+		freeaddrinfo(res);
+	return success;
+}
+
+static inline char escapeChar(const char c) {
+	switch (c) {
+		case '0':
+			return '\0';
+		case 'a':
+			return '\a';
+		case 'b':
+			return '\b';
+		case 't':
+			return '\t';
+		case 'n':
+			return '\n';
+		case 'v':
+			return '\v';
+		case 'f':
+			return '\f';
+		case 'r':
+			return '\r';
+		default:
+			return c;
+	}
+}
+
+string DirectiveValidation::decodeDoubleQuotedString(const string& str) {
+	string newStr;
+	if (str[0] != '"')
+		return newStr; // ignore error
+	size_t i;
+	for (i = 1; i < str.length() - 1; ++i) {
+		if (str[i] == '"')
+			return newStr; // ignore error
+		if (str[i] == '\\') {
+			newStr += escapeChar(str[i + 1]);
+			i += 1;
+		} else
+			newStr += str[i];
+	}
+	if (str[i] != '"')
+		return newStr; // ignore error
+	return newStr;
+}
+
+static inline void ensureValidDoubleQuotedString(const string& ctx, const string& directive, const string& argument) {
+	if (!DirectiveValidation::isDoubleQuoted(argument))
+		throw runtime_error(Errors::Config::DirectiveArgumentInvalidDoubleQuotedString(ctx, directive, argument));
+}
+
+static inline void ensureValidHttpUri(const string& ctx, const string& directive, const string& argument) {
+	if (!DirectiveValidation::isHttpUri(argument))
+		throw runtime_error(Errors::Config::DirectiveArgumentInvalidHttpUri(ctx, directive, argument)); // TODO: normally, you'd use a regex to validate the domain, but hell nah we are not implementing a NFA from scratch
 }
 
 // was only needed for the int argument to the worker_processes directive, which is not needed anymore
@@ -222,7 +317,11 @@ static inline bool checkReturn(const string& ctx, const string& directive, const
 	if (directive == "return") {
 		ensureArity(ctx, directive, arguments, 2, 2);
 		ensureStatusCode(ctx, directive, arguments[0]);
-		ensureNotEmpty(ctx, directive, arguments[1]); // TODO: @timo: ensure it's a url starting with http or https or a location
+		ensureNotEmpty(ctx, directive, arguments[1]);
+		if (arguments[1][0] == '"')
+			ensureValidDoubleQuotedString(ctx, directive, arguments[1]);
+		else
+			ensureValidHttpUri(ctx, directive, arguments[1]);
 		return true;
 	}
 	return false;
@@ -427,7 +526,7 @@ static void ensureServerUniqueness(const Directives& directives, const ServerCtx
 	}
 }
 
-void checkDirectives(Config& config) {
+void DirectiveValidation::checkDirectives(Config& config) {
 	checkHttpDirectives(config.first);
 	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
 		checkServerDirectives(server->first);
