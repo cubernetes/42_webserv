@@ -1,3 +1,4 @@
+#include "Config.hpp"
 #include "HttpServer.hpp"
 #include "CgiHandler.hpp"
 
@@ -134,11 +135,22 @@ void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& re
 	}
 }
 
-void HttpServer::handleRequest(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
-	if (!requestIsForCgi(request, location)) {
-		handleRequestInternally(clientSocket, request, location);
-		return;
+bool HttpServer::methodAllowed(const HttpRequest& request, const LocationCtx& location) {
+	if (!directiveExists(location.second, "limit_except"))
+		return true;
+	const Arguments& allowedMethods = getFirstDirective(location.second, "limit_except");
+	for (Arguments::const_iterator method = allowedMethods.begin(); method != allowedMethods.end(); ++method) {
+		if (*method == request.method)
+			return true;
 	}
+	return false;
+}
+
+void HttpServer::handleRequest(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
+	if (!methodAllowed(request, location))
+		sendError(clientSocket, 405);
+	else if (!requestIsForCgi(request, location))
+		handleRequestInternally(clientSocket, request, location);
 	try {
 		// Get CGI configuration TODO: @sonia do the executeDirectly case
 		ArgResults cgiExts = getAllDirectives(location.second, "cgi_ext");
