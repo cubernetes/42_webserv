@@ -1,10 +1,5 @@
 #include "HttpServer.hpp"
 
-void HttpServer::timeoutHandler(int clientSocket) {
-	close(clientSocket);
-	Logger::logError("Client socket " + STR(clientSocket) + " timed out and was closed.");
-}
-
 void HttpServer::checkForInactiveClients() {
 	for (std::map<int, CGIProcess>::iterator it = _cgiProcesses.begin(); it != _cgiProcesses.end(); ) {
 		CGIProcess& process = it->second;
