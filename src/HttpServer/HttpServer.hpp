@@ -220,6 +220,7 @@ private:
 	
 	// static file serving
 	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+	string determineDiskPath(const HttpRequest& request, const LocationCtx& location);
 	bool handleUriWithoutSlash(int clientSocket, const string& diskPath, const HttpRequest& request, const LocationCtx& location, bool sendErrorMsg = true);
 	void handleUriWithSlash(int clientSocket, const string& diskPath, const HttpRequest& request, const LocationCtx& location, bool sendErrorMsg = true);
 	bool handleIndexes(int clientSocket, const string& diskPath, const HttpRequest& request, const LocationCtx& location);
