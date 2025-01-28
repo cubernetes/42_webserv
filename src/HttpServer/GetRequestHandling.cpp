@@ -77,7 +77,7 @@ bool HttpServer::handleUriWithoutSlash(int clientSocket, const string& diskPath,
 		return sendFileContent(clientSocket, diskPath, location);
 	}
 	if (sendErrorMsg)
-		sendError(clientSocket, 404, &location); // sometimes it's also 403, or 500, but haven't figured out the pattern yet
+		sendError(clientSocket, 403, &location); // sometimes it's also 404, or 500, but haven't figured out the pattern yet
 	return false;
 }
 
