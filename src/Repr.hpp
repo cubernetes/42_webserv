@@ -12,6 +12,7 @@
 #include "Constants.hpp"
 #include "Ansi.hpp"
 #include "Reflection.hpp"
+#include "Utils.hpp"
 
 # define ANSI_FG     "41;41;41"
 # define ANSI_STR    "184;187;38"
@@ -134,27 +135,25 @@ template <> struct ReprWrapper<bool> {
 	}
 };
 
-// TODO: @timo: escape for string literal
 template <>
 struct ReprWrapper<string> {
 	static inline string
 	repr(const string& value, bool json = false) {
 		if (json)
-			return "\"" + value + "\"";
+			return "\"" + Utils::jsonEscape(value) + "\"";
 		else
-			return str("\"" + value + "\"") + (Constants::verboseLogs ? punct("s") : "");
+			return str("\"" + Utils::jsonEscape(value) + "\"") + (Constants::verboseLogs ? punct("s") : "");
 	}
 };
 
-// TODO: @timo: escape for string literal
 template <> 
 struct ReprWrapper<char*> {
 	static inline string
 	repr(const char* const& value, bool json = false) {
 		if (json)
-			return string("\"") + value + "\"";
+			return string("\"") + Utils::jsonEscape(value) + "\"";
 		else
-			return str(string("\"") + value + "\"");
+			return str(string("\"") + Utils::jsonEscape(value) + "\"");
 	}
 };
 
@@ -178,9 +177,9 @@ struct ReprWrapper<T*> {
 		static inline string \
 		repr(const T& value, bool json = false) { \
 			if (json) \
-				return string("\"") + static_cast<char>(value) + "\""; \
+				return string("\"") + Utils::jsonEscape(string(1, value)) + "\""; \
 			else \
-				return chr(string("'") + static_cast<char>(value) + "'"); \
+				return chr(string("'") + (value == '\\' ? "\\\\" : value == '\'' ? "\\'" : string(1, value)) + "'"); \
 		} \
 	}
 

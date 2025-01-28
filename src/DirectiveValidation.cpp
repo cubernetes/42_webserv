@@ -52,7 +52,7 @@ static inline void ensureNotEmpty(const string& ctx, const string& directive, co
 		throw runtime_error(Errors::Config::DirectiveArgumentEmpty(ctx, directive));
 }
 
-static inline bool evenNumberOfBackslashes(const string& str, size_t endingAt) {
+bool DirectiveValidation::evenNumberOfBackslashes(const string& str, size_t endingAt) {
 	int count = 0;
 	for (int i = static_cast<int>(endingAt); i >= 0; --i) {
 		if (str[static_cast<size_t>(i)] == '\\')

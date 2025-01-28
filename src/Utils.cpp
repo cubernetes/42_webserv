@@ -60,3 +60,16 @@ bool Utils::isHexDigitNoCase(const char c) {
 		return true;
 	return false;
 }
+
+string Utils::replaceAll(string s, const string& search, const string& replace) {
+	size_t pos = 0;
+	while ((pos = s.find(search, pos)) != string::npos) {
+		 s.replace(pos, search.length(), replace);
+		 pos += replace.length();
+	}
+	return s;
+}
+
+string Utils::jsonEscape(string s) {
+	return Utils::replaceAll(Utils::replaceAll(s, "\\", "\\\\"), "\"", "\\\"");
+}

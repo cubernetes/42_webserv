@@ -4,22 +4,10 @@
 
 #include "Reflection.hpp"
 #include "Repr.hpp"
+#include "Utils.hpp"
 
 using std::string;
 using std::swap;
-
-static inline string _replace(string s, const string& search, const string& replace) {
-	size_t pos = 0;
-	while ((pos = s.find(search, pos)) != string::npos) {
-		 s.replace(pos, search.length(), replace);
-		 pos += replace.length();
-	}
-	return s;
-}
-
-static inline string jsonEscape(string s) {
-	return _replace(_replace(s, "\\", "\\\\"), "\"", "\\\"");
-}
 
 Reflection::Reflection() : _class(), _members() {}
 Reflection::Reflection(const Reflection& other) : _class(other._class), _members(other._members) {}
@@ -32,7 +20,7 @@ void swap(Reflection& a, Reflection& b) { a.swap(b); }
 string Reflection::reprStruct(string name, Members members, bool json) const {
 	std::stringstream out;
 	if (json || Constants::jsonTrace) {
-		out << "{\"class\":\"" << jsonEscape(name) << "\"";
+		out << "{\"class\":\"" << Utils::jsonEscape(name) << "\"";
 		for (Members::const_iterator it = members.begin(); it != members.end(); ++it)
 			out << ",\"" << it->first << "\":" << (this->*it->second.first)(true);
 		out << "}";
