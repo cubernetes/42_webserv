@@ -22,6 +22,17 @@ void HttpServer::handleCGIRead(int fd) {
 	}
 
 	CGIProcess& process = it->second;
+	// process.pollCycles++;
+	// int cyclesForTimeout = CGI_TIMEOUT * (1000 / Constants::multiplexTimeout);
+	// if (process.pollCycles > cyclesForTimeout) {
+	// 	kill(process.pid, SIGKILL);
+	// 	waitpid(process.pid, NULL, 0);
+	// 	sendError(process.clientSocket, 504, process.location);
+	// 	closeAndRemoveMultPlexFd(_monitorFds, fd);
+	// 	_cgiProcesses.erase(fd);
+	// 	return;
+	// }
+
 	char buffer[CONSTANTS_CHUNK_SIZE];
 
 	ssize_t bytesRead = read(fd, buffer, sizeof(buffer) - 1);

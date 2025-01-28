@@ -85,6 +85,7 @@ SRC += ResponseSending.cpp
 SRC += Setup.cpp
 SRC += SocketManagement.cpp
 SRC += SocketUtils.cpp
+SRC += TimeoutHandling.cpp 
 SRC += UriCanonicalization.cpp
 
 vpath %.$(EXT) src

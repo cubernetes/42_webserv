@@ -30,6 +30,7 @@ void HttpServer::run() {
 								  // 2) write pending data for Constants::chunkSize bytes (and remove this disposition if done writing)
 								  // 3) read data for Constants::chunkSize bytes (or remove client if appropriate)
 								  // 4) do nothing
+		checkForInactiveClients();
 	}
 	/* NOTREACHED */
 }
