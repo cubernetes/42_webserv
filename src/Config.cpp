@@ -339,7 +339,7 @@ config.second[0].second -> vector of locations for a server (order is important 
 config.second[0].second[0] -> first location (if there are any, check for empty!)
 config.second[0].second[0].first -> the actual location (a string), something like /web
 config.second[0].second[0].second -> again, Directives, so a map of directives similar to above
-config.second[0].second[0].second["limit_except"] -> which methods does this location support? mutliple arguments!
+config.second[0].second[0].second["limit_except"] -> which methods does this location support? multiple arguments!
 config.second[0].second[0].second["limit_except"][0] == "GET" -> check if the first allowed method for this location is "GET"
 
 

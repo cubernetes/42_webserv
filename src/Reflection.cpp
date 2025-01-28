@@ -3,7 +3,6 @@
 #include <string>
 
 #include "Reflection.hpp"
-#include "Logger.hpp"
 #include "Repr.hpp"
 
 using std::string;

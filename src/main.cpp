@@ -1,5 +1,4 @@
 #include <string>
-#include <stdexcept>
 #include <cstdlib>
 
 #include "HttpServer.hpp"

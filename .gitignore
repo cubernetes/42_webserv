@@ -28,3 +28,6 @@ test*.c
 
 # debugging
 .gdbinit
+
+# development tools
+.vim/

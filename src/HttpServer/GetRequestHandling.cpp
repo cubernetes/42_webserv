@@ -1,3 +1,4 @@
+#include "Config.hpp"
 #include "HttpServer.hpp"
 
 bool HttpServer::handleDirectoryRedirect(int clientSocket, const string& uri) {
@@ -80,8 +81,21 @@ bool HttpServer::handleUriWithoutSlash(int clientSocket, const string& diskPath,
 	return false;
 }
 
+string HttpServer::determineDiskPath(const HttpRequest& request, const LocationCtx& location) {
+	string path;
+	if (directiveExists(location.second, "alias")) {
+		string alias = getFirstDirective(location.second, "alias")[0];
+		string prefix = location.first;
+		size_t prefixLen = prefix.length();
+		string uri = request.path;
+		path = alias + uri.substr(prefixLen);
+	} else
+		path = request.path;
+	return getFirstDirective(location.second, "root")[0] + path;
+}
+
 void HttpServer::serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
-	string diskPath = getFirstDirective(location.second, "root")[0] + request.path;
+	string diskPath = determineDiskPath(request, location);
 
 	if (diskPath[diskPath.length() - 1] == '/')
 		handleUriWithSlash(clientSocket, diskPath, request, location);
