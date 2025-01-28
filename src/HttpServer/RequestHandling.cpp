@@ -26,8 +26,6 @@ void HttpServer::handleCGIRead(int fd) {
 
 	ssize_t bytesRead = read(fd, buffer, sizeof(buffer) - 1);
 	if (bytesRead < 0) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return;
 		kill(process.pid, SIGKILL);
 		sendError(process.clientSocket, 502, process.location);
 		closeAndRemoveMultPlexFd(_monitorFds, fd);
