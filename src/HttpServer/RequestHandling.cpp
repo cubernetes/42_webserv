@@ -1,6 +1,7 @@
 #include "Config.hpp"
 #include "HttpServer.hpp"
 #include "CgiHandler.hpp"
+#include <cstdio>
 
 bool HttpServer::requestIsForCgi(const HttpRequest& request, const LocationCtx& location) {
 	if (!directiveExists(location.second, "cgi_dir"))
@@ -119,13 +120,35 @@ HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer) {
 	return request;
 }
 
+void HttpServer::handleDelete(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
+	if (!directiveExists(location.second, "upload_dir"))
+		sendError(clientSocket, 405);
+	string diskPath = determineDiskPath(request, location);
+
+	struct stat fileStat;
+	int fileExists = stat(diskPath.c_str(), &fileStat) == 0;
+
+	if (!fileExists) {
+		sendError(clientSocket, 404, &location);
+	} else if (S_ISDIR(fileStat.st_mode)) {
+		sendError(clientSocket, 403, &location);
+	} else if (S_ISREG(fileStat.st_mode)) {
+		if (::remove(diskPath.c_str()) < 0)
+			sendError(clientSocket, 500, &location);
+		else
+			sendString(clientSocket, "Successfully deleted " + request.path);
+	} else {
+		sendError(clientSocket, 403, &location);
+	}
+}
+
 void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
 	if (request.method == "GET")
 		serveStaticContent(clientSocket, request, location);
 	else if (request.method == "POST")
 		sendString(clientSocket, "POST for file upload not implemented yet\r\n");
 	else if (request.method == "DELETE")
-		sendString(clientSocket, "DELETE for file deletion not implemented yet\r\n");
+		handleDelete(clientSocket, request, location);
 	else if (request.method == "4242")
 		sendString(clientSocket, repr(*this) + '\n');
 	else {
