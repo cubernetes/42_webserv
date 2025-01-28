@@ -217,6 +217,7 @@ private:
 	// request handling
 	void handleRequest(int clientSocket, const HttpRequest& request, const LocationCtx& location);
 	void handleRequestInternally(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+	bool methodAllowed(const HttpRequest& request, const LocationCtx& location);
 	
 	// static file serving
 	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
