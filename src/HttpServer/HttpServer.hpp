@@ -58,11 +58,19 @@ public:
 	//// forward decls ////
 	struct Server;
 	struct AddrPortCompare;
+	struct HttpRequest;
 	struct PendingWrite;
 	enum FdState {
 		FD_READABLE,
 		FD_WRITEABLE,
 		FD_OTHER_STATE,
+	};
+
+	enum RequestState {
+		READING_HEADERS,
+		READING_BODY,
+		REQUEST_COMPLETE,
+		REQUEST_ERROR
 	};
 
 	//// typedefs ////
@@ -77,6 +85,7 @@ public:
 	typedef map<int, string> StatusTexts;
 	typedef map<int, PendingWrite> PendingWrites;
 	typedef set<int> PendingCloses;
+	typedef map<int, HttpRequest> PendingRequests;
 
 	//// structs and other constructs ////
 	struct HttpRequest {
@@ -84,13 +93,23 @@ public:
 		string				path;
 		string				httpVersion;
 		map<string, string>	headers;
+		string				body;
+		RequestState		state;
+		size_t				contentLength;
+		bool				chunkedTransfer;
+		size_t				bytesRead;
 
 		HttpRequest() :
 			method(),
 			path(),
 			httpVersion(),
-			headers() {}
+			body(),
+			state(READING_HEADERS),
+			contentLength(0),
+			chunkedTransfer(false),
+			bytesRead(0) {}
 	};
+	
 	struct PendingWrite {
 		string	data;
 		size_t	bytesSent;
@@ -183,6 +202,7 @@ private:
 	Servers					_servers;
 	DefaultServers			_defaultServers;
 	map<int, CGIProcess>	_cgiProcesses;
+	PendingRequests			_pendingRequests;
 	static const int		CGI_TIMEOUT = 5; 
 
 
@@ -283,6 +303,15 @@ private:
 	string statusTextFromCode(int statusCode);
 	string wrapInHtmlBody(const string& text);
 	bool isListeningSocket(int socket);
+
+	// POST related
+	bool isHeaderComplete(const HttpRequest& request) const;
+	bool needsMoreData(const HttpRequest& request) const;
+	void processContentLength(HttpRequest& request);
+	bool validateRequest(const HttpRequest& request) const;
+	bool parseRequestLine(const string& line, HttpRequest& request);
+	bool parseHeader(const string& line, HttpRequest& request);
+	size_t getRequestSizeLimit(const HttpRequest& request, const LocationCtx* location = NULL);
 };
 
 std::ostream& operator<<(std::ostream&, const HttpServer&);

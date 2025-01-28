@@ -15,6 +15,7 @@ namespace Utils {
 	string strToLower(const string& str);
 	char decodeTwoHexChars(const char _c1, const char _c2);
 	bool isHexDigitNoCase(const char c);
+	size_t convertSizeToBytes(const string& sizeStr);
 	string replaceAll(string s, const string& search, const string& replace);
 	string jsonEscape(string s);
 	bool allUppercase(const string& str);

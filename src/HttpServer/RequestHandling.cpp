@@ -93,6 +93,33 @@ void HttpServer::handleCGIRead(int fd) {
 	}
 }
 
+bool HttpServer::parseRequestLine(const string& line, HttpRequest& request) {
+	std::istringstream iss(line);
+	if (!(iss >> request.method >> request.path >> request.httpVersion)) {
+		return false;
+	}
+	
+	request.path = canonicalizePath(request.path);
+	return true;
+}
+
+bool HttpServer::parseHeader(const string& line, HttpRequest& request) {
+	size_t colonPos = line.find(':');
+	if (colonPos == string::npos) {
+		return false;
+	}
+	
+	string key = line.substr(0, colonPos);
+	string value = line.substr(colonPos + 1);
+	
+	// Trim leading/trailing whitespace
+	value.erase(0, value.find_first_not_of(" \t"));
+	value.erase(value.find_last_not_of(" \t\r\n") + 1);
+	
+	request.headers[key] = value;
+	return true;
+}
+
 void HttpServer::parseHeaders(std::istringstream& requestStream, string& line, HttpRequest& request) {
 	while (std::getline(requestStream, line) && line != "\r") { // TODO: @all: headers might be very hard to parse (multiline, etc) // RFC should really be the reference
 		size_t colonPos = line.find(':');
@@ -227,27 +254,166 @@ ssize_t HttpServer::recvToBuffer(int clientSocket, char *buffer, size_t bufSiz) 
 	return bytesRead;
 }
 
-void HttpServer::readFromClient(int clientSocket) {
 
+bool HttpServer::isHeaderComplete(const HttpRequest& request) const {
+	return !request.method.empty() && !request.path.empty() && !request.httpVersion.empty();
+}
+
+bool HttpServer::needsMoreData(const HttpRequest& request) const {
+	if (request.state == READING_HEADERS) 
+		return true;
+	if (request.state == READING_BODY) {
+		if (request.chunkedTransfer) 
+			return true; // TODO: @sonia Will be handled in follow-up PR
+		return request.bytesRead < request.contentLength;
+	}
+	return false;
+}
+
+void HttpServer::processContentLength(HttpRequest& request) {
+	if (request.headers.find("Content-Length") != request.headers.end())
+		request.contentLength = static_cast<size_t>(std::atoi(request.headers["Content-Length"].c_str()));
+	
+	if (request.headers.find("Transfer-Encoding") != request.headers.end() && 
+		request.headers["Transfer-Encoding"] == "chunked")
+		request.chunkedTransfer = true;
+}
+
+bool HttpServer::validateRequest(const HttpRequest& request) const {
+	if (!isHeaderComplete(request)) 
+		return false;
+	if (request.method != "GET" && request.method != "POST" && request.method != "DELETE") 
+		return false;
+	if (request.httpVersion != "HTTP/1.1") 
+		return false;
+	
+	// For POST requests
+	if (request.method == "POST" && !request.chunkedTransfer && request.contentLength == 0)
+		return false;
+	
+	return true;
+}
+
+size_t HttpServer::getRequestSizeLimit(const HttpRequest& request, const LocationCtx* location) {
+	if (location && directiveExists(location->second, "client_max_body_size")) {
+		return Utils::convertSizeToBytes(getFirstDirective(location->second, "client_max_body_size")[0]);
+	}
+	
+	try {
+		const LocationCtx& loc = requestToLocation(-1, request);
+		if (directiveExists(loc.second, "client_max_body_size")) {
+			return Utils::convertSizeToBytes(getFirstDirective(loc.second, "client_max_body_size")[0]);
+		}
+	} catch (const std::exception&) {
+		if (directiveExists(_config.first, "client_max_body_size")) {
+			return Utils::convertSizeToBytes(getFirstDirective(_config.first, "client_max_body_size")[0]);
+		}
+	}
+	
+	// Default nginx
+	return Utils::convertSizeToBytes("1m");
+}
+
+void HttpServer::readFromClient(int clientSocket) {
 	if (_cgiProcesses.find(clientSocket) != _cgiProcesses.end()) {
 		handleCGIRead(clientSocket);
 		return;
 	}
 
 	char buffer[CONSTANTS_CHUNK_SIZE];
-	if (!recvToBuffer(clientSocket, buffer, CONSTANTS_CHUNK_SIZE))
-		return;
-	HttpRequest request = parseHttpRequest(buffer);
+	ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
 	
-	bool bound = false; // hack courtesy of https://stackoverflow.com/a/43016806
-	try {
-		const LocationCtx& location = requestToLocation(clientSocket, request);
-		bound = true;
-		handleRequest(clientSocket, request, location);
-	} catch (const runtime_error& err) {
-		if (bound) throw; // runtime_error because of handleRequest
-		// couldn't find a server, or location, or couldn't get sockname, which shouldn't be fatal so we return
-		Logger::logError(err.what());
+	if (bytesRead <= 0) {
+		removeClient(clientSocket);
+		_pendingRequests.erase(clientSocket);
 		return;
+	}
+	
+	HttpRequest& request = _pendingRequests[clientSocket];
+
+	if (request.state == READING_HEADERS) {
+		string newData(buffer, static_cast<size_t>(bytesRead));
+		string& accumulated = request.body; // Temporarily store headers here
+		accumulated += newData;
+		
+		size_t sizeLimit = getRequestSizeLimit(request);
+		if (accumulated.size() > sizeLimit) {
+			sendError(clientSocket, 413);
+			removeClient(clientSocket);
+			_pendingRequests.erase(clientSocket);
+			return;
+		}
+		
+		// Look for end of headers
+		size_t headerEnd = accumulated.find("\r\n\r\n");
+		if (headerEnd == string::npos) {
+			return; // Need MOAR!!1 data
+		}
+		
+		std::istringstream stream(accumulated);
+		string line;
+		
+		if (!std::getline(stream, line) || !parseRequestLine(line, request)) {
+			removeClient(clientSocket);
+			_pendingRequests.erase(clientSocket);
+			return;
+		}
+		
+		while (std::getline(stream, line) && line != "\r") {
+			if (!parseHeader(line, request)) {
+				removeClient(clientSocket);
+				_pendingRequests.erase(clientSocket);
+				return;
+			}
+		}
+		
+		processContentLength(request);
+		
+		if (!validateRequest(request)) {
+			removeClient(clientSocket);
+			_pendingRequests.erase(clientSocket);
+			return;
+		}
+		
+		if (headerEnd + 4 < accumulated.size()) {
+			request.body = accumulated.substr(headerEnd + 4);
+			request.bytesRead = request.body.size();
+		} else {
+			request.body.clear();
+			request.bytesRead = 0;
+		}
+		
+		request.state = READING_BODY;
+		
+		// If no body needed
+		if (!request.chunkedTransfer && request.contentLength == 0) {
+			request.state = REQUEST_COMPLETE;
+		}
+	}
+	else if (request.state == READING_BODY) {
+		// TODO: @sonia follow up PR on chunked transfer
+		request.body.append(buffer, static_cast<size_t>(bytesRead));
+		request.bytesRead += static_cast<size_t>(bytesRead);
+
+		size_t sizeLimit = getRequestSizeLimit(request);
+		if (request.body.size() > sizeLimit) {
+			sendError(clientSocket, 413);
+			removeClient(clientSocket);
+			_pendingRequests.erase(clientSocket);
+			return;
+		}
+		
+		if (!request.chunkedTransfer && request.bytesRead >= request.contentLength)
+			request.state = REQUEST_COMPLETE;
+	}
+	
+	if (request.state == REQUEST_COMPLETE) {
+		try {
+			const LocationCtx& location = requestToLocation(clientSocket, request);
+			handleRequest(clientSocket, request, location);
+		} catch (const runtime_error& err) {
+			Logger::logError(err.what());
+		}
+		_pendingRequests.erase(clientSocket);
 	}
 }
