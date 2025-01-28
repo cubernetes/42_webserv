@@ -34,7 +34,7 @@ mkdir -p "${LLVM_PROFDATA_DIR}" || die "Could not create LLVM_PROFDATA_DIR (${LL
 make -sj unit_tests || die "Build failed"
 # shellcheck disable=SC2046
 llvm-profdata merge -output="${LLVM_PROFDATA_DIR}/code.profdata" $(find "${LLVM_PROFDATA_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'code-*.profraw') || die "Could not merge prof data"
-llvm-cov report ./c2_unit_tests -instr-profile="${LLVM_PROFDATA_DIR}/code.profdata" -use-color || die "Could not generate coverage report"
+llvm-cov report -ignore-filename-regex='Catch2/src/catch2/' ./c2_unit_tests -instr-profile="${LLVM_PROFDATA_DIR}/code.profdata" -use-color || die "Could not generate coverage report"
 
 printf "Show entire coverage data in less pager (y/N): "
 read -r choice
