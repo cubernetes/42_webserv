@@ -8,11 +8,12 @@ NAME := webserv
 EXT := cpp
 TEST := c2_unit_tests
 UNIT_TEST_DIR := tests/unit_tests
+CATCH2 := Catch2
 
 # tools
-#CXX := c++
-CXX := clang++ # TODO: @all: make sure it compiles with this
-#CXX := g++     # TODO: @all: make sure it compiles with this as well, although not super necessary
+_CXX ?= c++
+#_CXX := clang++ # TODO: @all: make sure it compiles with this
+#_CXX := g++     # TODO: @all: make sure it compiles with this as well, although not super necessary
 RM := /bin/rm -f
 MKDIR := /bin/mkdir -p
 
@@ -21,7 +22,7 @@ MKDIR := /bin/mkdir -p
 CFLAGS += -O2
 CFLAGS += -Wall
 CFLAGS += -Wextra
-CFLAGS += -Werror # TODO: @all: Add back
+#CFLAGS += -Werror # TODO: @all: Add back
 CFLAGS += -Wshadow
 CFLAGS += -Wconversion
 CFLAGS += -Wunreachable-code
@@ -31,7 +32,7 @@ CFLAGS += -MMD
 #CFLAGS += -Wno-variadic-macros # C++98 doesn't have variadic macros. Also, emtpy macro argument are UB. But yeahhhh we don't have to be pedantic :))
 
 CFLAGS += -fdiagnostics-color=always
-ifeq ($(strip $(CXX)),clang++)
+ifeq ($(strip $(_CXX)),clang++)
 CFLAGS += -ferror-limit=1
 else
 CFLAGS += -fmax-errors=1
@@ -42,13 +43,13 @@ CXXFLAGS += -Weffc++
 
 CPPFLAGS := -Isrc -Isrc/HttpServer
 
-# LDFLAGS := # Don't reset CFLAGS, as the coverage helper scripts in this repo need to adjust CFLAGS
+# LDFLAGS := # Don't reset LDFLAGS, as the coverage helper scripts in this repo need to adjust LDFLAGS
 
 LDLIBS :=
 
 # additional catch2 flags
-C2_CFLAGS := -std=c++14
-C2_LDFLAGS := -lCatch2Main -lCatch2
+C2_CFLAGS := -std=c++14 -I$(HOME)/.local/include -ICatch2/src -ICatch2/build/generated-includes -Wno-effc++
+C2_LDFLAGS := -L$(HOME)/.local/lib -LCatch2/build/src -lCatch2Main -lCatch2
 
 # DEBUG=1 make re # include debugging information in the binary
 ifeq ($(DEBUG), 1)
@@ -128,25 +129,32 @@ DEPS_C2 := $(OBJ_C2:.o=.d)
 
 all: $(NAME)
 
-all_c2: $(TEST)
+all_c2: $(CATCH2)
+	$(MAKE) $(TEST)
 
 $(NAME): $(OBJ)
-	$(CXX) $(OBJ) $(LDFLAGS) $(LDLIBS) -o $@
+	$(_CXX) $(OBJ) $(LDFLAGS) $(LDLIBS) -o $@
 
 $(TEST): $(OBJ_C2)
-	$(CXX) $(OBJ_C2) $(LDFLAGS) $(LDLIBS) $(C2_LDFLAGS) -o $@
+	$(_CXX) $(OBJ_C2) $(LDFLAGS) $(LDLIBS) $(C2_LDFLAGS) -o $@
 
 $(OBJDIR)/%.o: %.$(EXT) | $(OBJDIR)
-	$(CXX) $< $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -c -o $@
+	$(_CXX) $< $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -c -o $@
 
 $(OBJDIR_C2)/%.c2.o: %.$(EXT) | $(OBJDIR_C2)
-	$(CXX) $< $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(C2_CFLAGS) -c -o $@
+	$(_CXX) $< $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(C2_CFLAGS) -c -o $@
 
 $(OBJDIR):
 	$(MKDIR) $@
 
 $(OBJDIR_C2):
 	$(MKDIR) $@
+
+$(CATCH2):
+	git clone https://github.com/catchorg/Catch2 && \
+		cd Catch2 && \
+		cmake --install-prefix="$(HOME)/.local" -Bbuild -H. -DBUILD_TESTING=OFF && \
+		cmake --build build/ --target Catch2WithMain
 
 clean:
 	$(RM) $(OBJ)

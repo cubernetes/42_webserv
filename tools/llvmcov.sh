@@ -24,11 +24,9 @@ LLVM_PROFDATA_DIR="llvm_profdata"
 [ -e "${LLVM_PROFDATA_DIR}" ] && ([ -d "${LLVM_PROFDATA_DIR}" ] || die "LLVM_PROFDATA_DIR (${LLVM_PROFDATA_DIR}) exists and is not a directory")
 
 export DEBUG=1
-export CXX='clang++'
+export _CXX='clang++'
 export CFLAGS='-fprofile-instr-generate -fcoverage-mapping'
 export LDFLAGS='-fprofile-instr-generate'
-#CFLAGS='-fprofile-arcs -ftest-coverage'
-#LDFLAGS='-fprofile-arcs -ftest-coverage'
 export LLVM_PROFILE_FILE="${LLVM_PROFDATA_DIR}/code-%p.profraw"
 
 rm -rf "./${LLVM_PROFDATA_DIR}" || die "Could not remove LLVM_PROFDATA_DIR (${LLVM_PROFDATA_DIR})"
