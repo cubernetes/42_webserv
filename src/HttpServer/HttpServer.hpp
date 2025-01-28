@@ -15,12 +15,14 @@
 #include <netinet/in.h>
 #include <ostream>
 #include <set> 
+#include <signal.h>
 #include <stdexcept>
 #include <string>
 #include <sys/epoll.h>
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <utility>
 #include <vector>
@@ -142,9 +144,10 @@ public:
 		int clientSocket;
 		const LocationCtx* location;
 		bool headersSent;
+		int pollCycles;
 		
 		CGIProcess(pid_t p, int fd, int client, const LocationCtx* loc) : 
-			pid(p), pipe_fd(fd), response(), totalSize(0), clientSocket(client), location(loc), headersSent(false) {}
+			pid(p), pipe_fd(fd), response(), totalSize(0), clientSocket(client), location(loc), headersSent(false), pollCycles(0) {}
 };
 
 	const vector<int>&				get_listeningSockets()	const { return _listeningSockets; }
@@ -178,6 +181,7 @@ private:
 	Servers					_servers;
 	DefaultServers			_defaultServers;
 	map<int, CGIProcess>	_cgiProcesses;
+	static const int		CGI_TIMEOUT = 5; 
 
 
 	//// private methods ////
@@ -230,6 +234,10 @@ private:
 	// CGI
 	bool requestIsForCgi(const HttpRequest& request, const LocationCtx& location);
 	void handleCGIRead(int fd);
+
+	// Timeout
+	void checkForInactiveClients();
+	void timeoutHandler(int clientSocket);
 
 	// Writing to a client
 	void writeToClient(int clientSocket);
