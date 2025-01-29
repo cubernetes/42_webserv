@@ -8,6 +8,7 @@ void HttpServer::redirectClient(int clientSocket, const string& newUri, int stat
 			<< "Connection: close\r\n\r\n";
 	string responseStr = response.str();
 	send(clientSocket, responseStr.c_str(), responseStr.length(), 0);
+	// not checking for <= 0 since we remove the client anyways
 	removeClient(clientSocket);
 }
 

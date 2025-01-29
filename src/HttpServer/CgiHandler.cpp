@@ -142,6 +142,7 @@ bool CgiHandler::processCGIResponse(const string& response, int clientSocket) {
 	}
 
 	fullResponse << headers << "\r\n\r\n" << body;
+	// TODO: @sonia: eval sheet says we HAVE to check send for < 0 and == 0, not sure what to do here :/
 	send(clientSocket, fullResponse.str().c_str(), fullResponse.str().length(), 0);
 	return true;
 }
