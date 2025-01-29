@@ -19,4 +19,14 @@ void HttpServer::checkForInactiveClients() {
 			++it;
 		}
 	}
+
+	time_t currentTime = std::time(NULL);
+	for (UploadStates::iterator it = _uploadStates.begin(); it != _uploadStates.end();) {
+		if (currentTime - it->second.lastActive > UPLOAD_TIMEOUT) {
+			cleanupUpload(it->first);
+			it = _uploadStates.begin();
+		} else {
+			++it;
+		}
+	}
 }

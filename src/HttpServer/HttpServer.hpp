@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <cstring>
+#include <ctime> //hihi
 #include <ctype.h>
 #include <errno.h>
 #include <fstream>
@@ -60,6 +61,8 @@ public:
 	struct AddrPortCompare;
 	struct HttpRequest;
 	struct PendingWrite;
+	struct UploadState;
+
 	enum FdState {
 		FD_READABLE,
 		FD_WRITEABLE,
@@ -86,6 +89,7 @@ public:
 	typedef map<int, PendingWrite> PendingWrites;
 	typedef set<int> PendingCloses;
 	typedef map<int, HttpRequest> PendingRequests;
+	typedef std::map<int, UploadState> UploadStates;
 
 	//// structs and other constructs ////
 	struct HttpRequest {
@@ -172,6 +176,43 @@ public:
 			pid(p), pipe_fd(fd), response(), totalSize(0), clientSocket(client), location(loc), headersSent(false), pollCycles(0) {}
 		CGIProcess(const CGIProcess& other) : pid(other.pid), pipe_fd(other.pipe_fd), response(other.response), totalSize(other.totalSize), clientSocket(other.clientSocket), location(other.location), headersSent(other.headersSent), pollCycles(other.pollCycles) { (void)other; }
 		CGIProcess& operator=(const CGIProcess&) { return *this; }
+	};
+
+	// real sorry for this monstr
+	struct UploadState {
+	std::string tempFilePath;
+	std::ofstream* tempFile;
+	size_t bytesWritten;
+	time_t lastActive;
+	
+	UploadState() : tempFilePath(), tempFile(NULL), bytesWritten(0), lastActive(time(NULL)) {}
+
+	~UploadState() {
+		if (tempFile) {
+			tempFile->close();
+			delete tempFile;
+		}
+	}
+
+	UploadState(const UploadState& other)
+		: tempFilePath(other.tempFilePath), 
+		  tempFile(NULL),
+		  bytesWritten(other.bytesWritten),
+		  lastActive(other.lastActive) {}
+	
+	 UploadState& operator=(const UploadState& other) {
+		if (this != &other) {
+			tempFilePath = other.tempFilePath;
+			bytesWritten = other.bytesWritten;
+			lastActive = other.lastActive;
+			if (tempFile) {
+				tempFile->close();
+				delete tempFile;
+				tempFile = NULL;
+			}
+		}
+		return *this;
+	}
 };
 
 	const vector<int>&				get_listeningSockets()	const { return _listeningSockets; }
@@ -206,7 +247,10 @@ private:
 	DefaultServers			_defaultServers;
 	map<int, CGIProcess>	_cgiProcesses;
 	PendingRequests			_pendingRequests;
+	UploadStates			_uploadStates;
 	static const int		CGI_TIMEOUT = 5; 
+	static const size_t MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB default
+	static const int UPLOAD_TIMEOUT = 30; // 30 seconds timeout
 
 
 	//// private methods ////
@@ -314,6 +358,16 @@ private:
 	bool parseRequestLine(const string& line, HttpRequest& request);
 	bool parseHeader(const string& line, HttpRequest& request);
 	size_t getRequestSizeLimit(const HttpRequest& request, const LocationCtx* location = NULL);
+
+	//POST stuff
+	void handlePost(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+	void initializeUpload(int clientSocket, const HttpRequest& request);
+	void handleUploadData(int clientSocket, const char* buffer, size_t bytesRead);
+	void finalizeUpload(int clientSocket, HttpRequest& request);
+	void cleanupUpload(int clientSocket, bool success = false);
+	std::string generateTempFilename(const std::string& prefix = "upload_");
+	bool validateUploadDir(const std::string& path);
+	void createUploadDirectories(const std::string& path);
 
 	// Request processing stages
 	void handleIncomingData(int clientSocket, const char* buffer, ssize_t bytesRead);

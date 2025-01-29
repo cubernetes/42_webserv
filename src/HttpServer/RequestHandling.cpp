@@ -174,7 +174,7 @@ void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& re
 	if (request.method == "GET")
 		serveStaticContent(clientSocket, request, location);
 	else if (request.method == "POST")
-		sendString(clientSocket, "POST for file upload not implemented yet\r\n");
+		handlePost(clientSocket, request, location);
 	else if (request.method == "DELETE")
 		handleDelete(clientSocket, request, location);
 	else if (request.method == "4242")
