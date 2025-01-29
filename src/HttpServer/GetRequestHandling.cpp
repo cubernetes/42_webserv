@@ -1,16 +1,19 @@
 #include "Config.hpp"
 #include "HttpServer.hpp"
 
+void HttpServer::redirectClient(int clientSocket, const string& newUri, int statusCode) {
+	std::ostringstream response;
+	response << _httpVersionString << " " << statusCode << " " << statusTextFromCode(statusCode) << "\r\n"
+			<< "Location: " << newUri << "\r\n"
+			<< "Connection: close\r\n\r\n";
+	string responseStr = response.str();
+	send(clientSocket, responseStr.c_str(), responseStr.length(), 0);
+	removeClient(clientSocket);
+}
+
 bool HttpServer::handleDirectoryRedirect(int clientSocket, const string& uri) {
 		if (uri[uri.length() - 1] != '/') {
-			string redirectUri = uri + "/";
-			std::ostringstream response;
-			response << _httpVersionString << " " << 301 << " " << statusTextFromCode(301) << "\r\n"
-					<< "Location: " << redirectUri << "\r\n"
-					<< "Connection: close\r\n\r\n";
-			string responseStr = response.str();
-			send(clientSocket, responseStr.c_str(), responseStr.length(), 0);
-			removeClient(clientSocket);
+			redirectClient(clientSocket, uri + "/");
 			return true;
 		}
 		return false;

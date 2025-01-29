@@ -15,8 +15,8 @@ warn () {
 top_level="$(git rev-parse --show-toplevel)" || die "Failed to obtain root of git repository"
 cd -- "${top_level}" || die "Failed to change directory to '${top_level}'"
 
-1>/dev/null 2>/dev/null command -v lcov || die "lcov is not installed, install lcov, or look at https://command-not-found.com/genhtml"
-1>/dev/null 2>/dev/null command -v genhtml || die "genhtml is not installed, install lcov, or look at https://command-not-found.com/genhtml"
+1>/dev/null 2>/dev/null command -v lcov || die "lcov is not installed, install lcov, or look at https://command-not-found.com/genhtml, or run this command:$(printf '\n\n\t')git clone https://github.com/linux-test-project/lcov && cd lcov && mkdir -p \"$HOME/.local\" && make install PREFIX=\"$HOME/.local\" && rm -rf ./lcov && echo 'Installed lcov, restart your shell'"
+1>/dev/null 2>/dev/null command -v genhtml || die "genhtml is not installed, install lcov, or look at https://command-not-found.com/genhtml, or run this command:$(printf '\n\n\t')git clone https://github.com/linux-test-project/lcov && cd lcov && mkdir -p \"$HOME/.local\" && make install PREFIX=\"$HOME/.local\" && rm -rf ./lcov && echo 'Installed lcov, restart your shell'"
 
 LCOV_OUT_DIR="lcov_report"
 [ "$(printf %s "${LCOV_OUT_DIR}" | tr -d '/')" = "${LCOV_OUT_DIR}" ] || die "LCOV_OUT_DIR (${LCOV_OUT_DIR}) variable is probably unsafe because it contains a slash"
@@ -24,7 +24,7 @@ LCOV_OUT_DIR="lcov_report"
 [ -e "${LCOV_OUT_DIR}" ] && ([ -d "${LCOV_OUT_DIR}" ] || die "LCOV_OUT_DIR (${LCOV_OUT_DIR}) exists and is not a directory")
 
 export DEBUG=1
-export CXX='g++'
+export _CXX='g++'
 export CFLAGS='-fprofile-arcs -ftest-coverage'
 export LDFLAGS='-fprofile-arcs -ftest-coverage'
 

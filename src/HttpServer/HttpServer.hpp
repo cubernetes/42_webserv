@@ -148,6 +148,8 @@ public:
 		
 		CGIProcess(pid_t p, int fd, int client, const LocationCtx* loc) : 
 			pid(p), pipe_fd(fd), response(), totalSize(0), clientSocket(client), location(loc), headersSent(false), pollCycles(0) {}
+		CGIProcess(const CGIProcess& other) : pid(other.pid), pipe_fd(other.pipe_fd), response(other.response), totalSize(other.totalSize), clientSocket(other.clientSocket), location(other.location), headersSent(other.headersSent), pollCycles(other.pollCycles) { (void)other; }
+		CGIProcess& operator=(const CGIProcess&) { return *this; }
 };
 
 	const vector<int>&				get_listeningSockets()	const { return _listeningSockets; }
@@ -164,7 +166,7 @@ public:
 	const DefaultServers&			get_defaultServers()	const { return _defaultServers; }
 	map<int, CGIProcess>& 			get_CGIProcesses()		{ return _cgiProcesses; }
 	MultPlexFds&					get_MonitorFds()		{ return _monitorFds; }
-	void sendError(int clientSocket, int statusCode, const LocationCtx *const location = NULL);
+	void sendError(int clientSocket, int statusCode, const LocationCtx *const location);
 
 private:
 	//// private members ////
@@ -186,11 +188,11 @@ private:
 
 	//// private methods ////
 	// HttpServer must always be constructed with a config
-	HttpServer() : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers() {};
+	HttpServer() : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses() {};
 	// Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a server and its config
-	HttpServer(const HttpServer& other) : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers() { (void)other; };
+	HttpServer(const HttpServer&) : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses() {};
 	// HttpServer cannot be assigned to
-	HttpServer& operator=(HttpServer) { return *this; };
+	HttpServer& operator=(const HttpServer&) { return *this; };
 
 	// Setup
 	void setupServers(const Config& config);
@@ -223,6 +225,8 @@ private:
 	void handleRequestInternally(int clientSocket, const HttpRequest& request, const LocationCtx& location);
 	bool methodAllowed(const HttpRequest& request, const LocationCtx& location);
 	void handleDelete(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+	void rewriteRequest(int clientSocket, int statusCode, const string& urlOrText, const LocationCtx& location);
+	void redirectClient(int clientSocket, const string& newUri, int statusCode = 301);
 	
 	// static file serving
 	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);

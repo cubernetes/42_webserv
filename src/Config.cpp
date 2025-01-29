@@ -262,17 +262,28 @@ static void updateTokenType(Tokens& tokens) {
 		tokens.back().first = TOK_WORD;
 }
 
+static bool updateQuoted(bool& quoted, const string& stringSoFar) {
+	bool isRealQuote = DirectiveValidation::evenNumberOfBackslashes(stringSoFar, stringSoFar.length() - 1);
+	if (isRealQuote) {
+		quoted = !quoted;
+		return true;
+	}
+	return false;
+}
+
 static Tokens lexConfig(string rawConfig) {
 	Tokens tokens;
 	char c;
 	char prevC;
 	bool createNewToken = true;
+	bool quoted = false;
 	
 	rawConfig = removeComments(rawConfig);
 	prevC = '\0';
 	for (std::string::iterator it = rawConfig.begin(); it != rawConfig.end(); ++it) {
 		c = *it;
-		if (isspace(c) || c == ';' || c == '{' || c == '}' || prevC == ';' || prevC == '{' || prevC == '}') {
+		if (!quoted && (    isspace(c) ||     c == '"' ||     c == ';' ||     c == '{' ||     c == '}' ||
+						isspace(prevC) || prevC == '"' || prevC == ';' || prevC == '{' || prevC == '}')) {
 			if (!tokens.empty()) {
 				createNewToken = true;
 				updateTokenType(tokens);
@@ -286,6 +297,9 @@ static Tokens lexConfig(string rawConfig) {
 			tokens.push_back(newToken(TOK_UNKNOWN, ""));
 			createNewToken = false;
 		}
+
+		if (c == '"')
+			(void)updateQuoted(quoted, tokens.back().second);
 		tokens.back().second += c;
 	}
 	return tokens;
@@ -315,7 +329,7 @@ Config parseConfig(string rawConfig) {
 
 	updateDefaults(config);
 
-	checkDirectives(config);
+	DirectiveValidation::checkDirectives(config);
 
 	if (config.second.empty())
 		throw runtime_error(Errors::Config::ZeroServers());

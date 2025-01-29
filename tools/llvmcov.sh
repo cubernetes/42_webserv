@@ -24,11 +24,9 @@ LLVM_PROFDATA_DIR="llvm_profdata"
 [ -e "${LLVM_PROFDATA_DIR}" ] && ([ -d "${LLVM_PROFDATA_DIR}" ] || die "LLVM_PROFDATA_DIR (${LLVM_PROFDATA_DIR}) exists and is not a directory")
 
 export DEBUG=1
-export CXX='clang++'
+export _CXX='clang++'
 export CFLAGS='-fprofile-instr-generate -fcoverage-mapping'
 export LDFLAGS='-fprofile-instr-generate'
-#CFLAGS='-fprofile-arcs -ftest-coverage'
-#LDFLAGS='-fprofile-arcs -ftest-coverage'
 export LLVM_PROFILE_FILE="${LLVM_PROFDATA_DIR}/code-%p.profraw"
 
 rm -rf "./${LLVM_PROFDATA_DIR}" || die "Could not remove LLVM_PROFDATA_DIR (${LLVM_PROFDATA_DIR})"
@@ -36,7 +34,7 @@ mkdir -p "${LLVM_PROFDATA_DIR}" || die "Could not create LLVM_PROFDATA_DIR (${LL
 make -sj unit_tests || die "Build failed"
 # shellcheck disable=SC2046
 llvm-profdata merge -output="${LLVM_PROFDATA_DIR}/code.profdata" $(find "${LLVM_PROFDATA_DIR}" -mindepth 1 -maxdepth 1 -type f -name 'code-*.profraw') || die "Could not merge prof data"
-llvm-cov report ./c2_unit_tests -instr-profile="${LLVM_PROFDATA_DIR}/code.profdata" -use-color || die "Could not generate coverage report"
+llvm-cov report -ignore-filename-regex='Catch2/src/catch2/' ./c2_unit_tests -instr-profile="${LLVM_PROFDATA_DIR}/code.profdata" -use-color || die "Could not generate coverage report"
 
 printf "Show entire coverage data in less pager (y/N): "
 read -r choice

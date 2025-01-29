@@ -21,10 +21,10 @@ highlight_tags () {
 }
 
 remove_todo_color () {
-	sed -e "s/\\[01;31m\\[K[Tt][Oo][Dd][Oo]\\[m\\[K/TODO/g"
+	sed -e "s/\\[01;31m\\[K[Mm][Aa][Yy][Bb][Ee]\\[m\\[K/MAYBE/g"
 }
 
 grep --color=always \
 	--exclude-dir=.git/ \
 	--exclude-dir=Catch2/ \
-	-IinR -- '\<[T]ODO\>' "$(git rev-parse --show-toplevel)" | grep -v 'src/\.gitignore' | remove_todo_color | grep -v -e '_TODO_' -e '/TODO/' | highlight_tags
+	-IinR -- '\<[M]AYBE\>' "$(git rev-parse --show-toplevel)" | grep -v 'src/\.gitignore' | remove_todo_color | grep -v -e '_MAYBE_' -e '/MAYBE/' | highlight_tags

@@ -2,6 +2,7 @@
 #include "HttpServer.hpp"
 #include "CgiHandler.hpp"
 #include <cstdio>
+#include "DirectiveValidation.hpp"
 
 bool HttpServer::requestIsForCgi(const HttpRequest& request, const LocationCtx& location) {
 	if (!directiveExists(location.second, "cgi_dir"))
@@ -122,7 +123,7 @@ HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer) {
 
 void HttpServer::handleDelete(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
 	if (!directiveExists(location.second, "upload_dir"))
-		sendError(clientSocket, 405);
+		sendError(clientSocket, 405, NULL);
 	string diskPath = determineDiskPath(request, location);
 
 	struct stat fileStat;
@@ -157,7 +158,9 @@ void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& re
 }
 
 bool HttpServer::methodAllowed(const HttpRequest& request, const LocationCtx& location) {
-	if (!directiveExists(location.second, "limit_except"))
+	if (!Utils::allUppercase(request.method))
+		return false;
+	else if (!directiveExists(location.second, "limit_except"))
 		return true;
 	const Arguments& allowedMethods = getFirstDirective(location.second, "limit_except");
 	for (Arguments::const_iterator method = allowedMethods.begin(); method != allowedMethods.end(); ++method) {
@@ -167,12 +170,27 @@ bool HttpServer::methodAllowed(const HttpRequest& request, const LocationCtx& lo
 	return false;
 }
 
+void HttpServer::rewriteRequest(int clientSocket, int statusCode, const string& urlOrText, const LocationCtx& location) {
+	if (DirectiveValidation::isDoubleQuoted(urlOrText))
+		sendString(clientSocket, DirectiveValidation::decodeDoubleQuotedString(urlOrText), statusCode);
+	else if (DirectiveValidation::isHttpUri(urlOrText))
+		redirectClient(clientSocket, urlOrText, statusCode);
+	else
+		sendError(clientSocket, 500, &location); // proper parsing should catch this case!
+}
+
+// MAYBE: refactor
 void HttpServer::handleRequest(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
 	if (!methodAllowed(request, location))
-		sendError(clientSocket, 405);
+		sendError(clientSocket, 405, &location);
+	else if (directiveExists(location.second, "return"))
+		rewriteRequest(clientSocket,
+			std::atoi(getFirstDirective(location.second, "return")[0].c_str()),
+			getFirstDirective(location.second, "return")[1],
+			location);
 	else if (!requestIsForCgi(request, location))
 		handleRequestInternally(clientSocket, request, location);
-	try {
+	else try {
 		// Get CGI configuration TODO: @sonia do the executeDirectly case
 		ArgResults cgiExts = getAllDirectives(location.second, "cgi_ext");
 		for (ArgResults::const_iterator ext = cgiExts.begin(); ext != cgiExts.end(); ++ext) {

@@ -80,7 +80,7 @@ struct sockaddr_in HttpServer::getSockaddrIn(int clientSocket) {
 	socklen_t addrLen = sizeof(addr);
 	if (getsockname(clientSocket, (struct sockaddr*)&addr, &addrLen) < 0) {
 		int prev_errno = errno;
-		sendError(clientSocket, 500);
+		sendError(clientSocket, 500, NULL);
 		throw runtime_error(string("getsockname failed: ") + strerror(prev_errno));
 	}
 	return addr;
@@ -95,7 +95,7 @@ const LocationCtx& HttpServer::requestToLocation(int clientSocket, const HttpReq
 	// find server by matching against host, addr, and port
 	size_t serverIdx;
 	if (!(serverIdx = findMatchingServer(host, addr.sin_addr, addr.sin_port))) {
-		sendError(clientSocket, 404); // TODO: @all: is 404 rlly correct?
+		sendError(clientSocket, 404, NULL); // TODO: @all: is 404 rlly correct?
 		throw runtime_error(string("couldn't find a server for hostname '") + host + "' and addr:port being " + STR(ntohl(addr.sin_addr.s_addr)) + ":" + STR(ntohs(addr.sin_port)));
 	}
 	const Server& server = _servers[serverIdx - 1]; // serverIdx=0 indicates failure, so 1 is the first server
@@ -103,7 +103,7 @@ const LocationCtx& HttpServer::requestToLocation(int clientSocket, const HttpReq
 	// find location by matching against request uri
 	size_t locationIdx;
 	if (!(locationIdx = findMatchingLocation(server, request.path))) {
-		sendError(clientSocket, 404); // TODO: @all: is 404 rlly correct?
+		sendError(clientSocket, 404, NULL); // TODO: @all: is 404 rlly correct?
 		throw runtime_error(string("couldn't find a location for URI '") + request.path + "'");
 	}
 	return server.locations[locationIdx - 1]; // TODO: @all: we need a default location at "/" that has all the server's directives
