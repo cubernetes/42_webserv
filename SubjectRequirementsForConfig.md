@@ -136,9 +136,3 @@
     - default: html
     - multiple: no
     - https://nginx.org/en/docs/http/ngx_http_core_module.html#root
-
-```c
-int main() {
-    echo hi
-}
-```
