@@ -60,6 +60,7 @@ public:
 	struct AddrPortCompare;
 	struct HttpRequest;
 	struct PendingWrite;
+	struct CgiProcess;
 	enum FdState {
 		FD_READABLE,
 		FD_WRITEABLE,
@@ -84,6 +85,8 @@ public:
 	typedef map<string, string> MimeTypes;
 	typedef map<int, string> StatusTexts;
 	typedef map<int, PendingWrite> PendingWrites;
+	typedef int CgiFds[2];
+	typedef map<int, CgiProcess> CgiProcessMap;
 	typedef set<int> PendingCloses;
 	typedef map<int, HttpRequest> PendingRequests;
 
@@ -154,13 +157,12 @@ public:
 		FdStates fdStates;
 
 		MultPlexFds(MultPlexType initMultPlexType) : multPlexType(initMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() { FD_ZERO(&selectFdSet); }
-	//private:
+	//private: //should be private, but can't because of Repr.hpp
 		MultPlexFds() : multPlexType(Constants::defaultMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() {}
 	};
-
-	struct CGIProcess {
+	struct CgiProcess {
 		pid_t pid;
-		int pipe_fd;
+		CgiFds cgiFds;
 		string response;
 		unsigned long totalSize;
 		int clientSocket;
@@ -168,11 +170,12 @@ public:
 		bool headersSent;
 		int pollCycles;
 		
-		CGIProcess(pid_t p, int fd, int client, const LocationCtx* loc) : 
-			pid(p), pipe_fd(fd), response(), totalSize(0), clientSocket(client), location(loc), headersSent(false), pollCycles(0) {}
-		CGIProcess(const CGIProcess& other) : pid(other.pid), pipe_fd(other.pipe_fd), response(other.response), totalSize(other.totalSize), clientSocket(other.clientSocket), location(other.location), headersSent(other.headersSent), pollCycles(other.pollCycles) { (void)other; }
-		CGIProcess& operator=(const CGIProcess&) { return *this; }
-};
+		CgiProcess(pid_t _pid, CgiFds _cgiFds, int _clientSocket, const LocationCtx* _location) : 
+			pid(_pid), cgiFds(), response(), totalSize(0), clientSocket(_clientSocket), location(_location), headersSent(false), pollCycles(0) { cgiFds[0] = _cgiFds[0]; cgiFds[1] = _cgiFds[1]; }
+		CgiProcess(const CgiProcess& other) :
+			pid(other.pid), cgiFds(), response(other.response), totalSize(other.totalSize), clientSocket(other.clientSocket), location(other.location), headersSent(other.headersSent), pollCycles(other.pollCycles) { cgiFds[0] = other.cgiFds[0]; cgiFds[1] = other.cgiFds[1]; }
+		CgiProcess& operator=(const CgiProcess&) { return *this; }
+	};
 
 	const vector<int>&				get_listeningSockets()	const { return _listeningSockets; }
 	const MultPlexFds&				get_monitorFds()		const { return _monitorFds; }
@@ -186,7 +189,7 @@ public:
 	const PendingCloses&			get_pendingCloses()		const { return _pendingCloses; }
 	const Servers&					get_servers()			const { return _servers; }
 	const DefaultServers&			get_defaultServers()	const { return _defaultServers; }
-	map<int, CGIProcess>& 			get_CGIProcesses()		{ return _cgiProcesses; }
+	CgiProcessMap&		 			get_CgiProcesses()		{ return _cgiProcesses; }
 	MultPlexFds&					get_MonitorFds()		{ return _monitorFds; }
 	void sendError(int clientSocket, int statusCode, const LocationCtx *const location);
 
@@ -204,8 +207,8 @@ private:
 	PendingCloses			_pendingCloses;
 	Servers					_servers;
 	DefaultServers			_defaultServers;
-	map<int, CGIProcess>	_cgiProcesses;
 	PendingRequests			_pendingRequests;
+	CgiProcessMap			_cgiProcesses;
 	static const int		CGI_TIMEOUT = 5; 
 
 
@@ -261,7 +264,7 @@ private:
 
 	// CGI
 	bool requestIsForCgi(const HttpRequest& request, const LocationCtx& location);
-	void handleCGIRead(int fd);
+	void handleCgiRead(int fd);
 
 	// Timeout
 	void checkForInactiveClients();

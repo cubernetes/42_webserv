@@ -14,16 +14,16 @@ bool HttpServer::requestIsForCgi(const HttpRequest& request, const LocationCtx& 
 	return true;
 }
 
-void HttpServer::handleCGIRead(int fd) {
+void HttpServer::handleCgiRead(int fd) {
 
-	std::map<int, CGIProcess>::iterator it = _cgiProcesses.find(fd);
+	CgiProcessMap::iterator it = _cgiProcesses.find(fd);
 	if (it == _cgiProcesses.end()) {
 		// CGI process is not found
 		sendError(fd, 502, NULL);
 		return;
 	}
 
-	CGIProcess& process = it->second;
+	CgiProcess& process = it->second;
 	char buffer[CONSTANTS_CHUNK_SIZE];
 
 	ssize_t bytesRead = read(fd, buffer, sizeof(buffer) - 1);
@@ -480,7 +480,7 @@ void HttpServer::handleIncomingData(int clientSocket, const char* buffer, ssize_
 
 void HttpServer::readFromClient(int clientSocket) {
 	if (_cgiProcesses.find(clientSocket) != _cgiProcesses.end()) {
-		handleCGIRead(clientSocket);
+		handleCgiRead(clientSocket);
 		return;
 	}
 

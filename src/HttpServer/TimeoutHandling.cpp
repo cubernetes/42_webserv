@@ -1,8 +1,8 @@
 #include "HttpServer.hpp"
 
 void HttpServer::checkForInactiveClients() {
-	for (std::map<int, CGIProcess>::iterator it = _cgiProcesses.begin(); it != _cgiProcesses.end(); ) {
-		CGIProcess& process = it->second;
+	for (CgiProcessMap::iterator it = _cgiProcesses.begin(); it != _cgiProcesses.end(); ) {
+		CgiProcess& process = it->second;
 		process.pollCycles++;
 
 		int cyclesForTimeout = CGI_TIMEOUT * (1000 / Constants::multiplexTimeout);
@@ -12,7 +12,7 @@ void HttpServer::checkForInactiveClients() {
 			sendError(process.clientSocket, 504, process.location);
 			
 			closeAndRemoveMultPlexFd(_monitorFds, it->first);
-			std::map<int, CGIProcess>::iterator tmp = it;
+			std::map<int, CgiProcess>::iterator tmp = it;
 			++it;
 			_cgiProcesses.erase(tmp);
 		} else {
