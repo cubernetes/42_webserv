@@ -58,11 +58,19 @@ public:
 	//// forward decls ////
 	struct Server;
 	struct AddrPortCompare;
+	struct HttpRequest;
 	struct PendingWrite;
 	enum FdState {
 		FD_READABLE,
 		FD_WRITEABLE,
 		FD_OTHER_STATE,
+	};
+
+	enum RequestState {
+		READING_HEADERS,
+		READING_BODY,
+		REQUEST_COMPLETE,
+		REQUEST_ERROR
 	};
 
 	//// typedefs ////
@@ -77,6 +85,7 @@ public:
 	typedef map<int, string> StatusTexts;
 	typedef map<int, PendingWrite> PendingWrites;
 	typedef set<int> PendingCloses;
+	typedef map<int, HttpRequest> PendingRequests;
 
 	//// structs and other constructs ////
 	struct HttpRequest {
@@ -84,13 +93,26 @@ public:
 		string				path;
 		string				httpVersion;
 		map<string, string>	headers;
+		string				body;
+		RequestState		state;
+		size_t				contentLength;
+		bool				chunkedTransfer;
+		size_t				bytesRead;
+		string				temporaryBuffer;
 
 		HttpRequest() :
 			method(),
 			path(),
 			httpVersion(),
-			headers() {}
+			headers(),
+			body(),
+			state(READING_HEADERS),
+			contentLength(0),
+			chunkedTransfer(false),
+			bytesRead(0),
+			temporaryBuffer() {}
 	};
+	
 	struct PendingWrite {
 		string	data;
 		size_t	bytesSent;
@@ -183,14 +205,15 @@ private:
 	Servers					_servers;
 	DefaultServers			_defaultServers;
 	map<int, CGIProcess>	_cgiProcesses;
+	PendingRequests			_pendingRequests;
 	static const int		CGI_TIMEOUT = 5; 
 
 
 	//// private methods ////
 	// HttpServer must always be constructed with a config
-	HttpServer() : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses() {};
+	HttpServer() : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses(), _pendingRequests() {};
 	// Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a server and its config
-	HttpServer(const HttpServer&) : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses() {};
+	HttpServer(const HttpServer&) : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses(), _pendingRequests() {};
 	// HttpServer cannot be assigned to
 	HttpServer& operator=(const HttpServer&) { return *this; };
 
@@ -242,7 +265,6 @@ private:
 
 	// Timeout
 	void checkForInactiveClients();
-	void timeoutHandler(int clientSocket);
 
 	// Writing to a client
 	void writeToClient(int clientSocket);
@@ -283,6 +305,23 @@ private:
 	string statusTextFromCode(int statusCode);
 	string wrapInHtmlBody(const string& text);
 	bool isListeningSocket(int socket);
+
+	// POST related
+	bool isHeaderComplete(const HttpRequest& request) const;
+	bool needsMoreData(const HttpRequest& request) const;
+	void processContentLength(HttpRequest& request);
+	bool validateRequest(const HttpRequest& request) const;
+	bool parseRequestLine(const string& line, HttpRequest& request);
+	bool parseHeader(const string& line, HttpRequest& request);
+	size_t getRequestSizeLimit(const HttpRequest& request, const LocationCtx* location = NULL);
+
+	// Request processing stages
+	void handleIncomingData(int clientSocket, const char* buffer, ssize_t bytesRead);
+	bool processRequestHeaders(int clientSocket, HttpRequest& request, const string& rawData);
+	bool processRequestBody(int clientSocket, HttpRequest& request, const char* buffer, size_t bytesRead);
+	void finalizeRequest(int clientSocket, HttpRequest& request);
+	void removeClientAndRequest(int clientSocket);
+	bool checkRequestSize(int clientSocket, const HttpRequest& request, size_t currentSize);
 };
 
 std::ostream& operator<<(std::ostream&, const HttpServer&);

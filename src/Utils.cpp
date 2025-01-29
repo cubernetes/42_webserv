@@ -81,3 +81,29 @@ bool Utils::allUppercase(const string& str) {
 	}
 	return true;
 }
+
+size_t Utils::convertSizeToBytes(const string& sizeStr) {
+	if (sizeStr.empty())
+		return 0;
+		
+	size_t size = 0;
+	string numStr;
+	char unit = sizeStr[sizeStr.length() - 1];
+	
+	if (std::isdigit(unit)) {
+		numStr = sizeStr;
+	} else {
+		numStr = sizeStr.substr(0, sizeStr.length() - 1);
+		unit = static_cast<char>(std::tolower(unit));
+	}
+	
+	size = static_cast<size_t>(std::atol(numStr.c_str()));
+	
+	switch (unit) {
+		case 'k': size *= 1024; break;
+		case 'm': size *= 1024 * 1024; break;
+		case 'g': size *= 1024 * 1024 * 1024; break;
+	}
+	
+	return size;
+}
