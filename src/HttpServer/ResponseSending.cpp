@@ -31,7 +31,7 @@ void HttpServer::terminateIfNoPendingData(PendingWrites::iterator& it, int clien
 	pw.bytesSent += static_cast<size_t>(bytesSent);
 	
 	// Check whether we've sent everything
-	if (pw.bytesSent >= pw.data.length()) {
+	if (pw.bytesSent >= pw.data.length() || bytesSent == 0) {
 		_pendingWrites.erase(it);
 		// for POLL: remove POLLOUT from events since we're done writing
 		stopMonitoringForWriteEvents(_monitorFds, clientSocket);
