@@ -280,16 +280,29 @@ void HttpServer::processContentLength(HttpRequest& request) {
 }
 
 bool HttpServer::validateRequest(const HttpRequest& request) const {
-	if (!isHeaderComplete(request)) 
+	// First check headers are complete
+	if (!isHeaderComplete(request)) {
+		Logger::logDebug("Invalid request: incomplete headers");
 		return false;
-	if (request.method != "GET" && request.method != "POST" && request.method != "DELETE") 
-		return false;
-	if (request.httpVersion != "HTTP/1.1") 
-		return false;
+	}
 	
-	// For POST requests
-	if (request.method == "POST" && !request.chunkedTransfer && request.contentLength == 0)
+	// Check HTTP method
+	if (request.method != "GET" && request.method != "POST" && request.method != "DELETE") {
+		Logger::logDebug("Invalid request: unsupported method: " + request.method);
 		return false;
+	}
+	
+	// Check HTTP version
+	if (request.httpVersion != "HTTP/1.1") {
+		Logger::logDebug("Invalid request: unsupported HTTP version: " + request.httpVersion);
+		return false;
+	}
+	
+	// For POST requests, verify content info
+	if (request.method == "POST" && !request.chunkedTransfer && request.contentLength == 0) {
+		Logger::logDebug("Invalid POST request: no content length or chunked transfer");
+		return false;
+	}
 	
 	return true;
 }
@@ -314,6 +327,157 @@ size_t HttpServer::getRequestSizeLimit(const HttpRequest& request, const Locatio
 	return Utils::convertSizeToBytes("1m");
 }
 
+void HttpServer::removeClientAndRequest(int clientSocket) {
+	removeClient(clientSocket);
+	_pendingRequests.erase(clientSocket);
+}
+
+bool HttpServer::checkRequestSize(int clientSocket, const HttpRequest& request, size_t currentSize) {
+	size_t sizeLimit = getRequestSizeLimit(request);
+	if (currentSize > sizeLimit) {
+		sendError(clientSocket, 413, NULL); // Payload Too Large
+		removeClientAndRequest(clientSocket);
+		return false;
+	}
+	return true;
+}
+
+bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest& request, const string& rawData) {
+	size_t headerEnd = rawData.find("\r\n\r\n");
+	Logger::logDebug("Looking for headers end marker. Found: " + STR(headerEnd != string::npos));
+	if (headerEnd == string::npos) {
+		return false; // Need more data
+	}
+
+	std::istringstream stream(rawData);
+	string line;
+
+	// Parse request line (GET /path HTTP/1.1)
+	if (!std::getline(stream, line) || !parseRequestLine(line, request)) {
+		Logger::logDebug("Failed to parse request line: [" + line + "]");
+		sendError(clientSocket, 400, NULL);
+		removeClientAndRequest(clientSocket);
+		return false;
+	}
+	Logger::logDebug("Parsed request line: " + request.method + " " + request.path);
+	// Parse headers (Key: Value)
+	while (std::getline(stream, line) && line != "\r") {
+		if (!parseHeader(line, request)) {
+			Logger::logDebug("Failed to parse header line: [" + line + "]");
+			sendError(clientSocket, 400, NULL);
+			removeClientAndRequest(clientSocket);
+			return false;
+		}
+		Logger::logDebug("Parsed header line: [" + line + "]");
+	}
+
+	// Process Content-Length and chunked transfer headers
+	processContentLength(request);
+	Logger::logDebug("Content length detected: " + STR(request.contentLength));
+	Logger::logDebug("Chunked transfer: " + STR(request.chunkedTransfer));
+
+
+	// Validate the request
+	if (!validateRequest(request)) {
+		Logger::logDebug("Request validation failed");
+		sendError(clientSocket, 405, NULL);
+		removeClientAndRequest(clientSocket);
+		return false;
+	}
+
+	// Move any remaining data to body
+	if (headerEnd + 4 < rawData.size()) {
+		request.body = rawData.substr(headerEnd + 4);
+		request.bytesRead = request.body.size();
+		Logger::logDebug("Moved " + STR(request.bytesRead) + " bytes to body");
+	} else {
+		request.body.clear();
+		request.bytesRead = 0;
+	}
+
+	// Update state
+	request.state = READING_BODY;
+
+	// If no body expected, mark as complete
+	if (!request.chunkedTransfer && 
+		(request.contentLength == 0 || request.bytesRead >= request.contentLength)) {
+		Logger::logDebug("No body expected, marking as complete");
+		request.state = REQUEST_COMPLETE;
+	}
+
+	return true;
+}
+
+bool HttpServer::processRequestBody(int clientSocket, HttpRequest& request, const char* buffer, size_t bytesRead) {
+	// Append new data to body
+	request.body.append(buffer, bytesRead);
+	request.bytesRead += bytesRead;
+
+	// Check size limit
+	if (!checkRequestSize(clientSocket, request, request.body.size()))
+		return false;
+
+	// Check if we have all the data
+	if (!request.chunkedTransfer && request.bytesRead >= request.contentLength)
+		request.state = REQUEST_COMPLETE;
+
+	return true;
+}
+
+void HttpServer::finalizeRequest(int clientSocket, HttpRequest& request) {
+	try {
+		const LocationCtx& location = requestToLocation(clientSocket, request);
+		handleRequest(clientSocket, request, location);
+	} catch (const runtime_error& err) {
+		Logger::logError(err.what());
+	}
+	_pendingRequests.erase(clientSocket);
+}
+
+void HttpServer::handleIncomingData(int clientSocket, const char* buffer, ssize_t bytesRead) {
+
+	Logger::logDebug("Received data length: " + STR(bytesRead));
+	Logger::logDebug("Raw data: [" + string(buffer, bytesRead) + "]");
+	// Get or create request state
+	HttpRequest& request = _pendingRequests[clientSocket];
+	Logger::logDebug("Current request state: " + STR(static_cast<int>(request.state)));
+
+	// Process based on current state
+	if (request.state == READING_HEADERS) {
+		// During header reading, we temporarily accumulate data
+		string rawData = request.temporaryBuffer + string(buffer, static_cast<size_t>(bytesRead));
+		Logger::logDebug("Accumulated data length: " + STR(rawData.size()));
+
+		// Check accumulated size
+		if (!checkRequestSize(clientSocket, request, rawData.size()))
+			return;
+
+		// Store for next iteration if headers aren't complete
+		request.temporaryBuffer = rawData;
+
+		// Try to process headers
+		if (processRequestHeaders(clientSocket, request, rawData)) {
+			Logger::logDebug("Headers processed. Body size so far: " + STR(request.body.size()));
+			Logger::logDebug("Expected content length: " + STR(request.contentLength));
+			request.temporaryBuffer.clear();
+		}
+	}
+	else if (request.state == READING_BODY) {
+		Logger::logDebug("Reading body. Current size: " + STR(request.bytesRead) + 
+						" Expected: " + STR(request.contentLength));
+		if (!processRequestBody(clientSocket, request, buffer, static_cast<size_t>(bytesRead))) {
+			return;
+		}
+	}
+
+	// If request is complete, handle it
+	if (request.state == REQUEST_COMPLETE) {
+		Logger::logDebug("Request complete. Processing...");
+		finalizeRequest(clientSocket, request);
+	}
+
+}
+
 void HttpServer::readFromClient(int clientSocket) {
 	if (_cgiProcesses.find(clientSocket) != _cgiProcesses.end()) {
 		handleCGIRead(clientSocket);
@@ -322,98 +486,12 @@ void HttpServer::readFromClient(int clientSocket) {
 
 	char buffer[CONSTANTS_CHUNK_SIZE];
 	ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
-	
+
 	if (bytesRead <= 0) {
-		removeClient(clientSocket);
-		_pendingRequests.erase(clientSocket);
+		removeClientAndRequest(clientSocket);
 		return;
 	}
-	
-	HttpRequest& request = _pendingRequests[clientSocket];
 
-	if (request.state == READING_HEADERS) {
-		string newData(buffer, static_cast<size_t>(bytesRead));
-		string& accumulated = request.body; // Temporarily store headers here
-		accumulated += newData;
-		
-		size_t sizeLimit = getRequestSizeLimit(request);
-		if (accumulated.size() > sizeLimit) {
-			sendError(clientSocket, 413, NULL);
-			removeClient(clientSocket);
-			_pendingRequests.erase(clientSocket);
-			return;
-		}
-		
-		// Look for end of headers
-		size_t headerEnd = accumulated.find("\r\n\r\n");
-		if (headerEnd == string::npos) {
-			return; // Need MOAR!!1 data
-		}
-		
-		std::istringstream stream(accumulated);
-		string line;
-		
-		if (!std::getline(stream, line) || !parseRequestLine(line, request)) {
-			removeClient(clientSocket);
-			_pendingRequests.erase(clientSocket);
-			return;
-		}
-		
-		while (std::getline(stream, line) && line != "\r") {
-			if (!parseHeader(line, request)) {
-				removeClient(clientSocket);
-				_pendingRequests.erase(clientSocket);
-				return;
-			}
-		}
-		
-		processContentLength(request);
-		
-		if (!validateRequest(request)) {
-			removeClient(clientSocket);
-			_pendingRequests.erase(clientSocket);
-			return;
-		}
-		
-		if (headerEnd + 4 < accumulated.size()) {
-			request.body = accumulated.substr(headerEnd + 4);
-			request.bytesRead = request.body.size();
-		} else {
-			request.body.clear();
-			request.bytesRead = 0;
-		}
-		
-		request.state = READING_BODY;
-		
-		// If no body needed
-		if (!request.chunkedTransfer && request.contentLength == 0) {
-			request.state = REQUEST_COMPLETE;
-		}
-	}
-	else if (request.state == READING_BODY) {
-		// TODO: @sonia follow up PR on chunked transfer
-		request.body.append(buffer, static_cast<size_t>(bytesRead));
-		request.bytesRead += static_cast<size_t>(bytesRead);
-
-		size_t sizeLimit = getRequestSizeLimit(request);
-		if (request.body.size() > sizeLimit) {
-			sendError(clientSocket, 413, NULL);
-			removeClient(clientSocket);
-			_pendingRequests.erase(clientSocket);
-			return;
-		}
-		
-		if (!request.chunkedTransfer && request.bytesRead >= request.contentLength)
-			request.state = REQUEST_COMPLETE;
-	}
-	
-	if (request.state == REQUEST_COMPLETE) {
-		try {
-			const LocationCtx& location = requestToLocation(clientSocket, request);
-			handleRequest(clientSocket, request, location);
-		} catch (const runtime_error& err) {
-			Logger::logError(err.what());
-		}
-		_pendingRequests.erase(clientSocket);
-	}
+	buffer[bytesRead] = '\0';
+	handleIncomingData(clientSocket, buffer, bytesRead);
 }

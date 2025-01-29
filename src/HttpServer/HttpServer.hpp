@@ -98,16 +98,19 @@ public:
 		size_t				contentLength;
 		bool				chunkedTransfer;
 		size_t				bytesRead;
+		string				temporaryBuffer;
 
 		HttpRequest() :
 			method(),
 			path(),
 			httpVersion(),
+			headers(),
 			body(),
 			state(READING_HEADERS),
 			contentLength(0),
 			chunkedTransfer(false),
-			bytesRead(0) {}
+			bytesRead(0),
+			temporaryBuffer() {}
 	};
 	
 	struct PendingWrite {
@@ -208,9 +211,9 @@ private:
 
 	//// private methods ////
 	// HttpServer must always be constructed with a config
-	HttpServer() : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses() {};
+	HttpServer() : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses(), _pendingRequests() {};
 	// Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a server and its config
-	HttpServer(const HttpServer&) : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses() {};
+	HttpServer(const HttpServer&) : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses(), _pendingRequests() {};
 	// HttpServer cannot be assigned to
 	HttpServer& operator=(const HttpServer&) { return *this; };
 
@@ -262,7 +265,6 @@ private:
 
 	// Timeout
 	void checkForInactiveClients();
-	void timeoutHandler(int clientSocket);
 
 	// Writing to a client
 	void writeToClient(int clientSocket);
@@ -312,6 +314,14 @@ private:
 	bool parseRequestLine(const string& line, HttpRequest& request);
 	bool parseHeader(const string& line, HttpRequest& request);
 	size_t getRequestSizeLimit(const HttpRequest& request, const LocationCtx* location = NULL);
+
+	// Request processing stages
+	void handleIncomingData(int clientSocket, const char* buffer, ssize_t bytesRead);
+	bool processRequestHeaders(int clientSocket, HttpRequest& request, const string& rawData);
+	bool processRequestBody(int clientSocket, HttpRequest& request, const char* buffer, size_t bytesRead);
+	void finalizeRequest(int clientSocket, HttpRequest& request);
+	void removeClientAndRequest(int clientSocket);
+	bool checkRequestSize(int clientSocket, const HttpRequest& request, size_t currentSize);
 };
 
 std::ostream& operator<<(std::ostream&, const HttpServer&);
