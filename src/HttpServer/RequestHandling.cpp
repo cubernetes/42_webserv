@@ -123,7 +123,7 @@ HttpServer::HttpRequest HttpServer::parseHttpRequest(const char *buffer) {
 
 void HttpServer::handleDelete(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
 	if (!directiveExists(location.second, "upload_dir"))
-		sendError(clientSocket, 405);
+		sendError(clientSocket, 405, NULL);
 	string diskPath = determineDiskPath(request, location);
 
 	struct stat fileStat;
@@ -158,7 +158,9 @@ void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& re
 }
 
 bool HttpServer::methodAllowed(const HttpRequest& request, const LocationCtx& location) {
-	if (!directiveExists(location.second, "limit_except"))
+	if (!Utils::allUppercase(request.method))
+		return false;
+	else if (!directiveExists(location.second, "limit_except"))
 		return true;
 	const Arguments& allowedMethods = getFirstDirective(location.second, "limit_except");
 	for (Arguments::const_iterator method = allowedMethods.begin(); method != allowedMethods.end(); ++method) {

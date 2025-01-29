@@ -73,3 +73,11 @@ string Utils::replaceAll(string s, const string& search, const string& replace) 
 string Utils::jsonEscape(string s) {
 	return Utils::replaceAll(Utils::replaceAll(s, "\\", "\\\\"), "\"", "\\\"");
 }
+
+bool Utils::allUppercase(const string& str) {
+	for (size_t i = 0; i < str.length(); ++i) {
+		if (str[i] < 'A' || str[i] > 'Z')
+			return false;
+	}
+	return true;
+}
