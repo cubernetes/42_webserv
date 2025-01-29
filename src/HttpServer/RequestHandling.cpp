@@ -189,7 +189,8 @@ bool HttpServer::methodAllowed(const HttpRequest& request, const LocationCtx& lo
 		return false;
 	else if (!directiveExists(location.second, "limit_except"))
 		return true;
-	const Arguments& allowedMethods = getFirstDirective(location.second, "limit_except");
+	string limit_except = "limit_except";
+	const Arguments& allowedMethods = getFirstDirective(location.second, limit_except);
 	for (Arguments::const_iterator method = allowedMethods.begin(); method != allowedMethods.end(); ++method) {
 		if (*method == request.method)
 			return true;

@@ -4,7 +4,10 @@ size_t HttpServer::getIndexOfServerByHost(const string& requestedHost, const str
 	string requestedHostLower = Utils::strToLower(requestedHost);
 	for (size_t i = 0; i < _servers.size(); ++i) {
 		const Server& server = _servers[i];
-		if (server.port == port && memcmp(&server.ip, &addr, sizeof(addr)) == 0) {
+		if (server.port == port && (
+				memcmp(&server.ip, &addr, sizeof(addr)) == 0 ||
+				server.ip.s_addr == INADDR_ANY
+			)) {
 			for (size_t j = 0; j < server.serverNames.size(); ++j) {
 				if (requestedHostLower == Utils::strToLower(server.serverNames[j])) { // see https://datatracker.ietf.org/doc/html/rfc2616#section-3.2.3
 					return i + 1;
@@ -17,9 +20,17 @@ size_t HttpServer::getIndexOfServerByHost(const string& requestedHost, const str
 
 size_t HttpServer::getIndexOfDefaultServer(const struct in_addr& addr, in_port_t port) const {
 	AddrPort addrPort(addr, port);
-	DefaultServers::const_iterator it = _defaultServers.find(addrPort);
-	if (it != _defaultServers.end()) {
-		return it->second + 1;
+	DefaultServers::const_iterator exactMatch = _defaultServers.find(addrPort);
+	if (exactMatch != _defaultServers.end()) {
+		return exactMatch->second + 1;
+	}
+
+	struct in_addr addrDefault;
+	addrDefault.s_addr = INADDR_ANY;
+	AddrPort addrPortDefault(addrDefault, port);
+	DefaultServers::const_iterator anyMatch = _defaultServers.find(addrPortDefault);
+	if (anyMatch != _defaultServers.end()) {
+		return anyMatch->second + 1;
 	}
 	return 0;
 }
@@ -37,7 +48,6 @@ size_t HttpServer::findMatchingServer(const string& host, const struct in_addr& 
 	return getIndexOfDefaultServer(addr, port);
 }
 
-// TODO: @all: is this algorithm correct? >.>
 size_t HttpServer::findMatchingLocation(const Server& server, const string& path) const {
 	int bestIdx = -1;
 	int bestScore = -1;
@@ -53,13 +63,7 @@ size_t HttpServer::findMatchingLocation(const Server& server, const string& path
 			}
 		}
 	}
-	if (bestIdx >= 0) {
-		return static_cast<size_t>(bestIdx + 1);
-	}
-
-	// TODO: @all: there MUST be a default location on "/", like with nginx, otherwise complicated
-	// location = server.locations[0];
-	return 0;
+	return static_cast<size_t>(bestIdx + 1); // will be 0 when nothing was found. a default / location block is always added at the end of the location vector that SHOULD always match (every path must start with /)
 }
 
 static string getHost(const HttpServer::HttpRequest& request) {
@@ -96,7 +100,7 @@ const LocationCtx& HttpServer::requestToLocation(int clientSocket, const HttpReq
 	size_t serverIdx;
 	if (!(serverIdx = findMatchingServer(host, addr.sin_addr, addr.sin_port))) {
 		sendError(clientSocket, 404, NULL); // TODO: @all: is 404 rlly correct?
-		throw runtime_error(string("couldn't find a server for hostname '") + host + "' and addr:port being " + STR(ntohl(addr.sin_addr.s_addr)) + ":" + STR(ntohs(addr.sin_port)));
+		throw runtime_error(string("Couldn't find a server for hostname '") + host + "' and addr:port being " + STR(ntohl(addr.sin_addr.s_addr)) + ":" + STR(ntohs(addr.sin_port)));
 	}
 	const Server& server = _servers[serverIdx - 1]; // serverIdx=0 indicates failure, so 1 is the first server
 
@@ -104,7 +108,7 @@ const LocationCtx& HttpServer::requestToLocation(int clientSocket, const HttpReq
 	size_t locationIdx;
 	if (!(locationIdx = findMatchingLocation(server, request.path))) {
 		sendError(clientSocket, 404, NULL); // TODO: @all: is 404 rlly correct?
-		throw runtime_error(string("couldn't find a location for URI '") + request.path + "'");
+		throw runtime_error(string("Couldn't find a location for URI '") + request.path + "'");
 	}
-	return server.locations[locationIdx - 1]; // TODO: @all: we need a default location at "/" that has all the server's directives
+	return server.locations[locationIdx - 1];
 }

@@ -1,12 +1,14 @@
 #include "HttpServer.hpp"
 
 static string getServerIpStr(const ServerCtx& serverCtx) {
-	const Arguments hostPort = getFirstDirective(serverCtx.first, "listen");
+	string listen = "listen";
+	const Arguments& hostPort = getFirstDirective(serverCtx.first, listen);
 	return hostPort[0];
 }
 
 static struct in_addr getServerIp(const ServerCtx& serverCtx) {
-	const Arguments hostPort = getFirstDirective(serverCtx.first, "listen");
+	string listen = "listen";
+	const Arguments& hostPort = getFirstDirective(serverCtx.first, listen);
 
 	struct addrinfo hints, *res;
 	std::memset(&hints, 0, sizeof(hints));
@@ -22,7 +24,8 @@ static struct in_addr getServerIp(const ServerCtx& serverCtx) {
 }
 
 static in_port_t getServerPort(const ServerCtx& serverCtx) {
-	const Arguments hostPort = getFirstDirective(serverCtx.first, "listen");
+	string listen = "listen";
+	const Arguments& hostPort = getFirstDirective(serverCtx.first, listen);
 	return htons((in_port_t)std::atoi(hostPort[1].c_str()));
 }
 
@@ -62,7 +65,7 @@ static bool alreadyListening(const HttpServer::Server& server, const HttpServer:
 	for (HttpServer::Servers::const_iterator otherServer = servers.begin(); otherServer != servers.end(); ++otherServer) {
 		struct in_addr otherAddr = otherServer->ip;
 		in_port_t otherPort = otherServer->port;
-		if (std::memcmp(&otherAddr, &server.ip, sizeof(otherAddr)) == 0 && server.port == otherPort)
+		if (server.port == otherPort && (::memcmp(&otherAddr, &server.ip, sizeof(otherAddr)) == 0 || otherAddr.s_addr == INADDR_ANY))
 			return true;
 	}
 	return false;
