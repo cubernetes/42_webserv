@@ -338,7 +338,7 @@ void HttpServer::readFromClient(int clientSocket) {
 		
 		size_t sizeLimit = getRequestSizeLimit(request);
 		if (accumulated.size() > sizeLimit) {
-			sendError(clientSocket, 413);
+			sendError(clientSocket, 413, NULL);
 			removeClient(clientSocket);
 			_pendingRequests.erase(clientSocket);
 			return;
@@ -397,7 +397,7 @@ void HttpServer::readFromClient(int clientSocket) {
 
 		size_t sizeLimit = getRequestSizeLimit(request);
 		if (request.body.size() > sizeLimit) {
-			sendError(clientSocket, 413);
+			sendError(clientSocket, 413, NULL);
 			removeClient(clientSocket);
 			_pendingRequests.erase(clientSocket);
 			return;
