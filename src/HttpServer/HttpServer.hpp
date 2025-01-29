@@ -207,8 +207,8 @@ private:
 	PendingCloses			_pendingCloses;
 	Servers					_servers;
 	DefaultServers			_defaultServers;
-	PendingRequests			_pendingRequests;
 	CgiProcessMap			_cgiProcesses;
+	PendingRequests			_pendingRequests;
 	static const int		CGI_TIMEOUT = 5; 
 
 
