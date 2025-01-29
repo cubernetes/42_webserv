@@ -115,11 +115,16 @@ bool HttpServer::sendErrorPage(int clientSocket, int statusCode, const LocationC
 
 // pass NULL as location if errorPages should not be served
 void HttpServer::sendError(int clientSocket, int statusCode, const LocationCtx *const location) {
-	if (location == NULL || !sendErrorPage(clientSocket, statusCode, *location))
+	Logger::logDebug("Sending error response: " + STR(statusCode));
+	if (location == NULL || !sendErrorPage(clientSocket, statusCode, *location)) {
+		string errorContent = wrapInHtmlBody("<h1>\r\n\t\t\t" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "\r\n\t\t</h1>");
+		Logger::logDebug("Error content: " + errorContent);
 		sendString(clientSocket, wrapInHtmlBody("<h1>\r\n\t\t\t" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "\r\n\t\t</h1>"), statusCode);
+	}
 }
 
 void HttpServer::sendString(int clientSocket, const string& payload, int statusCode, const string& contentType) {
+	Logger::logDebug("Preparing to send string response with status " + STR(statusCode));
 	std::ostringstream	response;
 	
 	response << _httpVersionString << " " << statusCode << " " << statusTextFromCode(statusCode) << "\r\n"
@@ -129,6 +134,7 @@ void HttpServer::sendString(int clientSocket, const string& payload, int statusC
 			<< "\r\n"
 			<< payload;
 
+	Logger::logDebug("Queueing response: " + response.str());
 	queueWrite(clientSocket, response.str());
 	_pendingCloses.insert(clientSocket);
 }

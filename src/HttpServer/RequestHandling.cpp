@@ -381,7 +381,6 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest& request, c
 	if (!validateRequest(request)) {
 		Logger::logDebug("Request validation failed");
 		sendError(clientSocket, 405, NULL);
-		removeClientAndRequest(clientSocket);
 		return false;
 	}
 
