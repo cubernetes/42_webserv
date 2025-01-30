@@ -2,9 +2,9 @@
 
 void HttpServer::queueWrite(int clientSocket, const string& data) {
 	if (_pendingWrites.find(clientSocket) == _pendingWrites.end())
-		_pendingWrites[clientSocket] = PendingWrite(data);
+		_pendingWrites[clientSocket] = string(data);
 	else
-		_pendingWrites[clientSocket].data += data;
+		_pendingWrites[clientSocket] += data;
 	startMonitoringForWriteEvents(_monitorFds, clientSocket);
 }
 
@@ -15,45 +15,60 @@ void HttpServer::terminatePendingCloses(int clientSocket) {
 	}
 }
 
-bool HttpServer::maybeTerminateConnection(PendingWrites::iterator it, int clientSocket) {
-	if (it == _pendingWrites.end()) {
-		// No pending writes, for POLL: remove POLLOUT from events
-		stopMonitoringForWriteEvents(_monitorFds, clientSocket);
-		// Also if this client's connection is pending to be closed, close it
-		terminatePendingCloses(clientSocket);
+bool HttpServer::maybeTerminateConnection(PendingWriteMap::iterator it, int clientSocket) {
+	if (it == _pendingWrites.end()) { // no pending writes anymore, maybe close
+		if (_clientToCgi.find(clientSocket) == _clientToCgi.end()) { // STOP, make sure CGI doesn't want to write data to this client
+			if (_cgiToClient.count(clientSocket) == 0) { // STOP, make sure clientSocket is not a writeFd to the CGI process
+				// No pending writes, for POLL: remove POLLOUT from events
+				// TODO: @timo: is this really needed? aren't we removing the client anyways?
+				stopMonitoringForWriteEvents(_monitorFds, clientSocket);
+				// Also if this client's connection is pending to be closed, close it
+				terminatePendingCloses(clientSocket);
+			}
+		}
 		return true;
 	}
 	return false;
 }
 
-void HttpServer::terminateIfNoPendingData(PendingWrites::iterator& it, int clientSocket, ssize_t bytesSent) {
+void HttpServer::terminateIfNoPendingDataAndNoCgi(PendingWriteMap::iterator& it, int clientSocket, ssize_t bytesSent) {
 	PendingWrite& pw = it->second;
-	pw.bytesSent += static_cast<size_t>(bytesSent);
 	
-	// Check whether we've sent everything
-	if (pw.bytesSent >= pw.data.length() || bytesSent == 0) {
+	// Check whether we've sent everything and that there are no CGI processes
+	if (_clientToCgi.find(clientSocket) == _clientToCgi.end() && (pw.length() == 0 || bytesSent == 0)) {
 		_pendingWrites.erase(it);
+		// TODO: @all: what about removing pendingCloses?
 		// for POLL: remove POLLOUT from events since we're done writing
 		stopMonitoringForWriteEvents(_monitorFds, clientSocket);
+		// TODO: @all: yeah actually we really have to close the connection here somehow, removeCLient or smth
+		removeClient(clientSocket); // REALLY NOT SURE ABOUT THIS ONE
+		_pendingCloses.erase(clientSocket); // also not 100% sure about this one
 	}
 }
 
 void HttpServer::writeToClient(int clientSocket) {
-	PendingWrites::iterator it = _pendingWrites.find(clientSocket);
+	PendingWriteMap::iterator it = _pendingWrites.find(clientSocket);
 	if (maybeTerminateConnection(it, clientSocket))
 		return;
 
 	PendingWrite& pw = it->second;
-	const char* data = pw.data.c_str() + pw.bytesSent;
-	size_t remaining = std::min(Constants::chunkSize, pw.data.length() - pw.bytesSent);
+	size_t dataSize = std::min(Constants::chunkSize, pw.length());
+	string dataChunk = pw.substr(0, dataSize);
+	pw = pw.substr(dataSize); // remove chunk (that will be send) from the beginning
+	const char* data = dataChunk.c_str();
 	
-	ssize_t bytesSent = send(clientSocket, data, remaining, 0);
+	ssize_t bytesSent;
+	if (_cgiToClient.count(clientSocket)) // it's a writeFd for the CGI, can't use send
+		bytesSent = write(clientSocket, data, dataSize);
+	else
+		bytesSent = send(clientSocket, data, dataSize, 0);
 	if (bytesSent < 0) {
+		// TODO: @all: remove pending closes? clear pending writes?
 		removeClient(clientSocket);
 		return;
 	}
 	
-	terminateIfNoPendingData(it, clientSocket, bytesSent);
+	terminateIfNoPendingDataAndNoCgi(it, clientSocket, bytesSent);
 }
 
 // note, be careful sending errors from this function, as it could lead to infinite recursion! (the error sending function uses this function)

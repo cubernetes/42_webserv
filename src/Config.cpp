@@ -309,6 +309,9 @@ static void updateDefaults(Config& config) {
 	populateDefaultHttpDirectives(config.first);
 	for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
 		populateDefaultServerDirectives(server->first, config.first);
+		LocationCtx defaultLocation;
+		defaultLocation.first = "/";
+		server->second.push_back(defaultLocation);
 		for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
 			populateDefaultLocationDirectives(location->second, server->first);
 		}

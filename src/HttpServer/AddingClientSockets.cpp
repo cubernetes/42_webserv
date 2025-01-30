@@ -1,4 +1,5 @@
 #include "HttpServer.hpp"
+#include <fcntl.h>
 
 void HttpServer::addClientSocketToPollFds(MultPlexFds& monitorFds, int clientSocket) {
 	struct pollfd pfd;
@@ -28,7 +29,11 @@ void HttpServer::addNewClient(int listeningSocket) {
 	int clientSocket = accept(listeningSocket, (struct sockaddr*)&clientAddr, &clientLen);
 	if (clientSocket < 0) {
 		Logger::logError(string("accept failed: ") + strerror(errno));
-		return;
+		return; // don't add client on this kind of failure
+	}
+	if (::fcntl(clientSocket, F_SETFD, FD_CLOEXEC) < 0) {
+		Logger::logError(string("fcntl failed: ") + strerror(errno));
+		return; // don't add client on this kind of failure
 	}
 	
 	addClientSocketToMonitorFds(_monitorFds, clientSocket);

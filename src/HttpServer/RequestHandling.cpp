@@ -1,8 +1,8 @@
 #include "Config.hpp"
 #include "HttpServer.hpp"
 #include "CgiHandler.hpp"
-#include <cstdio>
 #include "DirectiveValidation.hpp"
+#include <cstdio>
 
 bool HttpServer::requestIsForCgi(const HttpRequest& request, const LocationCtx& location) {
 	if (!directiveExists(location.second, "cgi_dir"))
@@ -14,29 +14,33 @@ bool HttpServer::requestIsForCgi(const HttpRequest& request, const LocationCtx& 
 	return true;
 }
 
-void HttpServer::handleCGIRead(int fd) {
+void HttpServer::handleCgiRead(int cgiFd) {
 
-	std::map<int, CGIProcess>::iterator it = _cgiProcesses.find(fd);
-	if (it == _cgiProcesses.end()) {
-		// CGI process is not found
-		sendError(fd, 502, NULL);
+	int clientSocket = _cgiToClient[cgiFd]; // guaranteed to work because of the checks before this function is called
+	ClientFdToCgiMap::iterator it = _clientToCgi.find(clientSocket);
+	if (it == _clientToCgi.end()) {
+		// CGI process not found
+		sendError(cgiFd, 502, NULL);
 		return;
 	}
 
-	CGIProcess& process = it->second;
+	CgiProcess& process = it->second;
 	char buffer[CONSTANTS_CHUNK_SIZE];
 
-	ssize_t bytesRead = read(fd, buffer, sizeof(buffer) - 1);
+	ssize_t bytesRead = ::read(cgiFd, buffer, sizeof(buffer) - 1);
 	if (bytesRead < 0) {
 		kill(process.pid, SIGKILL);
 		sendError(process.clientSocket, 502, process.location);
-		closeAndRemoveMultPlexFd(_monitorFds, fd);
-		_cgiProcesses.erase(fd);
+		// TODO: @all: not sure if the following line is correct
+		closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
+		_clientToCgi.erase(clientSocket); // TODO: @all couple _cgiToClient and _clientToCgi as as to never forget to remove one of them if the other is removed
+		_cgiToClient.erase(cgiFd);
 		return;
 	}
 
 	if (bytesRead == 0) { // EOF - CGI process finished writing
 		int status;
+		// TODO: @all: we should install a signal handler that will reap the CGI process
 		waitpid(process.pid, &status, WNOHANG);
 
 		if (!process.headersSent) 
@@ -44,8 +48,9 @@ void HttpServer::handleCGIRead(int fd) {
 		else if (!process.response.empty())
 			queueWrite(process.clientSocket, process.response);
 
-		closeAndRemoveMultPlexFd(_monitorFds, fd);
-		_cgiProcesses.erase(fd);
+		closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
+		_clientToCgi.erase(clientSocket);
+		_cgiToClient.erase(cgiFd);
 		return;
 	}
 
@@ -55,8 +60,10 @@ void HttpServer::handleCGIRead(int fd) {
 	if (process.totalSize > 10 * 1024 * 1024) { // 10MB limit
 		kill(process.pid, SIGKILL);
 		sendError(process.clientSocket, 413, process.location);
-		closeAndRemoveMultPlexFd(_monitorFds, fd);
-		_cgiProcesses.erase(fd);
+		// TODO: @all: not sure if the following line is correct
+		closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
+		_clientToCgi.erase(clientSocket);
+		_cgiToClient.erase(cgiFd);
 		return;
 	}
 	
@@ -81,11 +88,17 @@ void HttpServer::handleCGIRead(int fd) {
 			process.headersSent = true;
 			queueWrite(process.clientSocket, fullResponse.str());
 			process.response.clear();
+
+			closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
+			_clientToCgi.erase(clientSocket); // TODO: @timo: rename _clientToCgi to something like _clientFdToCgiProcess
+			_cgiToClient.erase(cgiFd); // TODO: @timo: rename _cgiToClient to something like _cgiFdToClientFd
 		} else if (process.response.length() > 8192) { // Headers too long
 			kill(process.pid, SIGKILL);
 			sendError(process.clientSocket, 502, process.location);
-			closeAndRemoveMultPlexFd(_monitorFds, fd);
-			_cgiProcesses.erase(fd);
+			// TODO: @all: not sure if the following line is correct
+			closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
+			_clientToCgi.erase(clientSocket); // TODO: @timo: rename _clientToCgi to something like _clientFdToCgiProcess
+			_cgiToClient.erase(cgiFd); // TODO: @timo: rename _cgiToClient to something like _cgiFdToClientFd
 			return;
 		}
 	} else {
@@ -189,7 +202,8 @@ bool HttpServer::methodAllowed(const HttpRequest& request, const LocationCtx& lo
 		return false;
 	else if (!directiveExists(location.second, "limit_except"))
 		return true;
-	const Arguments& allowedMethods = getFirstDirective(location.second, "limit_except");
+	string limit_except = "limit_except";
+	const Arguments& allowedMethods = getFirstDirective(location.second, limit_except);
 	for (Arguments::const_iterator method = allowedMethods.begin(); method != allowedMethods.end(); ++method) {
 		if (*method == request.method)
 			return true;
@@ -307,24 +321,14 @@ bool HttpServer::validateRequest(const HttpRequest& request) const {
 	return true;
 }
 
-size_t HttpServer::getRequestSizeLimit(const HttpRequest& request, const LocationCtx* location) {
-	if (location && directiveExists(location->second, "client_max_body_size")) {
-		return Utils::convertSizeToBytes(getFirstDirective(location->second, "client_max_body_size")[0]);
-	}
-	
+size_t HttpServer::getRequestSizeLimit(int clientSocket, const HttpRequest& request) {
 	try {
-		const LocationCtx& loc = requestToLocation(-1, request);
-		if (directiveExists(loc.second, "client_max_body_size")) {
-			return Utils::convertSizeToBytes(getFirstDirective(loc.second, "client_max_body_size")[0]);
-		}
-	} catch (const std::exception&) {
-		if (directiveExists(_config.first, "client_max_body_size")) {
-			return Utils::convertSizeToBytes(getFirstDirective(_config.first, "client_max_body_size")[0]);
-		}
+		const LocationCtx& loc = requestToLocation(clientSocket, request);
+		return Utils::convertSizeToBytes(getFirstDirective(loc.second, "client_max_body_size")[0]);
+	} catch (const runtime_error& error) {
+		Logger::logError(error.what());
+		return Utils::convertSizeToBytes("1m");
 	}
-	
-	// Default nginx
-	return Utils::convertSizeToBytes("1m");
 }
 
 void HttpServer::removeClientAndRequest(int clientSocket) {
@@ -333,10 +337,11 @@ void HttpServer::removeClientAndRequest(int clientSocket) {
 }
 
 bool HttpServer::checkRequestSize(int clientSocket, const HttpRequest& request, size_t currentSize) {
-	size_t sizeLimit = getRequestSizeLimit(request);
+	size_t sizeLimit = getRequestSizeLimit(clientSocket, request);
 	if (currentSize > sizeLimit) {
 		sendError(clientSocket, 413, NULL); // Payload Too Large
-		removeClientAndRequest(clientSocket);
+		// TODO: @discuss: what about removing clientSocket from _pendingRequests
+		// removeClientAndRequest(clientSocket);
 		return false;
 	}
 	return true;
@@ -381,6 +386,8 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest& request, c
 	if (!validateRequest(request)) {
 		Logger::logDebug("Request validation failed");
 		sendError(clientSocket, 405, NULL);
+		// TODO: @discuss: what about removing clientSocket from _pendingRequests
+		// removeClientAndRequest(clientSocket);
 		return false;
 	}
 
@@ -424,10 +431,13 @@ bool HttpServer::processRequestBody(int clientSocket, HttpRequest& request, cons
 }
 
 void HttpServer::finalizeRequest(int clientSocket, HttpRequest& request) {
+	bool bound = false;
 	try {
 		const LocationCtx& location = requestToLocation(clientSocket, request);
+		bound = true;
 		handleRequest(clientSocket, request, location);
 	} catch (const runtime_error& err) {
+		if (!bound) throw; // requestToLocation may throw, but if handleRequest throws, we got bigger problems, thus, rethrowing
 		Logger::logError(err.what());
 	}
 	_pendingRequests.erase(clientSocket);
@@ -436,7 +446,7 @@ void HttpServer::finalizeRequest(int clientSocket, HttpRequest& request) {
 void HttpServer::handleIncomingData(int clientSocket, const char* buffer, ssize_t bytesRead) {
 
 	Logger::logDebug("Received data length: " + STR(bytesRead));
-	Logger::logDebug("Raw data: [" + string(buffer, bytesRead) + "]");
+	Logger::logDebug("Raw data: [" + string(buffer, static_cast<size_t>(bytesRead)) + "]");
 	// Get or create request state
 	HttpRequest& request = _pendingRequests[clientSocket];
 	Logger::logDebug("Current request state: " + STR(static_cast<int>(request.state)));
@@ -478,8 +488,8 @@ void HttpServer::handleIncomingData(int clientSocket, const char* buffer, ssize_
 }
 
 void HttpServer::readFromClient(int clientSocket) {
-	if (_cgiProcesses.find(clientSocket) != _cgiProcesses.end()) {
-		handleCGIRead(clientSocket);
+	if (_cgiToClient.find(clientSocket) != _cgiToClient.end()) {
+		handleCgiRead(clientSocket);
 		return;
 	}
 

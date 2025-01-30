@@ -47,5 +47,6 @@ void HttpServer::closeAndRemoveAllMultPlexFd(MultPlexFds& monitorFds) {
 }
 
 void HttpServer::removeClient(int clientSocket) {
+	// TODO: @all: this function should actually be the one that removes all PendingWrites, PendingCloses, PendingRequests, cgi stuff
 	closeAndRemoveMultPlexFd(_monitorFds, clientSocket);
 }

@@ -1,22 +1,33 @@
 #include "HttpServer.hpp"
+#include "Constants.hpp"
+#include <ctime>
+
+static bool isTimedOut(const HttpServer::CgiProcess& process) {
+	std::time_t lastActive = process.lastActive;
+	std::time_t now = std::time(NULL);
+	if (now - lastActive >= Constants::cgiTimeout)
+		return true;
+	return false;
+}
 
 void HttpServer::checkForInactiveClients() {
-	for (std::map<int, CGIProcess>::iterator it = _cgiProcesses.begin(); it != _cgiProcesses.end(); ) {
-		CGIProcess& process = it->second;
-		process.pollCycles++;
+	vector<int> deleteFromClientToCgi;
+	vector<int> deleteFromCgiToClient;
+	for (ClientFdToCgiMap::iterator it = _clientToCgi.begin(); it != _clientToCgi.end(); ++it) {
+		CgiProcess& process = it->second;
 
-		int cyclesForTimeout = CGI_TIMEOUT * (1000 / Constants::multiplexTimeout);
-		if (process.pollCycles > cyclesForTimeout) {
+		if (isTimedOut(process)) {
 			kill(process.pid, SIGKILL);
-			waitpid(process.pid, NULL, 0);
+			waitpid(process.pid, NULL, 0); // TODO: @all: Should be WNOHANG, otherwise blocking!, although, SIGKILL should do the job yeah
 			sendError(process.clientSocket, 504, process.location);
 			
 			closeAndRemoveMultPlexFd(_monitorFds, it->first);
-			std::map<int, CGIProcess>::iterator tmp = it;
-			++it;
-			_cgiProcesses.erase(tmp);
-		} else {
-			++it;
+			deleteFromClientToCgi.push_back(it->first);
+			deleteFromCgiToClient.push_back(it->second.readFd);
 		}
+	}
+	for (size_t i = 0; i < deleteFromClientToCgi.size(); ++i) {
+		_clientToCgi.erase(deleteFromClientToCgi[i]);
+		_cgiToClient.erase(deleteFromCgiToClient[i]);
 	}
 }

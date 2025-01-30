@@ -25,14 +25,13 @@ public:
 	bool canHandle(const string& path) const;
 	void execute(int clientSocket, const HttpServer::HttpRequest& request, 
 			const LocationCtx& location);
-	static bool processCGIResponse(const string& response, int clientSocket);
 	static bool validateHeaders(const string& headers);
 private:
 	HttpServer& _server;
 	string _extension;
 	string _program;
 
-	void exportEnvironment(const std::map<string, string>& env);
+	char **exportEnvironment(const std::map<string, string>& env);
 	std::map<string, string> setupEnvironment(const HttpServer::HttpRequest& request, 
 											const LocationCtx& location);
 };

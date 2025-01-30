@@ -26,8 +26,8 @@
 #include <unistd.h>
 #include <utility>
 #include <vector>
+#include <ctime>
 
-#include "Config.hpp"
 #include "Constants.hpp"
 #include "Config.hpp"
 #include "Utils.hpp"
@@ -59,7 +59,7 @@ public:
 	struct Server;
 	struct AddrPortCompare;
 	struct HttpRequest;
-	struct PendingWrite;
+	struct CgiProcess;
 	enum FdState {
 		FD_READABLE,
 		FD_WRITEABLE,
@@ -82,8 +82,12 @@ public:
 	typedef vector<struct epoll_event> EpollFds;
 	typedef vector<FdState> FdStates;
 	typedef map<string, string> MimeTypes;
+	typedef map<string, string> Headers;
 	typedef map<int, string> StatusTexts;
-	typedef map<int, PendingWrite> PendingWrites;
+	typedef string PendingWrite;
+	typedef map<int, PendingWrite> PendingWriteMap;
+	typedef map<int, CgiProcess> ClientFdToCgiMap;
+	typedef map<int, int> CgiFdToClientMap;
 	typedef set<int> PendingCloses;
 	typedef map<int, HttpRequest> PendingRequests;
 
@@ -92,7 +96,7 @@ public:
 		string				method;
 		string				path;
 		string				httpVersion;
-		map<string, string>	headers;
+		Headers				headers;
 		string				body;
 		RequestState		state;
 		size_t				contentLength;
@@ -102,7 +106,7 @@ public:
 
 		HttpRequest() :
 			method(),
-			path(),
+			path("/"),
 			httpVersion(),
 			headers(),
 			body(),
@@ -113,13 +117,6 @@ public:
 			temporaryBuffer() {}
 	};
 	
-	struct PendingWrite {
-		string	data;
-		size_t	bytesSent;
-
-		PendingWrite() : data(), bytesSent() {}
-		PendingWrite(const string& d) : data(d), bytesSent() {}
-	};
 	struct Server { // Basically just a thin wrapper around ServerCtx, but with some fields transformed for ease of use and efficiency
 		struct in_addr	ip; // network byte order // Should multiple listen directive be possible in the future, then this, along with port, would become a vector of pairs, but for MVP's sake, let's keep it at one
 		in_port_t		port; // network byte order
@@ -154,66 +151,66 @@ public:
 		FdStates fdStates;
 
 		MultPlexFds(MultPlexType initMultPlexType) : multPlexType(initMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() { FD_ZERO(&selectFdSet); }
-	//private:
+	//private: //should be private, but can't because of Repr.hpp
 		MultPlexFds() : multPlexType(Constants::defaultMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() {}
 	};
-
-	struct CGIProcess {
+	struct CgiProcess {
 		pid_t pid;
-		int pipe_fd;
+		int readFd;
 		string response;
 		unsigned long totalSize;
 		int clientSocket;
 		const LocationCtx* location;
 		bool headersSent;
-		int pollCycles;
+		std::time_t lastActive;
 		
-		CGIProcess(pid_t p, int fd, int client, const LocationCtx* loc) : 
-			pid(p), pipe_fd(fd), response(), totalSize(0), clientSocket(client), location(loc), headersSent(false), pollCycles(0) {}
-		CGIProcess(const CGIProcess& other) : pid(other.pid), pipe_fd(other.pipe_fd), response(other.response), totalSize(other.totalSize), clientSocket(other.clientSocket), location(other.location), headersSent(other.headersSent), pollCycles(other.pollCycles) { (void)other; }
-		CGIProcess& operator=(const CGIProcess&) { return *this; }
-};
+		CgiProcess(pid_t _pid, int _readFd, int _clientSocket, const LocationCtx* _location) : 
+			pid(_pid), readFd(_readFd), response(), totalSize(0), clientSocket(_clientSocket), location(_location), headersSent(false), lastActive(std::time(NULL)) {}
+		CgiProcess(const CgiProcess& other) :
+			pid(other.pid), readFd(other.readFd), response(other.response), totalSize(other.totalSize), clientSocket(other.clientSocket), location(other.location), headersSent(other.headersSent), lastActive(other.lastActive) {}
+		CgiProcess& operator=(const CgiProcess&) { return *this; } // forgot the reason why we have define a copy constructor and copy assignment operator, but I think it was because we use CgiProcess in a map and something with references or so
+	};
 
-	const vector<int>&				get_listeningSockets()	const { return _listeningSockets; }
-	const MultPlexFds&				get_monitorFds()		const { return _monitorFds; }
-	const PollFds&					get_pollFds()			const { return _pollFds; }
-	const string&					get_httpVersionString()	const { return _httpVersionString; }
-	const string&					get_rawConfig()			const { return _rawConfig; }
-	const Config&					get_config()			const { return _config; }
-	const MimeTypes&				get_mimeTypes()			const { return _mimeTypes; }
-	const StatusTexts&				get_statusTexts()		const { return _statusTexts; }
-	const PendingWrites&			get_pendingWrites()		const { return _pendingWrites; }
-	const PendingCloses&			get_pendingCloses()		const { return _pendingCloses; }
-	const Servers&					get_servers()			const { return _servers; }
-	const DefaultServers&			get_defaultServers()	const { return _defaultServers; }
-	map<int, CGIProcess>& 			get_CGIProcesses()		{ return _cgiProcesses; }
-	MultPlexFds&					get_MonitorFds()		{ return _monitorFds; }
-	void sendError(int clientSocket, int statusCode, const LocationCtx *const location);
+	const vector<int>&				get_listeningSockets()	const	{ return _listeningSockets; }
+	const PollFds&					get_pollFds()			const 	{ return _pollFds; }
+	const string&					get_httpVersionString()	const 	{ return _httpVersionString; }
+	const string&					get_rawConfig()			const 	{ return _rawConfig; }
+	const Config&					get_config()			const 	{ return _config; }
+	const MimeTypes&				get_mimeTypes()			const 	{ return _mimeTypes; }
+	const StatusTexts&				get_statusTexts()		const 	{ return _statusTexts; }
+	const PendingWriteMap&			get_pendingWrites()		const 	{ return _pendingWrites; }
+	const PendingCloses&			get_pendingCloses()		const 	{ return _pendingCloses; }
+	const Servers&					get_servers()			const 	{ return _servers; }
+	const DefaultServers&			get_defaultServers()	const 	{ return _defaultServers; }
+	const PendingRequests&			get_pendingRequests()	const	{ return _pendingRequests; }
+	const MultPlexFds&				get_monitorFds()		const	{ return _monitorFds; }
+	const ClientFdToCgiMap&			get_clientToCgi()		const	{ return _clientToCgi; }
+	const CgiFdToClientMap&			get_cgiToClient()		const	{ return _cgiToClient; }
 
+	MultPlexFds				_monitorFds;
+	ClientFdToCgiMap		_clientToCgi;
+	CgiFdToClientMap		_cgiToClient;
 private:
 	//// private members ////
 	vector<int>				_listeningSockets;
-	MultPlexFds				_monitorFds;
 	PollFds&				_pollFds;
 	const string			_httpVersionString;
 	const string			_rawConfig;
 	const Config			_config;
 	MimeTypes				_mimeTypes;
 	StatusTexts				_statusTexts;
-	PendingWrites			_pendingWrites;
+	PendingWriteMap			_pendingWrites;
 	PendingCloses			_pendingCloses;
 	Servers					_servers;
 	DefaultServers			_defaultServers;
-	map<int, CGIProcess>	_cgiProcesses;
 	PendingRequests			_pendingRequests;
-	static const int		CGI_TIMEOUT = 5; 
 
 
 	//// private methods ////
 	// HttpServer must always be constructed with a config
-	HttpServer() : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses(), _pendingRequests() {};
+	HttpServer() : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests() {};
 	// Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a server and its config
-	HttpServer(const HttpServer&) : _listeningSockets(), _monitorFds(Constants::defaultMultPlexType), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _cgiProcesses(), _pendingRequests() {};
+	HttpServer(const HttpServer&) : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests() {};
 	// HttpServer cannot be assigned to
 	HttpServer& operator=(const HttpServer&) { return *this; };
 
@@ -261,15 +258,18 @@ private:
 
 	// CGI
 	bool requestIsForCgi(const HttpRequest& request, const LocationCtx& location);
-	void handleCGIRead(int fd);
+	void handleCgiRead(int fd);
 
 	// Timeout
 	void checkForInactiveClients();
 
 	// Writing to a client
 	void writeToClient(int clientSocket);
-	void queueWrite(int clientSocket, const string& data);
 	void sendString(int clientSocket, const string& payload, int statusCode = 200, const string& contentType = "text/html");
+public:
+	void sendError(int clientSocket, int statusCode, const LocationCtx *const location);
+	void queueWrite(int clientSocket, const string& data);
+private:
 	bool sendErrorPage(int clientSocket, int statusCode, const LocationCtx& location);
 	bool sendFileContent(int clientSocket, const string& filePath, const LocationCtx& location, int statusCode = 200, const string& contentType = "");
 	PendingWrite& updatePendingWrite(PendingWrite& pw);
@@ -280,8 +280,8 @@ private:
 	void removePollFd(MultPlexFds& monitorFds, int fd);
 	void closeAndRemoveAllMultPlexFd(MultPlexFds& monitorFds);
 	void closeAndRemoveAllPollFd(MultPlexFds& monitorFds);
-	bool maybeTerminateConnection(PendingWrites::iterator it, int clientSocket);
-	void terminateIfNoPendingData(PendingWrites::iterator& it, int clientSocket, ssize_t bytesSent);
+	bool maybeTerminateConnection(PendingWriteMap::iterator it, int clientSocket);
+	void terminateIfNoPendingDataAndNoCgi(PendingWriteMap::iterator& it, int clientSocket, ssize_t bytesSent);
 	void terminatePendingCloses(int clientSocket);
 
 	// Monitor sockets (the blocking part)
@@ -313,7 +313,7 @@ private:
 	bool validateRequest(const HttpRequest& request) const;
 	bool parseRequestLine(const string& line, HttpRequest& request);
 	bool parseHeader(const string& line, HttpRequest& request);
-	size_t getRequestSizeLimit(const HttpRequest& request, const LocationCtx* location = NULL);
+	size_t getRequestSizeLimit(int clientSocket, const HttpRequest& request);
 
 	// Request processing stages
 	void handleIncomingData(int clientSocket, const char* buffer, ssize_t bytesRead);

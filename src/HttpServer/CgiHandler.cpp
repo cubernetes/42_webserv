@@ -1,10 +1,14 @@
 #include "CgiHandler.hpp"
 #include "ReprCgi.hpp"
+#include <cstdio>
+#include <cstring>
+
+#define PIPE_READ 0
+#define PIPE_WRITE 1
 
 using std::swap;
 using std::string;
-
-extern char **environ;
+typedef HttpServer::ClientFdToCgiMap CgiProcessMap; // not sure why using doesn't work with this one
 
 // De- & Constructors
 CgiHandler::~CgiHandler() {
@@ -76,7 +80,7 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
 	env["SERVER_PROTOCOL"] = "HTTP/1.1";
 	env["SERVER_SOFTWARE"] = "webserv/1.0";
 	env["REQUEST_METHOD"] = request.method;
-	env["SCRIPT_FILENAME"] = rootPath + relativePath;
+	env["SCRIPT_FILENAME"] = rootPath + relativePath; // TODO: @all: it should be with cgi_dir directive
 	env["QUERY_STRING"] = "";
 	
 	size_t queryPos = request.path.find('?');
@@ -104,47 +108,18 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
 	return env;
 }
 
-void CgiHandler::exportEnvironment(const std::map<string, string>& env) {
-	for (std::map<string, string>::const_iterator it = env.begin(); 
-		 it != env.end(); ++it) {
-		if (it->first.empty() || it->first.find('=' != string::npos))
+char **CgiHandler::exportEnvironment(const std::map<string, string>& env) {
+	size_t size = env.size();
+	char **envArr = new char*[size + 1];
+	size_t i = 0;
+	for (std::map<string, string>::const_iterator it = env.begin(); it != env.end(); ++it) {
+		if (it->first.empty() || it->first.find('=') != string::npos)
 			continue;
-		setenv(it->first.c_str(), it->second.c_str(), 1);
+		envArr[i] = ::strdup((it->first + "=" + it->second).c_str());
+		++i;
 	}
-}
-
-bool CgiHandler::processCGIResponse(const string& response, int clientSocket) {
-	size_t headerEnd = response.find("\r\n\r\n");
-	if (headerEnd == string::npos) {
-		headerEnd = response.find("\n\n");
-		if (headerEnd == string::npos) {
-			return false;
-		}
-	}
-
-	string headers = response.substr(0, headerEnd);
-	string body = response.substr(headerEnd + (response[headerEnd + 1] == '\n' ? 2 : 4));
-
-	// Basic header validation
-	if (!validateHeaders(headers)) {
-		return false;
-	}
-
-	std::ostringstream fullResponse;
-	fullResponse << "HTTP/1.1 200 OK\r\n";
-	
-	if (headers.find("Content-Length:") == string::npos) {
-		fullResponse << "Content-Length: " << body.length() << "\r\n";
-	}
-	
-	if (headers.find("Content-Type:") == string::npos) {
-		fullResponse << "Content-Type: text/html\r\n";
-	}
-
-	fullResponse << headers << "\r\n\r\n" << body;
-	// TODO: @sonia: eval sheet says we HAVE to check send for < 0 and == 0, not sure what to do here :/
-	send(clientSocket, fullResponse.str().c_str(), fullResponse.str().length(), 0);
-	return true;
+	envArr[i] = NULL;
+	return envArr;
 }
 
 bool CgiHandler::validateHeaders(const string& headers) {
@@ -180,36 +155,43 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 		return;
 	}
 
-	int sockets[2];
-	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0, sockets) < 0) {
-		throw std::runtime_error("Failed to create socket pair for CGI");
-	}
+	int toCgi[2];
+	int fromCgi[2];
+	if (pipe(toCgi) < 0)
+		throw std::runtime_error("Failed to create input pipe for CGI");
+	if (pipe(fromCgi) < 0)
+		throw std::runtime_error("Failed to create output pipe for CGI");
 
-	 // Make both ends non-blocking
-	fcntl(sockets[0], F_SETFL, O_NONBLOCK);
-	fcntl(sockets[1], F_SETFL, O_NONBLOCK);
+	// (deprecated) Make both ends non-blocking
+	// fcntl(toCgi[PIPE_READ], F_SETFL, O_NONBLOCK);
+	// fcntl(toCgi[PIPE_WRITE], F_SETFL, O_NONBLOCK);
+	// fcntl(fromCgi[PIPE_READ], F_SETFL, O_NONBLOCK);
+	// fcntl(fromCgi[PIPE_WRITE], F_SETFL, O_NONBLOCK);
 	
 	pid_t pid = fork();
 	if (pid < 0) {
-		close(sockets[0]);
-		close(sockets[1]);
+		close(toCgi[PIPE_READ]);
+		close(toCgi[PIPE_WRITE]);
+		close(fromCgi[PIPE_READ]);
+		close(fromCgi[PIPE_WRITE]);
 		throw std::runtime_error("Fork failed for CGI execution");
 	}
 
-	if (pid == 0) {
+	if (pid == 0) { // we are in child
+		close(toCgi[PIPE_WRITE]); // doesn't need to write to itself
+		close(fromCgi[PIPE_READ]); // doesn't need to read from itself
 
-		close(sockets[0]);
-		dup2(sockets[1], STDOUT_FILENO);
-		close(sockets[1]);
+		dup2(toCgi[PIPE_READ], STDIN_FILENO); // whenever something writes to toCgi WRITE end, then CGI will receive it via stdin
+		dup2(fromCgi[PIPE_WRITE], STDOUT_FILENO); // whenever CGI writes something to stdout, it will go to WRITE end of formCgi pipe
 
-		if (chdir(rootPath.c_str()) < 0) {
+		if (chdir(rootPath.c_str()) < 0) { // TODO: @all: use cgi_dir as well
 			exit(1);
 		}
 		
-		exportEnvironment(env);
+		char **cgiEnviron = exportEnvironment(env); // allocates on the heap!
 
 		// for some reason if relative specified before it doesn't work at all
-		if (Utils::isPrefix(rootPath + "/", scriptPath)) {
+		if (Utils::isPrefix(rootPath + "/", scriptPath)) { // TODO: @all: use cgi_dir as well
 			scriptPath = scriptPath.substr(rootPath.length() + 1);
 		}
 
@@ -218,23 +200,37 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 			const_cast<char*>(scriptPath.c_str()),
 			NULL
 		};
-		execve(args[0], args, environ);
+		execve(args[0], args, cgiEnviron);
 		exit(1);
 	}
 
-	close(sockets[1]);
+	close(toCgi[PIPE_READ]); // parent process should only write to cgi process
+	close(fromCgi[PIPE_WRITE]); // parent process should only read from cgi process
+	int cgiWriteFd = toCgi[PIPE_WRITE];
+	int cgiReadFd = fromCgi[PIPE_READ];
 
-	std::map<int, HttpServer::CGIProcess>& cgiProcesses = _server.get_CGIProcesses();
-	std::pair<std::map<int, HttpServer::CGIProcess>::iterator, bool> result;
-	result = cgiProcesses.insert(std::make_pair(sockets[0], HttpServer::CGIProcess(pid, sockets[0], clientSocket, &location)));
+	std::pair<CgiProcessMap::iterator, bool> result;
+	result = _server._clientToCgi.insert(std::make_pair(clientSocket, HttpServer::CgiProcess(pid, cgiReadFd, clientSocket, &location)));
+	(void)result;
 
-	if (!result.second) {
-		// If key already exists, update the existing entry
-		result.first->second = HttpServer::CGIProcess(pid, sockets[0], clientSocket, &location);
-	}
+	// from timo: commented out for now
+	// if (!result.second) {
+	// 	// If key already exists, update the existing entry
+	// 	// TODO: @discuss: is this even correct? what happens to the old CgiProcess entry?
+	// 	result.first->second = HttpServer::CgiProcess(pid, cgiReadFd, clientSocket, &location);
+	// }
 
 	struct pollfd pfd;
-	pfd.fd = sockets[0];
-	pfd.events = POLLIN;
-	_server.get_MonitorFds().pollFds.push_back(pfd);
+	pfd.fd = cgiReadFd;
+	pfd.events = POLLIN; // get notified when CGI has data ready to send
+	_server._cgiToClient[cgiReadFd] = clientSocket;
+	_server._monitorFds.pollFds.push_back(pfd);
+
+	struct pollfd pfd2;
+	pfd2.fd = cgiWriteFd;
+	pfd2.events = POLLOUT; // for the pendingWrite
+	_server._cgiToClient[cgiWriteFd] = -1; // don't couple the writeFd with the client socket, the program doesn't need that information
+	_server._monitorFds.pollFds.push_back(pfd2);
+
+	_server.queueWrite(cgiWriteFd, request.body);
 }
