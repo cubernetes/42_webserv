@@ -183,11 +183,18 @@ void HttpServer::handleDelete(int clientSocket, const HttpRequest& request, cons
 	}
 }
 
+void HttpServer::uploadFile(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
+	// write request.body
+}
+
 void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
 	if (request.method == "GET")
 		serveStaticContent(clientSocket, request, location);
 	else if (request.method == "POST")
-		sendString(clientSocket, "POST for file upload not implemented yet\r\n");
+		uploadFile(clientSocket, request, location);
+	else if (request.method == "PUT")
+		uploadFile(clientSocket, request, location);
+	else if (request.method == "PUT")
 	else if (request.method == "DELETE")
 		handleDelete(clientSocket, request, location);
 	else if (request.method == "4242")

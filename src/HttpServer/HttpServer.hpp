@@ -247,7 +247,8 @@ private:
 	void handleDelete(int clientSocket, const HttpRequest& request, const LocationCtx& location);
 	void rewriteRequest(int clientSocket, int statusCode, const string& urlOrText, const LocationCtx& location);
 	void redirectClient(int clientSocket, const string& newUri, int statusCode = 301);
-	
+	void uploadFile(int clientSocket, const HttpRequest& request, const LocationCtx& location);
+
 	// static file serving
 	void serveStaticContent(int clientSocket, const HttpRequest& request, const LocationCtx& location);
 	string determineDiskPath(const HttpRequest& request, const LocationCtx& location);
