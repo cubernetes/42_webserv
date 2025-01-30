@@ -174,14 +174,14 @@ void HttpServer::handleDelete(int clientSocket, const HttpRequest& request, cons
 	if (!fileExists) {
 		sendError(clientSocket, 404, &location);
 	} else if (S_ISDIR(fileStat.st_mode)) {
-		sendError(clientSocket, 403, &location);
+		sendString(clientSocket, "Directory deletion is turned off", 403);
 	} else if (S_ISREG(fileStat.st_mode)) {
 		if (::remove(diskPath.c_str()) < 0)
-			sendError(clientSocket, 500, &location);
+			sendString(clientSocket, "Failed to delete resource " + request.path, 500);
 		else
 			sendString(clientSocket, "Successfully deleted " + request.path + "\n");
 	} else {
-		sendError(clientSocket, 403, &location);
+		sendString(clientSocket, "You may only delete regular files", 403);
 	}
 }
 
@@ -216,7 +216,7 @@ void HttpServer::handleUpload(int clientSocket, const HttpRequest& request, cons
 }
 
 void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
-	if (request.method == "GET")
+	if (request.method == "GET" || request.method == "HEAD")
 		serveStaticContent(clientSocket, request, location);
 	else if (request.method == "POST")
 		handleUpload(clientSocket, request, location, false);
@@ -335,7 +335,12 @@ bool HttpServer::validateRequest(const HttpRequest& request) const {
 	}
 	
 	// Check HTTP method
-	if (request.method != "GET" && request.method != "POST" && request.method != "DELETE" && request.method != "PUT" && request.method != "FTFT") {
+	if (request.method != "GET"
+			&& request.method != "HEAD"
+			&& request.method != "POST"
+			&& request.method != "DELETE"
+			&& request.method != "PUT"
+			&& request.method != "FTFT") {
 		Logger::logDebug("Invalid request: unsupported method: " + request.method);
 		return false;
 	}

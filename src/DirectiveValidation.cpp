@@ -91,7 +91,7 @@ bool DirectiveValidation::isHttpUri(const string& str) {
 	string domain = withoutScheme.substr(0, withoutScheme.find('/'));
 	struct addrinfo hints, *res;
 	std::memset(&hints, 0, sizeof(hints));
-	hints.ai_family = PF_INET;
+	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	int success = getaddrinfo(domain.c_str(), NULL, &hints, &res) == 0;
 	if (success)
@@ -303,7 +303,7 @@ static inline bool checkLimitExcept(const string& ctx, const string& directive, 
 	if (directive == "limit_except") {
 		ensureArity(ctx, directive, arguments, 1, -1);
 		for (Arguments::const_iterator argument = arguments.begin(); argument != arguments.end(); ++argument) {
-			ensureOneOfStrings(ctx, directive, *argument, VEC(string, "GET", "POST", "DELETE", "PUT", "FTFT"));
+			ensureOneOfStrings(ctx, directive, *argument, VEC(string, "GET", "HEAD", "POST", "DELETE", "PUT", "FTFT"));
 		}
 		return true;
 	}

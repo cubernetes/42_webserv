@@ -57,7 +57,7 @@ void HttpServer::handleUriWithSlash(int clientSocket, const string& diskPath, co
 				sendError(clientSocket, 403, &location);
 			return;
 		}
-		sendString(clientSocket, indexDirectory(request.path, diskPath));
+		sendString(clientSocket, indexDirectory(request.path, diskPath), 200, "text/html", request.method == "HEAD");
 		return;
 	}
 }
@@ -78,7 +78,7 @@ bool HttpServer::handleUriWithoutSlash(int clientSocket, const string& diskPath,
 		}
 		return true;
 	} else if (S_ISREG(fileStat.st_mode)) {
-		return sendFileContent(clientSocket, diskPath, location);
+		return sendFileContent(clientSocket, diskPath, location, 200, "", request.method == "HEAD");
 	}
 	if (sendErrorMsg)
 		sendError(clientSocket, 403, &location); // sometimes it's also 404, or 500, but haven't figured out the pattern yet

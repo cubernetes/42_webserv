@@ -72,7 +72,7 @@ void HttpServer::writeToClient(int clientSocket) {
 }
 
 // note, be careful sending errors from this function, as it could lead to infinite recursion! (the error sending function uses this function)
-bool HttpServer::sendFileContent(int clientSocket, const string& filePath, const LocationCtx& location, int statusCode, const string& contentType) {
+bool HttpServer::sendFileContent(int clientSocket, const string& filePath, const LocationCtx& location, int statusCode, const string& contentType, bool onlyHeaders) {
 		std::ifstream file(filePath.c_str(), std::ifstream::binary);
 		if (!file) {
 			sendError(clientSocket, 403, &location);
@@ -91,11 +91,13 @@ bool HttpServer::sendFileContent(int clientSocket, const string& filePath, const
 
 		queueWrite(clientSocket, headers.str());
 
-		char buffer[CONSTANTS_CHUNK_SIZE];
-		while(file.read(buffer, sizeof(buffer)))
-			queueWrite(clientSocket, string(buffer, static_cast<size_t>(file.gcount())));
-		if (file.gcount() > 0)
-			queueWrite(clientSocket, string(buffer, static_cast<size_t>(file.gcount())));
+		if (!onlyHeaders) {
+			char buffer[CONSTANTS_CHUNK_SIZE];
+			while(file.read(buffer, sizeof(buffer)))
+				queueWrite(clientSocket, string(buffer, static_cast<size_t>(file.gcount())));
+			if (file.gcount() > 0)
+				queueWrite(clientSocket, string(buffer, static_cast<size_t>(file.gcount())));
+		}
 		_pendingCloses.insert(clientSocket);
 		return true;
 }
@@ -138,7 +140,7 @@ void HttpServer::sendError(int clientSocket, int statusCode, const LocationCtx *
 	}
 }
 
-void HttpServer::sendString(int clientSocket, const string& payload, int statusCode, const string& contentType) {
+void HttpServer::sendString(int clientSocket, const string& payload, int statusCode, const string& contentType, bool onlyHeaders) {
 	Logger::logDebug("Preparing to send string response with status " + STR(statusCode));
 	std::ostringstream	response;
 	
@@ -146,8 +148,9 @@ void HttpServer::sendString(int clientSocket, const string& payload, int statusC
 			<< "Content-Type: " << contentType << "\r\n"
 			<< "Content-Length: " << payload.length() << "\r\n"
 			<< "Connection: close\r\n"
-			<< "\r\n"
-			<< payload;
+			<< "\r\n";
+	if (!onlyHeaders)
+		response << payload;
 
 	Logger::logDebug("Queueing response: " + response.str());
 	queueWrite(clientSocket, response.str());

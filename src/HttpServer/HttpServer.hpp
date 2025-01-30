@@ -268,13 +268,13 @@ private:
 
 	// Writing to a client
 	void writeToClient(int clientSocket);
-	void sendString(int clientSocket, const string& payload, int statusCode = 200, const string& contentType = "text/html");
+	void sendString(int clientSocket, const string& payload, int statusCode = 200, const string& contentType = "text/html", bool onlyHeaders = false);
 public:
 	void sendError(int clientSocket, int statusCode, const LocationCtx *const location);
 	void queueWrite(int clientSocket, const string& data);
 private:
 	bool sendErrorPage(int clientSocket, int statusCode, const LocationCtx& location);
-	bool sendFileContent(int clientSocket, const string& filePath, const LocationCtx& location, int statusCode = 200, const string& contentType = "");
+	bool sendFileContent(int clientSocket, const string& filePath, const LocationCtx& location, int statusCode = 200, const string& contentType = "", bool onlyHeaders = false);
 	PendingWrite& updatePendingWrite(PendingWrite& pw);
 
 	// Removing a client
