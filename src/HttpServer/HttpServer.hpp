@@ -103,6 +103,7 @@ public:
 		bool				chunkedTransfer;
 		size_t				bytesRead;
 		string				temporaryBuffer;
+		bool				pathParsed;
 
 		HttpRequest() :
 			method(),
@@ -114,7 +115,8 @@ public:
 			contentLength(0),
 			chunkedTransfer(false),
 			bytesRead(0),
-			temporaryBuffer() {}
+			temporaryBuffer(),
+			pathParsed(false) {}
 	};
 	
 	struct Server { // Basically just a thin wrapper around ServerCtx, but with some fields transformed for ease of use and efficiency

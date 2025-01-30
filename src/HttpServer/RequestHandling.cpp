@@ -114,6 +114,7 @@ bool HttpServer::parseRequestLine(const string& line, HttpRequest& request) {
 	}
 	
 	request.path = canonicalizePath(request.path);
+	request.pathParsed = true;
 	return true;
 }
 
@@ -493,8 +494,9 @@ void HttpServer::handleIncomingData(int clientSocket, const char* buffer, ssize_
 		Logger::logDebug("Accumulated data length: " + STR(rawData.size()));
 
 		// Check accumulated size
-		if (!checkRequestSize(clientSocket, request, rawData.size()))
-			return;
+		// DONT check in headers, must only check body size
+		// if (request.pathParsed && !checkRequestSize(clientSocket, request, rawData.size()))
+		// 	return;
 
 		// Store for next iteration if headers aren't complete
 		request.temporaryBuffer = rawData;
@@ -505,21 +507,21 @@ void HttpServer::handleIncomingData(int clientSocket, const char* buffer, ssize_
 			Logger::logDebug("Expected content length: " + STR(request.contentLength));
 			request.temporaryBuffer.clear();
 		}
-	}
-	else if (request.state == READING_BODY) {
+	} else if (request.state == READING_BODY) {
 		Logger::logDebug("Reading body. Current size: " + STR(request.bytesRead) + 
 						" Expected: " + STR(request.contentLength));
 		if (!processRequestBody(clientSocket, request, buffer, static_cast<size_t>(bytesRead))) {
 			return;
 		}
 	}
+	// no else if. if state was set to complete just now then might as well already handle it in the same pass
+	if (request.state == REQUEST_COMPLETE) { // If request is complete, handle it
+		if (!checkRequestSize(clientSocket, request, request.body.length()))
+			return;
 
-	// If request is complete, handle it
-	if (request.state == REQUEST_COMPLETE) {
 		Logger::logDebug("Request complete. Processing...");
 		finalizeRequest(clientSocket, request);
 	}
-
 }
 
 void HttpServer::readFromClient(int clientSocket) {
