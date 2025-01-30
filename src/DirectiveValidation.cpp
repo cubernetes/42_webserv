@@ -47,10 +47,16 @@ static inline void ensureOneOfStrings(const string& ctx, const string& directive
 	}
 }
 
+static inline void ensureRootedPath(const string& ctx, const string& directive, const string& argument) {
+	if (argument.empty() || argument[0] != '/')
+		throw runtime_error(Errors::Config::DirectiveArgumentNotRootedPath(ctx, directive, argument));
+}
+
 static inline void ensureNotEmpty(const string& ctx, const string& directive, const string& argument) {
 	if (argument.empty())
 		throw runtime_error(Errors::Config::DirectiveArgumentEmpty(ctx, directive));
 }
+
 
 bool DirectiveValidation::evenNumberOfBackslashes(const string& str, size_t endingAt) {
 	int count = 0;
@@ -297,7 +303,7 @@ static inline bool checkLimitExcept(const string& ctx, const string& directive, 
 	if (directive == "limit_except") {
 		ensureArity(ctx, directive, arguments, 1, -1);
 		for (Arguments::const_iterator argument = arguments.begin(); argument != arguments.end(); ++argument) {
-			ensureOneOfStrings(ctx, directive, *argument, VEC(string, "GET", "POST", "DELETE"));
+			ensureOneOfStrings(ctx, directive, *argument, VEC(string, "GET", "POST", "DELETE", "PUT", "FTFT"));
 		}
 		return true;
 	}
@@ -307,7 +313,7 @@ static inline bool checkLimitExcept(const string& ctx, const string& directive, 
 static inline bool checkAlias(const string& ctx, const string& directive, const Arguments& arguments) {
 	if (directive == "alias") {
 		ensureArity(ctx, directive, arguments, 1, 1);
-		ensureNotEmpty(ctx, directive, arguments[0]);
+		ensureRootedPath(ctx, directive, arguments[0]);
 		return true;
 	}
 	return false;
@@ -343,7 +349,7 @@ static inline bool checkErrorPage(const string& ctx, const string& directive, co
 		for (i = 0; i < arguments.size() - 1; ++i) {
 			ensureStatusCode(ctx, directive, arguments[i]);
 		}
-		ensureNotEmpty(ctx, directive, arguments[i]);
+		ensureRootedPath(ctx, directive, arguments[i]);
 		return true;
 	}
 	return false;
@@ -371,7 +377,9 @@ static inline bool checkCgiDir(const string& ctx, const string& directive, const
 static inline bool checkUploadDir(const string& ctx, const string& directive, const Arguments& arguments) {
 	if (directive == "upload_dir") {
 		ensureArity(ctx, directive, arguments, 1, 1);
-		// ensureNotEmpty(directive, arguments[0]); // actually it may be empty, signifying to the CGI application there's nothing to upload
+		if (arguments[0].empty())
+			return true;
+		ensureRootedPath(ctx, directive, arguments[0]);
 		return true;
 	}
 	return false;

@@ -32,5 +32,6 @@ namespace Errors {
 		const string ZeroServers();
 		const string DirectiveArgumentInvalidHttpUri(const string& ctx, const string& directive, const string& argument);
 		const string DirectiveArgumentInvalidDoubleQuotedString(const string& ctx, const string& directive, const string& argument);
+		const string DirectiveArgumentNotRootedPath(const string& ctx, const string& directive, const string& argument);
 	}
 }

@@ -3,6 +3,7 @@
 #include "CgiHandler.hpp"
 #include "DirectiveValidation.hpp"
 #include <cstdio>
+#include <fstream>
 
 bool HttpServer::requestIsForCgi(const HttpRequest& request, const LocationCtx& location) {
 	if (!directiveExists(location.second, "cgi_dir"))
@@ -177,20 +178,52 @@ void HttpServer::handleDelete(int clientSocket, const HttpRequest& request, cons
 		if (::remove(diskPath.c_str()) < 0)
 			sendError(clientSocket, 500, &location);
 		else
-			sendString(clientSocket, "Successfully deleted " + request.path);
+			sendString(clientSocket, "Successfully deleted " + request.path + "\n");
 	} else {
 		sendError(clientSocket, 403, &location);
 	}
+}
+
+static string getFileName(const string& path) {
+	size_t pos;
+	if ((pos = path.rfind('/')) == path.npos)
+		return path;
+	return path.substr(pos);
+}
+
+void HttpServer::handleUpload(int clientSocket, const HttpRequest& request, const LocationCtx& location, bool overwrite) {
+	if (!directiveExists(location.second, "upload_dir"))
+		sendError(clientSocket, 405, NULL);
+	string fileName = getFileName(request.path);
+	string diskPath = getFirstDirective(location.second, "root")[0] + getFirstDirective(location.second, "upload_dir")[0] + fileName;
+
+	struct stat fileStat;
+	int fileExists = stat(diskPath.c_str(), &fileStat) == 0;
+
+	if (fileExists && !overwrite)
+		sendError(clientSocket, 409, &location); // == conflict
+
+	std::ofstream of(diskPath.c_str());
+	if (!of) {
+		sendError(clientSocket, 500, &location);
+		return;
+	}
+	of.write(request.body.c_str(), static_cast<long>(request.body.length()));
+	of.flush();
+	of.close();
+	sendString(clientSocket, "Successfully uploaded " + request.path + "\n", 201);
 }
 
 void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
 	if (request.method == "GET")
 		serveStaticContent(clientSocket, request, location);
 	else if (request.method == "POST")
-		sendString(clientSocket, "POST for file upload not implemented yet\r\n");
+		handleUpload(clientSocket, request, location, false);
+	else if (request.method == "PUT")
+		handleUpload(clientSocket, request, location, true);
 	else if (request.method == "DELETE")
 		handleDelete(clientSocket, request, location);
-	else if (request.method == "4242")
+	else if (request.method == "FTFT")
 		sendString(clientSocket, repr(*this) + '\n');
 	else {
 		sendError(clientSocket, 405, &location);
@@ -301,7 +334,7 @@ bool HttpServer::validateRequest(const HttpRequest& request) const {
 	}
 	
 	// Check HTTP method
-	if (request.method != "GET" && request.method != "POST" && request.method != "DELETE") {
+	if (request.method != "GET" && request.method != "POST" && request.method != "DELETE" && request.method != "PUT" && request.method != "FTFT") {
 		Logger::logDebug("Invalid request: unsupported method: " + request.method);
 		return false;
 	}
@@ -342,6 +375,7 @@ bool HttpServer::checkRequestSize(int clientSocket, const HttpRequest& request, 
 		sendError(clientSocket, 413, NULL); // Payload Too Large
 		// TODO: @discuss: what about removing clientSocket from _pendingRequests
 		// removeClientAndRequest(clientSocket);
+		_pendingRequests.erase(clientSocket);
 		return false;
 	}
 	return true;
@@ -385,9 +419,10 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest& request, c
 	// Validate the request
 	if (!validateRequest(request)) {
 		Logger::logDebug("Request validation failed");
-		sendError(clientSocket, 405, NULL);
+		sendError(clientSocket, 400, NULL); // TODO: @discuss: changed from 405 (method not allowed) to 400 (invalid request)
 		// TODO: @discuss: what about removing clientSocket from _pendingRequests
 		// removeClientAndRequest(clientSocket);
+		_pendingRequests.erase(clientSocket);
 		return false;
 	}
 

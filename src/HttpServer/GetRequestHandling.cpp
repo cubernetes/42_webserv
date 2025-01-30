@@ -87,7 +87,7 @@ bool HttpServer::handleUriWithoutSlash(int clientSocket, const string& diskPath,
 
 string HttpServer::determineDiskPath(const HttpRequest& request, const LocationCtx& location) {
 	string path;
-	if (directiveExists(location.second, "alias")) {
+	if (directiveExists(location.second, "alias")) { // TODO: @timo: sanitziation?
 		string alias = getFirstDirective(location.second, "alias")[0];
 		string prefix = location.first;
 		size_t prefixLen = prefix.length();

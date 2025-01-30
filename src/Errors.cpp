@@ -107,3 +107,7 @@ const string Errors::Config::DirectiveArgumentInvalidDoubleQuotedString(const st
 const string Errors::Config::DirectiveArgumentInvalidHttpUri(const string& ctx, const string& directive, const string& argument) {
 	return CONFIG_ERROR_PREFIX(ctx) + cmt("HTTP URI argument ") + repr(argument) + cmt(" for directive ") + repr(directive) + cmt(" is invalid");
 }
+
+const string Errors::Config::DirectiveArgumentNotRootedPath(const string& ctx, const string& directive, const string& argument) {
+	return CONFIG_ERROR_PREFIX(ctx) + cmt("Path argument ") + repr(argument) + cmt(" for directive ") + repr(directive) + cmt(" is not a rooted path (doesn't start with slash)");
+}
