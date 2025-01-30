@@ -30,7 +30,7 @@ static in_port_t getServerPort(const ServerCtx& serverCtx) {
 }
 
 static int createTcpListenSocket() {
-	int listeningSocket = socket(AF_INET, SOCK_STREAM, 0);
+	int listeningSocket = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
 	if (listeningSocket < 0)
 		throw runtime_error("Failed to create socket");
 	

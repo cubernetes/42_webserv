@@ -1,13 +1,14 @@
 #include "CgiHandler.hpp"
 #include "ReprCgi.hpp"
+#include <cstdio>
+#include <cstring>
 
 #define PIPE_READ 0
 #define PIPE_WRITE 1
 
 using std::swap;
 using std::string;
-typedef HttpServer::CgiProcessMap CgiProcessMap; // not sure why using doesn't work with this one
-typedef HttpServer::CgiFds CgiFds; // not sure why using doesn't work with this one
+typedef HttpServer::ClientFdToCgiMap CgiProcessMap; // not sure why using doesn't work with this one
 
 // De- & Constructors
 CgiHandler::~CgiHandler() {
@@ -112,9 +113,9 @@ char **CgiHandler::exportEnvironment(const std::map<string, string>& env) {
 	char **envArr = new char*[size + 1];
 	size_t i = 0;
 	for (std::map<string, string>::const_iterator it = env.begin(); it != env.end(); ++it) {
-		if (it->first.empty() || it->first.find('=' != string::npos))
+		if (it->first.empty() || it->first.find('=') != string::npos)
 			continue;
-		envArr[i] = (char*)(it->first + "=" + it->second).c_str();
+		envArr[i] = ::strdup((it->first + "=" + it->second).c_str());
 		++i;
 	}
 	envArr[i] = NULL;
@@ -205,26 +206,31 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 
 	close(toCgi[PIPE_READ]); // parent process should only write to cgi process
 	close(fromCgi[PIPE_WRITE]); // parent process should only read from cgi process
-	CgiFds cgiFds = {fromCgi[PIPE_READ], toCgi[PIPE_WRITE]};
+	int cgiWriteFd = toCgi[PIPE_WRITE];
+	int cgiReadFd = fromCgi[PIPE_READ];
 
-	CgiProcessMap& cgiProcesses = _server.get_CgiProcesses();
 	std::pair<CgiProcessMap::iterator, bool> result;
-	// TODO: @discuss: first of make_pair was sockets[0] before, I changed it to clientSocket but not sure if correct
-	result = cgiProcesses.insert(std::make_pair(clientSocket, HttpServer::CgiProcess(pid, cgiFds, clientSocket, &location)));
+	result = _server._clientToCgi.insert(std::make_pair(clientSocket, HttpServer::CgiProcess(pid, cgiReadFd, clientSocket, &location)));
+	(void)result;
 
-	if (!result.second) {
-		// If key already exists, update the existing entry
-		// TODO: @discuss: is this even correct? what happens to the old CgiProcess entry?
-		result.first->second = HttpServer::CgiProcess(pid, cgiFds, clientSocket, &location);
-	}
+	// from timo: commented out for now
+	// if (!result.second) {
+	// 	// If key already exists, update the existing entry
+	// 	// TODO: @discuss: is this even correct? what happens to the old CgiProcess entry?
+	// 	result.first->second = HttpServer::CgiProcess(pid, cgiReadFd, clientSocket, &location);
+	// }
 
 	struct pollfd pfd;
-	pfd.fd = cgiFds[PIPE_READ];
+	pfd.fd = cgiReadFd;
 	pfd.events = POLLIN; // get notified when CGI has data ready to send
-	_server.get_MonitorFds().pollFds.push_back(pfd);
+	_server._cgiToClient[cgiReadFd] = clientSocket;
+	_server._monitorFds.pollFds.push_back(pfd);
 
 	struct pollfd pfd2;
-	pfd2.fd = cgiFds[PIPE_WRITE];
-	pfd2.events = POLLOUT; // get notified when CGI is ready to receive data
-	_server.get_MonitorFds().pollFds.push_back(pfd2);
+	pfd2.fd = cgiWriteFd;
+	pfd2.events = POLLOUT; // for the pendingWrite
+	_server._cgiToClient[cgiWriteFd] = -1; // don't couple the writeFd with the client socket, the program doesn't need that information
+	_server._monitorFds.pollFds.push_back(pfd2);
+
+	_server.queueWrite(cgiWriteFd, request.body);
 }

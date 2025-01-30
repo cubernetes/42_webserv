@@ -76,7 +76,7 @@ static string getHost(const HttpServer::HttpRequest& request) {
 				host.substr(0, colonPos);
 		}
 	}
-	return host;
+	return host; // empty string should match default server_name
 }
 
 struct sockaddr_in HttpServer::getSockaddrIn(int clientSocket) {

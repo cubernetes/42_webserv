@@ -8,6 +8,7 @@
 #include <utility>
 #include <sys/poll.h>
 #include <netinet/in.h>
+#include <ctime>
 
 #include "Constants.hpp"
 #include "Ansi.hpp"
@@ -177,9 +178,9 @@ struct ReprWrapper<T*> {
 		static inline string \
 		repr(const T& value, bool json = false) { \
 			if (json) \
-				return string("\"") + Utils::jsonEscape(string(1, value)) + "\""; \
+				return string("\"") + Utils::jsonEscape(string(1, (char)value)) + "\""; \
 			else \
-				return chr(string("'") + (value == '\\' ? "\\\\" : value == '\'' ? "\\'" : string(1, value)) + "'"); \
+				return chr(string("'") + (value == '\\' ? "\\\\" : value == '\'' ? "\\'" : string(1, (char)value)) + "'"); \
 		} \
 	}
 
@@ -218,6 +219,8 @@ CHAR_REPR(signed char);
 	struct ReprWrapper<clsId> : public Reflection { \
 		void reflect() {} \
 		ReprWrapper() : uniqueNameMustComeFirst() FOR_EACH_PAIR(MAKE_MEMBER_INIT_LIST, __VA_ARGS__) {} \
+		ReprWrapper(const ReprWrapper& other) : Reflection(other), uniqueNameMustComeFirst() FOR_EACH_PAIR(MAKE_MEMBER_INIT_LIST, __VA_ARGS__) {} \
+		ReprWrapper& operator=(const ReprWrapper&) { return *this; } \
 		int uniqueNameMustComeFirst; \
 		FOR_EACH_PAIR(MAKE_DECL, __VA_ARGS__) \
 		FOR_EACH_PAIR(MAKE_REPR_FN, __VA_ARGS__) \
@@ -242,9 +245,10 @@ struct in_port_t_helper {
 
 #include "HttpServer.hpp"
 POST_REFLECT_MEMBER(HttpServer::Server, struct in_addr, ip, struct in_port_t_helper, port, vector<string>, serverNames, Directives, directives, LocationCtxs, locations);
-POST_REFLECT_MEMBER(HttpServer::PendingWrite, string, data, size_t, bytesSent);
+POST_REFLECT_MEMBER(HttpServer::CgiProcess, pid_t, pid, int, readFd, string, response, unsigned long, totalSize, int, clientSocket, const LocationCtx*, location, bool, headersSent, std::time_t, lastActive);
+POST_REFLECT_MEMBER(HttpServer::HttpRequest, string, method, string, path, string, httpVersion, HttpServer::Headers, headers, string, body, HttpServer::RequestState, state, size_t, contentLength, bool, chunkedTransfer, size_t, bytesRead, string, temporaryBuffer);
 POST_REFLECT_MEMBER(HttpServer::MultPlexFds, MultPlexType, multPlexType, HttpServer::SelectFds, selectFds, HttpServer::PollFds, pollFds, HttpServer::EpollFds, epollFds, HttpServer::FdStates, fdStates);
-POST_REFLECT_GETTER(HttpServer, vector<int>, _listeningSockets, HttpServer::MultPlexFds, _monitorFds, HttpServer::PollFds, _pollFds, string, _httpVersionString, string, _rawConfig, Config, _config, HttpServer::MimeTypes, _mimeTypes, HttpServer::StatusTexts, _statusTexts, HttpServer::PendingWrites, _pendingWrites, HttpServer::PendingCloses, _pendingCloses, HttpServer::Servers, _servers, HttpServer::DefaultServers, _defaultServers);
+POST_REFLECT_GETTER(HttpServer, HttpServer::MultPlexFds, _monitorFds, HttpServer::ClientFdToCgiMap, _clientToCgi, HttpServer::CgiFdToClientMap, _cgiToClient, vector<int>, _listeningSockets, HttpServer::PollFds, _pollFds, string, _httpVersionString, string, _rawConfig, Config, _config, HttpServer::MimeTypes, _mimeTypes, HttpServer::StatusTexts, _statusTexts, HttpServer::PendingWriteMap, _pendingWrites, HttpServer::PendingCloses, _pendingCloses, HttpServer::Servers, _servers, HttpServer::DefaultServers, _defaultServers, HttpServer::PendingRequests, _pendingRequests);
 
 // for vector
 template <typename T>
@@ -512,6 +516,31 @@ struct ReprWrapper<MultPlexType> {
 				oss << "EPOLL"; break;
 			default:
 				oss << "UNKNOWN"; break;
+		}
+		if (json)
+			return oss.str();
+		else
+			return num(oss.str());
+	}
+};
+
+// for enum RequestState
+template <>
+struct ReprWrapper<HttpServer::RequestState> {
+	static inline string
+	repr(const HttpServer::RequestState& value, bool json = false) {
+		std::ostringstream oss;
+		switch (value) {
+			case HttpServer::READING_HEADERS:
+				oss << "READING_HEADERS"; break;
+			case HttpServer::READING_BODY:
+				oss << "READING_BODY"; break;
+			case HttpServer::REQUEST_COMPLETE:
+				oss << "REQUEST_COMPLETE"; break;
+			case HttpServer::REQUEST_ERROR:
+				oss << "REQUEST_ERROR"; break;
+			default:
+				oss << "UNKNOWN_STATE"; break;
 		}
 		if (json)
 			return oss.str();

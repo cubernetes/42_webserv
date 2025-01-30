@@ -8,6 +8,7 @@
 using std::string;
 
 namespace Constants {
+	extern const int cgiTimeout;
 	extern const int multiplexTimeout;
 	extern const size_t chunkSize;
 	extern const string defaultConfPath;

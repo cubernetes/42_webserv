@@ -32,3 +32,4 @@ test*.c
 
 # development tools
 .vim/
+.gdb_history
