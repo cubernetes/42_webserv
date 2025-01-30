@@ -174,14 +174,14 @@ void HttpServer::handleDelete(int clientSocket, const HttpRequest& request, cons
 	if (!fileExists) {
 		sendError(clientSocket, 404, &location);
 	} else if (S_ISDIR(fileStat.st_mode)) {
-		sendError(clientSocket, 403, &location);
+		sendString(clientSocket, "Directory deletion is turned off", 403);
 	} else if (S_ISREG(fileStat.st_mode)) {
 		if (::remove(diskPath.c_str()) < 0)
-			sendError(clientSocket, 500, &location);
+			sendString(clientSocket, "Failed to delete resource " + request.path, 500);
 		else
 			sendString(clientSocket, "Successfully deleted " + request.path + "\n");
 	} else {
-		sendError(clientSocket, 403, &location);
+		sendString(clientSocket, "You may only delete regular files", 403);
 	}
 }
 
