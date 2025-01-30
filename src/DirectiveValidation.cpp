@@ -303,7 +303,7 @@ static inline bool checkLimitExcept(const string& ctx, const string& directive, 
 	if (directive == "limit_except") {
 		ensureArity(ctx, directive, arguments, 1, -1);
 		for (Arguments::const_iterator argument = arguments.begin(); argument != arguments.end(); ++argument) {
-			ensureOneOfStrings(ctx, directive, *argument, VEC(string, "GET", "POST", "DELETE", "PUT", "FTFT"));
+			ensureOneOfStrings(ctx, directive, *argument, VEC(string, "GET", "HEAD", "POST", "DELETE", "PUT", "FTFT"));
 		}
 		return true;
 	}

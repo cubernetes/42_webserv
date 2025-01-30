@@ -216,7 +216,7 @@ void HttpServer::handleUpload(int clientSocket, const HttpRequest& request, cons
 }
 
 void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest& request, const LocationCtx& location) {
-	if (request.method == "GET")
+	if (request.method == "GET" || request.method == "HEAD")
 		serveStaticContent(clientSocket, request, location);
 	else if (request.method == "POST")
 		handleUpload(clientSocket, request, location, false);
@@ -335,7 +335,12 @@ bool HttpServer::validateRequest(const HttpRequest& request) const {
 	}
 	
 	// Check HTTP method
-	if (request.method != "GET" && request.method != "POST" && request.method != "DELETE" && request.method != "PUT" && request.method != "FTFT") {
+	if (request.method != "GET"
+			&& request.method != "HEAD"
+			&& request.method != "POST"
+			&& request.method != "DELETE"
+			&& request.method != "PUT"
+			&& request.method != "FTFT") {
 		Logger::logDebug("Invalid request: unsupported method: " + request.method);
 		return false;
 	}
