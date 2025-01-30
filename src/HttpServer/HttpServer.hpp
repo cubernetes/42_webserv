@@ -159,6 +159,7 @@ public:
 	struct CgiProcess {
 		pid_t pid;
 		int readFd;
+		int writeFd;
 		string response;
 		unsigned long totalSize;
 		int clientSocket;
@@ -166,10 +167,10 @@ public:
 		bool headersSent;
 		std::time_t lastActive;
 		
-		CgiProcess(pid_t _pid, int _readFd, int _clientSocket, const LocationCtx* _location) : 
-			pid(_pid), readFd(_readFd), response(), totalSize(0), clientSocket(_clientSocket), location(_location), headersSent(false), lastActive(std::time(NULL)) {}
+		CgiProcess(pid_t _pid, int _readFd, int _writeFd, int _clientSocket, const LocationCtx* _location) : 
+			pid(_pid), readFd(_readFd), writeFd(_writeFd), response(), totalSize(0), clientSocket(_clientSocket), location(_location), headersSent(false), lastActive(std::time(NULL)) {}
 		CgiProcess(const CgiProcess& other) :
-			pid(other.pid), readFd(other.readFd), response(other.response), totalSize(other.totalSize), clientSocket(other.clientSocket), location(other.location), headersSent(other.headersSent), lastActive(other.lastActive) {}
+			pid(other.pid), readFd(other.readFd), writeFd(other.writeFd), response(other.response), totalSize(other.totalSize), clientSocket(other.clientSocket), location(other.location), headersSent(other.headersSent), lastActive(other.lastActive) {}
 		CgiProcess& operator=(const CgiProcess&) { return *this; } // forgot the reason why we have define a copy constructor and copy assignment operator, but I think it was because we use CgiProcess in a map and something with references or so
 	};
 
@@ -189,6 +190,7 @@ public:
 	const ClientFdToCgiMap&			get_clientToCgi()		const	{ return _clientToCgi; }
 	const CgiFdToClientMap&			get_cgiToClient()		const	{ return _cgiToClient; }
 
+	static bool				_running;
 	MultPlexFds				_monitorFds;
 	ClientFdToCgiMap		_clientToCgi;
 	CgiFdToClientMap		_cgiToClient;
@@ -219,6 +221,7 @@ private:
 	// Setup
 	void setupServers(const Config& config);
 	void setupListeningSocket(const Server& server);
+	void initSignals();
 
 	// Adding a client
 	void addNewClient(int listeningSocket);

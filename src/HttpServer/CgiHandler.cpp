@@ -184,6 +184,9 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 		dup2(toCgi[PIPE_READ], STDIN_FILENO); // whenever something writes to toCgi WRITE end, then CGI will receive it via stdin
 		dup2(fromCgi[PIPE_WRITE], STDOUT_FILENO); // whenever CGI writes something to stdout, it will go to WRITE end of formCgi pipe
 
+		close(toCgi[PIPE_READ]);
+		close(fromCgi[PIPE_WRITE]);
+
 		if (chdir(rootPath.c_str()) < 0) { // TODO: @all: use cgi_dir as well
 			exit(1);
 		}
@@ -210,7 +213,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 	int cgiReadFd = fromCgi[PIPE_READ];
 
 	std::pair<CgiProcessMap::iterator, bool> result;
-	result = _server._clientToCgi.insert(std::make_pair(clientSocket, HttpServer::CgiProcess(pid, cgiReadFd, clientSocket, &location)));
+	result = _server._clientToCgi.insert(std::make_pair(clientSocket, HttpServer::CgiProcess(pid, cgiReadFd, cgiWriteFd, clientSocket, &location)));
 	(void)result;
 
 	// from timo: commented out for now
@@ -229,7 +232,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest& reques
 	struct pollfd pfd2;
 	pfd2.fd = cgiWriteFd;
 	pfd2.events = POLLOUT; // for the pendingWrite
-	_server._cgiToClient[cgiWriteFd] = -1; // don't couple the writeFd with the client socket, the program doesn't need that information
+	_server._cgiToClient[cgiWriteFd] = clientSocket;
 	_server._monitorFds.pollFds.push_back(pfd2);
 
 	_server.queueWrite(cgiWriteFd, request.body);

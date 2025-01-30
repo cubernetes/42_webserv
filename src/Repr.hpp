@@ -245,7 +245,7 @@ struct in_port_t_helper {
 
 #include "HttpServer.hpp"
 POST_REFLECT_MEMBER(HttpServer::Server, struct in_addr, ip, struct in_port_t_helper, port, vector<string>, serverNames, Directives, directives, LocationCtxs, locations);
-POST_REFLECT_MEMBER(HttpServer::CgiProcess, pid_t, pid, int, readFd, string, response, unsigned long, totalSize, int, clientSocket, const LocationCtx*, location, bool, headersSent, std::time_t, lastActive);
+POST_REFLECT_MEMBER(HttpServer::CgiProcess, pid_t, pid, int, readFd, int, writeFd, string, response, unsigned long, totalSize, int, clientSocket, const LocationCtx*, location, bool, headersSent, std::time_t, lastActive);
 POST_REFLECT_MEMBER(HttpServer::HttpRequest, string, method, string, path, string, httpVersion, HttpServer::Headers, headers, string, body, HttpServer::RequestState, state, size_t, contentLength, bool, chunkedTransfer, size_t, bytesRead, string, temporaryBuffer, bool, pathParsed);
 POST_REFLECT_MEMBER(HttpServer::MultPlexFds, MultPlexType, multPlexType, HttpServer::SelectFds, selectFds, HttpServer::PollFds, pollFds, HttpServer::EpollFds, epollFds, HttpServer::FdStates, fdStates);
 POST_REFLECT_GETTER(HttpServer, HttpServer::MultPlexFds, _monitorFds, HttpServer::ClientFdToCgiMap, _clientToCgi, HttpServer::CgiFdToClientMap, _cgiToClient, vector<int>, _listeningSockets, HttpServer::PollFds, _pollFds, string, _httpVersionString, string, _rawConfig, Config, _config, HttpServer::MimeTypes, _mimeTypes, HttpServer::StatusTexts, _statusTexts, HttpServer::PendingWriteMap, _pendingWrites, HttpServer::PendingCloses, _pendingCloses, HttpServer::Servers, _servers, HttpServer::DefaultServers, _defaultServers, HttpServer::PendingRequests, _pendingRequests);
@@ -591,3 +591,4 @@ template<typename T>
 static inline std::ostream& operator<<(std::ostream& os, const set<T>& val) { return os << repr(val, Constants::jsonTrace); }
 
 static inline std::ostream& operator<<(std::ostream& os, const struct pollfd& val) { return os << repr(val, Constants::jsonTrace); }
+static inline std::ostream& operator<<(std::ostream& os, const HttpServer::CgiProcess& val) { return os << repr(val, Constants::jsonTrace); }

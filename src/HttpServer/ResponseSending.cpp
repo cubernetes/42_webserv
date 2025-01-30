@@ -41,8 +41,10 @@ void HttpServer::terminateIfNoPendingDataAndNoCgi(PendingWriteMap::iterator& it,
 		// for POLL: remove POLLOUT from events since we're done writing
 		stopMonitoringForWriteEvents(_monitorFds, clientSocket);
 		// TODO: @all: yeah actually we really have to close the connection here somehow, removeCLient or smth
+		std::cout << "Closing clientSocket " << clientSocket << std::endl;
 		removeClient(clientSocket); // REALLY NOT SURE ABOUT THIS ONE
 		_pendingCloses.erase(clientSocket); // also not 100% sure about this one
+		_cgiToClient.erase(clientSocket);
 	}
 }
 
@@ -58,6 +60,7 @@ void HttpServer::writeToClient(int clientSocket) {
 	const char* data = dataChunk.c_str();
 	
 	ssize_t bytesSent;
+	std::cout << "Writing this data [" << data << "] to fd clientSocket " << clientSocket << std::endl;
 	if (_cgiToClient.count(clientSocket)) // it's a writeFd for the CGI, can't use send
 		bytesSent = write(clientSocket, data, dataSize);
 	else
