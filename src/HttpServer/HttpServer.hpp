@@ -319,7 +319,7 @@ class HttpServer {
     bool isHeaderComplete(const HttpRequest &request) const;
     bool needsMoreData(const HttpRequest &request) const;
     void processContentLength(HttpRequest &request);
-    bool validateRequest(const HttpRequest &request) const;
+    bool validateRequest(const HttpRequest &request, int clientSocket);
     bool parseRequestLine(const string &line, HttpRequest &request);
     bool parseHeader(const string &line, HttpRequest &request);
     size_t getRequestSizeLimit(int clientSocket, const HttpRequest &request);
