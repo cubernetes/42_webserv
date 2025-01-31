@@ -51,7 +51,6 @@ void HttpServer::terminateIfNoPendingDataAndNoCgi(PendingWriteMap::iterator &it,
     // for POLL: remove POLLOUT from events since we're done writing
     stopMonitoringForWriteEvents(_monitorFds, clientSocket);
     // TODO: @all: yeah actually we really have to close the connection here somehow, removeCLient or smth
-    std::cout << "Closing clientSocket " << clientSocket << std::endl;
     removeClient(clientSocket);         // REALLY NOT SURE ABOUT THIS ONE
     _pendingCloses.erase(clientSocket); // also not 100% sure about this one
     _cgiToClient.erase(clientSocket);
@@ -70,7 +69,6 @@ void HttpServer::writeToClient(int clientSocket) {
   const char *data = dataChunk.c_str();
 
   ssize_t bytesSent;
-  std::cout << "Writing this data [" << data << "] to fd clientSocket " << clientSocket << std::endl;
   if (_cgiToClient.count(clientSocket)) // it's a writeFd for the CGI, can't use send
     bytesSent = ::write(clientSocket, data, dataSize);
   else
@@ -148,11 +146,10 @@ bool HttpServer::sendErrorPage(int clientSocket, int statusCode, const LocationC
 
 // pass NULL as location if errorPages should not be served
 void HttpServer::sendError(int clientSocket, int statusCode, const LocationCtx *const location) {
-  Logger::logDebug("Sending error response: " + STR(statusCode));
   if (location == NULL || !sendErrorPage(clientSocket, statusCode, *location)) {
+    log.debug << "Sending hardcoded error with status code: " << statusCode << std::endl;
     string errorContent =
         wrapInHtmlBody("<h1>\r\n\t\t\t" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "\r\n\t\t</h1>");
-    Logger::logDebug("Error content: " + errorContent);
     sendString(
         clientSocket,
         wrapInHtmlBody("<h1>\r\n\t\t\t" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "\r\n\t\t</h1>"),
@@ -162,7 +159,7 @@ void HttpServer::sendError(int clientSocket, int statusCode, const LocationCtx *
 
 void HttpServer::sendString(int clientSocket, const string &payload, int statusCode, const string &contentType,
                             bool onlyHeaders) {
-  Logger::logDebug("Preparing to send string response with status " + STR(statusCode));
+  log.debug << "Preparing to send string response with status code: " << statusCode << std::endl;
   std::ostringstream response;
 
   response << _httpVersionString << " " << statusCode << " " << statusTextFromCode(statusCode) << "\r\n"
@@ -173,7 +170,6 @@ void HttpServer::sendString(int clientSocket, const string &payload, int statusC
   if (!onlyHeaders)
     response << payload;
 
-  Logger::logDebug("Queueing response: " + response.str());
   queueWrite(clientSocket, response.str());
   _pendingCloses.insert(clientSocket);
 }

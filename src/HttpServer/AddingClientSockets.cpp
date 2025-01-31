@@ -43,14 +43,14 @@ void HttpServer::addNewClient(int listeningSocket) {
 
   int clientSocket = accept(listeningSocket, (struct sockaddr *)&clientAddr, &clientLen);
   if (clientSocket < 0) {
-    Logger::logError(string("accept failed: ") + strerror(errno));
+    log.error << "accept failed: " << strerror(errno) << std::endl;
     return; // don't add client on this kind of failure
   }
   if (::fcntl(clientSocket, F_SETFD, FD_CLOEXEC) < 0) { // TODO: @timo: use accept4 maybe
-    Logger::logError(string("fcntl failed: ") + strerror(errno));
+    log.error << "fcntl failed: " << strerror(errno) << std::endl;
     return; // don't add client on this kind of failure
   }
 
   addClientSocketToMonitorFds(_monitorFds, clientSocket);
-  Logger::logDebug("New client connected. FD: " + STR(clientSocket));
+  log.debug << "New client connected. FD: " << STR(clientSocket) << std::endl;
 }

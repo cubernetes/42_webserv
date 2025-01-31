@@ -611,3 +611,113 @@ static inline std::ostream &operator<<(std::ostream &os, const struct pollfd &va
 static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiProcess &val) {
   return os << repr(val, Constants::jsonTrace);
 }
+
+// kinda belongs into Logger, but can't do that because it makes things SUPER ugly (circular dependencies and so on)
+// extern stuff
+#include <iostream>
+#include <ostream>
+#include <sstream>
+#include <string>
+
+#include "MacroMagic.h"
+
+using std::cout;
+
+#define TRACE_COPY_ASSIGN_OP                                                                                           \
+  do {                                                                                                                 \
+    if (log.istrace()) {                                                                                               \
+      std::ostringstream oss;                                                                                          \
+      if (Constants::jsonTrace)                                                                                        \
+        oss << "{\"event\":\"copy assignment operator\",\"other object\":" << ::repr(other) << "}\n";                  \
+      else                                                                                                             \
+        oss << kwrd(getClass(*this)) + punct("& ") + kwrd(getClass(*this)) + punct("::") + func("operator") +          \
+                   punct("=(")                                                                                         \
+            << ::repr(other) << punct(")") + '\n';                                                                     \
+      cout << oss.str() << std::flush;                                                                                 \
+    }                                                                                                                  \
+  } while (false)
+
+#define TRACE_COPY_CTOR                                                                                                \
+  do {                                                                                                                 \
+    if (log.istrace()) {                                                                                               \
+      std::ostringstream oss;                                                                                          \
+      if (Constants::jsonTrace)                                                                                        \
+        oss << "{\"event\":\"copy constructor\",\"other object\":" << ::repr(other)                                    \
+            << ",\"this object\":" << ::repr(*this) << "}\n";                                                          \
+      else                                                                                                             \
+        oss << kwrd(getClass(*this)) + punct("(") << ::repr(other) << punct(") -> ") << ::repr(*this) << '\n';         \
+      cout << oss.str() << std::flush;                                                                                 \
+    }                                                                                                                  \
+  } while (false)
+
+#define GEN_NAMES_FIRST(type, name) << #type << " " << #name
+
+#define GEN_NAMES(type, name) << punct(", ") << #type << " " << #name
+
+#define GEN_REPRS_FIRST(_, name)                                                                                       \
+  << (Constants::kwargLogs ? cmt(#name) : "") << (Constants::kwargLogs ? cmt("=") : "") << ::repr(name)
+
+#define GEN_REPRS(_, name)                                                                                             \
+  << punct(", ") << (Constants::kwargLogs ? cmt(#name) : "") << (Constants::kwargLogs ? cmt("=") : "") << ::repr(name)
+
+#define TRACE_ARG_CTOR(...)                                                                                            \
+  do {                                                                                                                 \
+    if (log.istrace()) {                                                                                               \
+      std::ostringstream oss;                                                                                          \
+      if (Constants::jsonTrace)                                                                                        \
+        IF(IS_EMPTY(__VA_ARGS__))                                                                                      \
+      (oss << "{\"event\":\"default constructor\",\"this object\":" << ::repr(*this) << "}\n";                         \
+       , oss << "{\"event\":\"(" EXPAND(DEFER(GEN_NAMES_FIRST)(HEAD2(__VA_ARGS__)))                                    \
+                    FOR_EACH_PAIR(GEN_NAMES, TAIL2(__VA_ARGS__))                                                       \
+             << ") constructor\",\"this object\":" << ::repr(*this)                                                    \
+             << "}\n";) else IF(IS_EMPTY(__VA_ARGS__))(oss << kwrd(getClass(*this)) + punct("() -> ") << ::repr(*this) \
+                                                           << '\n';                                                    \
+                                                       , oss << kwrd(getClass(*this)) +                                \
+                                                                    punct("(") EXPAND(                                 \
+                                                                        DEFER(GEN_REPRS_FIRST)(HEAD2(__VA_ARGS__)))    \
+                                                                        FOR_EACH_PAIR(GEN_REPRS, TAIL2(__VA_ARGS__))   \
+                                                             << punct(") -> ") << ::repr(*this) << '\n';) cout         \
+          << oss.str() << std::flush;                                                                                  \
+    }                                                                                                                  \
+  } while (false)
+
+#define TRACE_DEFAULT_CTOR TRACE_ARG_CTOR()
+
+#define TRACE_DTOR                                                                                                     \
+  do {                                                                                                                 \
+    if (log.istrace()) {                                                                                               \
+      std::ostringstream oss;                                                                                          \
+      if (Constants::jsonTrace)                                                                                        \
+        oss << "{\"event\":\"destructor\",\"this object\":" << ::repr(*this) << "}\n";                                 \
+      else                                                                                                             \
+        oss << punct("~") << ::repr(*this) << '\n';                                                                    \
+      cout << oss.str() << std::flush;                                                                                 \
+    }                                                                                                                  \
+  } while (false)
+
+#define TRACE_SWAP_BEGIN                                                                                               \
+  do {                                                                                                                 \
+    if (log.istrace()) {                                                                                               \
+      std::ostringstream oss;                                                                                          \
+      if (Constants::jsonTrace) {                                                                                      \
+        oss << "{\"event\":\"object swap\",\"this object\":" << ::repr(*this) << ",\"other object\":" << ::repr(other) \
+            << "}\n";                                                                                                  \
+      } else {                                                                                                         \
+        oss << cmt("<Swapping " + std::string(getClass(*this)) + " *this:") + '\n';                                    \
+        oss << ::repr(*this) << '\n';                                                                                  \
+        oss << cmt("with the following" + std::string(getClass(*this)) + "object:") + '\n';                            \
+        oss << ::repr(other) << '\n';                                                                                  \
+      }                                                                                                                \
+      cout << oss.str() << std::flush;                                                                                 \
+    }                                                                                                                  \
+  } while (false)
+
+#define TRACE_SWAP_END                                                                                                 \
+  do {                                                                                                                 \
+    if (log.istrace()) {                                                                                               \
+      std::ostringstream oss;                                                                                          \
+      if (!Constants::jsonTrace)                                                                                       \
+        oss << cmt(std::string(getClass(*this)) + " swap done>") + '\n';                                               \
+      cout << oss.str() << std::flush;                                                                                 \
+    }                                                                                                                  \
+  } while (false)

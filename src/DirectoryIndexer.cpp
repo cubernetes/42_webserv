@@ -7,15 +7,13 @@
 #include <string>
 #include <sys/stat.h>
 #include <utility>
-#include <vector>
 
+#include "DirectoryIndexer.hpp"
 #include "Logger.hpp"
 
 using std::string;
 
-typedef std::vector<std::pair<std::string, std::pair<long, long long> > > Entries;
-
-static std::string formatSizeReadable(long long size) {
+std::string DirectoryIndexer::formatSizeReadable(long long size) {
   std::ostringstream oss;
 
   if (size < 1024) {
@@ -31,13 +29,14 @@ static std::string formatSizeReadable(long long size) {
   return oss.str();
 }
 
-static void iterateOverDirEntries(Entries &entries, struct dirent *&entry, const string &path) {
+void DirectoryIndexer::iterateOverDirEntries(Entries &entries, struct dirent *&entry, const string &path) {
   if (std::strcmp(entry->d_name, ".") == 0)
     return;
   string entryPath = path + "/" + entry->d_name;
   struct stat st;
   if (stat(entryPath.c_str(), &st) == -1) {
-    Logger::logError("indexDirectory: Failed to stat file " + entryPath + ": " + std::strerror(errno));
+    log.debug << "indexDirectory: Failed to stat file " << entryPath << ": " << std::strerror(errno) << std::endl;
+    ;
     return;
   }
   string nameField = entry->d_name;
@@ -49,11 +48,11 @@ static void iterateOverDirEntries(Entries &entries, struct dirent *&entry, const
   entries.push_back(std::make_pair(nameField, std::make_pair(lastModified, sizeBytes)));
 }
 
-string indexDirectory(string location, string path) {
+string DirectoryIndexer::indexDirectory(string location, string path) {
   DIR *dir = opendir(path.c_str());
   if (!dir) {
-    Logger::logError("indexDirectory: Failed to open directory " + path); // TODO: @timo: make logging proper
-    return "Couldn't get directory contents";                             // not perfect, should throw 404 or smth
+    log.debug << "indexDirectory: Failed to open directory " << path << std::endl; // TODO: @timo: make logging proper
+    return "Couldn't get directory contents"; // not perfect, should throw 404 or smth
   }
 
   Entries entries;

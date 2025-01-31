@@ -17,7 +17,8 @@ namespace Utils {
   bool isHexDigitNoCase(const char c);
   size_t convertSizeToBytes(const string &sizeStr);
   string replaceAll(string s, const string &search, const string &replace);
-  string jsonEscape(string s);
+  string jsonEscape(const string &s);
+  string escape(const string &s);
   bool allUppercase(const string &str);
 
   template <typename T> static inline vector<T> &getTmpVec() {

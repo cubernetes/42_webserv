@@ -13,6 +13,7 @@
 
 #include "Config.hpp"
 #include "Constants.hpp"
+#include "Logger.hpp"
 
 using Constants::MultPlexType;
 using std::map;
@@ -24,7 +25,7 @@ using std::vector;
 class HttpServer {
 public:
   ~HttpServer();
-  HttpServer(const string &configPath);
+  HttpServer(const string &configPath, Logger &log);
   operator string() const;
 
   // entry point, will run forever unless interrupted by signals or exceptions
@@ -187,18 +188,22 @@ private:
   Servers _servers;
   DefaultServers _defaultServers;
   PendingRequests _pendingRequests;
+  Logger defaultLogger;
+  Logger &log;
 
   //// private methods ////
   // HttpServer must always be constructed with a config
   HttpServer()
       : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(),
         _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(),
-        _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests() {};
+        _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), defaultLogger(),
+        log(defaultLogger) {};
   // Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a server and its config
   HttpServer(const HttpServer &)
       : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(),
         _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(),
-        _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests() {};
+        _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), defaultLogger(),
+        log(defaultLogger) {};
   // HttpServer cannot be assigned to
   HttpServer &operator=(const HttpServer &) { return *this; };
 

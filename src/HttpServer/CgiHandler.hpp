@@ -7,7 +7,7 @@ using std::string;
 class CgiHandler {
 public:
   ~CgiHandler();
-  CgiHandler(HttpServer &server, const string &extension, const string &program);
+  CgiHandler(HttpServer &server, const string &extension, const string &program, Logger &_log);
   CgiHandler(const CgiHandler &other);
   CgiHandler &operator=(CgiHandler);
   void swap(CgiHandler &); // copy swap idiom
@@ -26,6 +26,7 @@ private:
   HttpServer &_server;
   string _extension;
   string _program;
+  Logger &log;
 
   char **exportEnvironment(const std::map<string, string> &env);
   std::map<string, string> setupEnvironment(const HttpServer::HttpRequest &request, const LocationCtx &location);

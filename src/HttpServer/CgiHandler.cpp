@@ -5,6 +5,7 @@
 #include "CgiHandler.hpp"
 #include "HttpServer.hpp"
 #include "Logger.hpp"
+#include "Repr.hpp"
 
 #define PIPE_READ 0
 #define PIPE_WRITE 1
@@ -16,13 +17,13 @@ typedef HttpServer::ClientFdToCgiMap CgiProcessMap; // not sure why using doesn'
 // De- & Constructors
 CgiHandler::~CgiHandler() { TRACE_DTOR; }
 
-CgiHandler::CgiHandler(HttpServer &server, const string &extension, const string &program)
-    : _server(server), _extension(extension), _program(program) {
+CgiHandler::CgiHandler(HttpServer &server, const string &extension, const string &program, Logger &_log)
+    : _server(server), _extension(extension), _program(program), log(_log) {
   TRACE_ARG_CTOR(string, extension, string, program);
 }
 
 CgiHandler::CgiHandler(const CgiHandler &other)
-    : _server(other._server), _extension(other._extension), _program(other._program) {
+    : _server(other._server), _extension(other._extension), _program(other._program), log(other.log) {
   TRACE_COPY_CTOR;
 }
 
@@ -41,6 +42,7 @@ void CgiHandler::swap(CgiHandler &other) /* noexcept */ {
   TRACE_SWAP_BEGIN;
   ::swap(_extension, other._extension);
   ::swap(_program, other._program);
+  ::swap(log, other.log);
   TRACE_SWAP_END;
 }
 

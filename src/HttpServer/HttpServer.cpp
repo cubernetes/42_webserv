@@ -1,7 +1,7 @@
 #include <signal.h>
 
 #include "HttpServer.hpp"
-#include "Logger.hpp"
+#include "Repr.hpp"
 
 HttpServer::~HttpServer() {
   TRACE_DTOR;
@@ -10,7 +10,6 @@ HttpServer::~HttpServer() {
 
 void finish(int signal) {
   (void)signal;
-  Logger::logInfo("\nShutting down");
   HttpServer::_running = false;
 }
 
@@ -20,11 +19,12 @@ void HttpServer::initSignals() {
 }
 
 bool HttpServer::_running = true;
-HttpServer::HttpServer(const string &configPath)
+HttpServer::HttpServer(const string &configPath, Logger &_log)
     : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(),
       _pollFds(_monitorFds.pollFds), _httpVersionString(Constants::httpVersionString),
       _rawConfig(readConfig(configPath)), _config(parseConfig(_rawConfig)), _mimeTypes(), _statusTexts(),
-      _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests() {
+      _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), defaultLogger(),
+      log(_log) {
   TRACE_ARG_CTOR(const string &, configPath);
   initSignals();
   initStatusTexts(_statusTexts);
@@ -51,5 +51,6 @@ void HttpServer::run() {
 								  // 4) do nothing
 		checkForInactiveClients();
 	}
+  log.warn << "Shutting server down" << std::endl;
 }
 // clang-format on

@@ -66,7 +66,23 @@ string Utils::replaceAll(string s, const string &search, const string &replace) 
   return s;
 }
 
-string Utils::jsonEscape(string s) { return Utils::replaceAll(Utils::replaceAll(s, "\\", "\\\\"), "\"", "\\\""); }
+string Utils::jsonEscape(const string &s) {
+  return Utils::replaceAll(Utils::replaceAll(s, "\\", "\\\\"), "\"", "\\\"");
+}
+
+string Utils::escape(const string &s) {
+  string replaced = s;
+  replaced = Utils::replaceAll(s, "\\", "\\\\");
+  replaced = Utils::replaceAll(replaced, "\"", "\\\"");
+  replaced = Utils::replaceAll(replaced, "\a", "\\a");
+  replaced = Utils::replaceAll(replaced, "\b", "\\b");
+  replaced = Utils::replaceAll(replaced, "\t", "\\t");
+  replaced = Utils::replaceAll(replaced, "\n", "\\n");
+  replaced = Utils::replaceAll(replaced, "\v", "\\v");
+  replaced = Utils::replaceAll(replaced, "\f", "\\f");
+  replaced = Utils::replaceAll(replaced, "\r", "\\r");
+  return "\"" + replaced + "\"";
+}
 
 bool Utils::allUppercase(const string &str) {
   for (size_t i = 0; i < str.length(); ++i) {

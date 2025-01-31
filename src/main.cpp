@@ -1,4 +1,5 @@
 #include <cstdlib>
+#include <iostream>
 #include <string>
 
 #include "HttpServer.hpp"
@@ -6,13 +7,14 @@
 #include "Utils.hpp"
 
 int main(int ac, char **av) {
+  Logger log(std::cout);
   try {
     std::string configPath = Utils::parseArgs(ac, av);
-    HttpServer server(configPath);
+    HttpServer server(configPath, log);
     server.run();
     return EXIT_SUCCESS;
   } catch (const std::exception &exception) {
-    Logger::logFatal(exception.what());
+    log.fatal << exception.what() << std::endl;
     return EXIT_FAILURE;
   }
 }

@@ -3,7 +3,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 
-#include "DirectoryIndexing.hpp"
+#include "DirectoryIndexer.hpp"
 #include "HttpServer.hpp"
 
 void HttpServer::redirectClient(int clientSocket, const string &newUri, int statusCode) {
@@ -64,7 +64,8 @@ void HttpServer::handleUriWithSlash(int clientSocket, const string &diskPath, co
         sendError(clientSocket, 403, &location);
       return;
     }
-    sendString(clientSocket, indexDirectory(request.path, diskPath), 200, "text/html", request.method == "HEAD");
+    DirectoryIndexer di(log);
+    sendString(clientSocket, di.indexDirectory(request.path, diskPath), 200, "text/html", request.method == "HEAD");
     return;
   }
 }
