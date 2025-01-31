@@ -1,9 +1,22 @@
+#include <cstdlib>
+#include <fstream>
+#include <stdexcept>
+
+#include <signal.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include "CgiHandler.hpp"
-#include "Config.hpp"
 #include "DirectiveValidation.hpp"
 #include "HttpServer.hpp"
-#include <cstdio>
-#include <fstream>
+#include "Logger.hpp"
+#include "Repr.hpp"
+#include "Utils.hpp"
+
+using std::runtime_error;
+using Utils::STR;
 
 bool HttpServer::requestIsForCgi(const HttpRequest &request, const LocationCtx &location) {
   if (!directiveExists(location.second, "cgi_dir"))
@@ -40,7 +53,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
   ssize_t bytesRead = ::read(cgiFd, buffer, sizeof(buffer) - 1);
   std::cout << "[Ok after the read, we got this in buffer: {" << buffer << "}]" << std::endl;
   if (bytesRead < 0) {
-    kill(process.pid, SIGKILL);
+    ::kill(process.pid, SIGKILL);
     sendError(process.clientSocket, 502, process.location);
     // TODO: @all: not sure if the following line is correct
     closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
@@ -53,7 +66,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
   if (bytesRead == 0) { // EOF - CGI process finished writing
     int status;
     // TODO: @all: we should install a signal handler that will reap the CGI process
-    waitpid(process.pid, &status, WNOHANG);
+    ::waitpid(process.pid, &status, WNOHANG);
 
     if (!process.headersSent)
       sendError(process.clientSocket, 502, process.location);
@@ -70,7 +83,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
   process.totalSize += static_cast<unsigned long>(bytesRead);
 
   if (process.totalSize > 10 * 1024 * 1024) { // 10MB limit
-    kill(process.pid, SIGKILL);
+    ::kill(process.pid, SIGKILL);
     sendError(process.clientSocket, 413, process.location);
     // TODO: @all: not sure if the following line is correct
     closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
@@ -107,7 +120,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
 
       std::cout << "Closing cgiReadFd " << cgiFd << std::endl;
     } else if (process.response.length() > 8192) { // Headers too long
-      kill(process.pid, SIGKILL);
+      ::kill(process.pid, SIGKILL);
       sendError(process.clientSocket, 502, process.location);
       // TODO: @all: not sure if the following line is correct
       closeAndRemoveMultPlexFd(_monitorFds, cgiFd);

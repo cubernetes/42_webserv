@@ -1,4 +1,9 @@
-#include "Config.hpp"
+#include <sstream>
+
+#include <signal.h>
+#include <sys/stat.h>
+
+#include "DirectoryIndexing.hpp"
 #include "HttpServer.hpp"
 
 void HttpServer::redirectClient(int clientSocket, const string &newUri, int statusCode) {

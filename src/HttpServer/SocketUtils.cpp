@@ -1,4 +1,11 @@
+#include <algorithm>
+
+#include "Constants.hpp"
 #include "HttpServer.hpp"
+
+using Constants::EPOLL;
+using Constants::POLL;
+using Constants::SELECT;
 
 bool HttpServer::isListeningSocket(int fd) {
   return std::find(_listeningSockets.begin(), _listeningSockets.end(), fd) != _listeningSockets.end();
@@ -17,8 +24,6 @@ int HttpServer::multPlexFdToRawFd(const MultPlexFds &readyFds, size_t i) {
   }
 }
 
-struct pollfd *HttpServer::multPlexFdsToPollFds(const MultPlexFds &fds) {
-  return (struct pollfd *)&fds.pollFds[0];
-}
+struct pollfd *HttpServer::multPlexFdsToPollFds(const MultPlexFds &fds) { return (struct pollfd *)&fds.pollFds[0]; }
 
 nfds_t HttpServer::getNumberOfPollFds(const MultPlexFds &fds) { return static_cast<nfds_t>(fds.pollFds.size()); }

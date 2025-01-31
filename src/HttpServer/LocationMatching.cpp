@@ -1,4 +1,11 @@
+#include <cerrno>
+#include <stdexcept>
+
 #include "HttpServer.hpp"
+#include "Utils.hpp"
+
+using std::runtime_error;
+using Utils::STR;
 
 size_t HttpServer::getIndexOfServerByHost(const string &requestedHost, const struct in_addr &addr,
                                           in_port_t port) const {

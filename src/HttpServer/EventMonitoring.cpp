@@ -1,4 +1,12 @@
+#include <cerrno>
+#include <stdexcept>
+
 #include "HttpServer.hpp"
+
+using Constants::EPOLL;
+using Constants::POLL;
+using Constants::SELECT;
+using std::runtime_error;
 
 HttpServer::MultPlexFds HttpServer::getReadyPollFds(MultPlexFds &monitorFds, int nReady, struct pollfd *pollFds,
                                                     nfds_t nPollFds) {

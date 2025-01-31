@@ -1,4 +1,7 @@
+#include <sstream>
+
 #include "HttpServer.hpp"
+#include "Utils.hpp"
 
 string HttpServer::percentDecode(const string &str) {
   std::ostringstream oss;

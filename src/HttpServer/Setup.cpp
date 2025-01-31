@@ -1,4 +1,19 @@
+#include <cerrno>
+#include <cstdlib>
+#include <iostream>
+#include <stdexcept>
+
+#include <netdb.h>
+#include <unistd.h>
+
+#include "Constants.hpp"
 #include "HttpServer.hpp"
+#include "Repr.hpp"
+
+using Constants::EPOLL;
+using Constants::POLL;
+using Constants::SELECT;
+using std::runtime_error;
 
 static string getServerIpStr(const ServerCtx &serverCtx) {
   string listen = "listen";
@@ -36,7 +51,7 @@ static int createTcpListenSocket() {
 
   int opt = 1;
   if (setsockopt(listeningSocket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
-    close(listeningSocket);
+    ::close(listeningSocket);
     throw runtime_error("Failed to set socket options");
   }
   return listeningSocket;
@@ -49,14 +64,14 @@ static void bindSocket(int listeningSocket, const HttpServer::Server &server) {
   address.sin_addr = server.ip;
 
   if (bind(listeningSocket, (struct sockaddr *)&address, sizeof(address)) < 0) {
-    close(listeningSocket);
+    ::close(listeningSocket);
     throw runtime_error(string("bind error: ") + strerror(errno));
   }
 }
 
 static void listenSocket(int listeningSocket) {
   if (listen(listeningSocket, SOMAXCONN) < 0) {
-    close(listeningSocket);
+    ::close(listeningSocket);
     throw runtime_error(string("listen error: ") + strerror(errno));
   }
 }
@@ -96,8 +111,8 @@ void HttpServer::setupServers(const Config &config) {
     server.port = getServerPort(*serverCtx);
 
     setupListeningSocket(server);
-    cout << cmt("Server with names ") << repr(server.serverNames) << cmt(" is listening on ")
-         << num(getServerIpStr(*serverCtx)) << num(":") << repr(ntohs(server.port)) << '\n';
+    std::cout << cmt("Server with names ") << repr(server.serverNames) << cmt(" is listening on ")
+              << num(getServerIpStr(*serverCtx)) << num(":") << repr(ntohs(server.port)) << '\n';
 
     _servers.push_back(server);
 

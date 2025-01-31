@@ -1,50 +1,25 @@
 #pragma once /* HttpServer.hpp */
 
-#include <algorithm>
-#include <cctype>
-#include <cstdlib>
 #include <cstring>
 #include <ctime>
-#include <ctype.h>
-#include <errno.h>
-#include <fstream>
 #include <iostream>
-#include <iterator>
-#include <limits.h>
 #include <map>
-#include <netdb.h>
 #include <netinet/in.h>
-#include <ostream>
 #include <set>
-#include <signal.h>
-#include <stdexcept>
-#include <string>
 #include <sys/epoll.h>
 #include <sys/poll.h>
-#include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/wait.h>
-#include <unistd.h>
 #include <utility>
 #include <vector>
 
 #include "Config.hpp"
 #include "Constants.hpp"
-#include "DirectoryIndexing.hpp"
-#include "Utils.hpp"
 
-using Constants::EPOLL;
 using Constants::MultPlexType;
-using Constants::POLL;
-using Constants::SELECT;
-using std::cout;
 using std::map;
 using std::pair;
-using std::runtime_error;
 using std::set;
 using std::string;
 using std::vector;
-using Utils::STR;
 
 class HttpServer {
 public:
@@ -349,5 +324,3 @@ std::ostream &operator<<(std::ostream &, const HttpServer &);
 
 void initMimeTypes(HttpServer::MimeTypes &mimeTypes);
 void initStatusTexts(HttpServer::StatusTexts &statusTexts);
-
-#include "Logger.hpp"

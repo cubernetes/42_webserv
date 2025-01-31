@@ -1,4 +1,7 @@
 #pragma once /* Repr.hpp */
+// This file MUST be included AFTER all of the following includes (to avoid circular dependencies)
+// - HttpServer.hpp
+// - CgiHandler.hpp
 
 #include <ctime>
 #include <map>
@@ -253,6 +256,9 @@ POST_REFLECT_GETTER(HttpServer, HttpServer::MultPlexFds, _monitorFds, HttpServer
                     _mimeTypes, HttpServer::StatusTexts, _statusTexts, HttpServer::PendingWriteMap, _pendingWrites,
                     HttpServer::PendingCloses, _pendingCloses, HttpServer::Servers, _servers,
                     HttpServer::DefaultServers, _defaultServers, HttpServer::PendingRequests, _pendingRequests);
+
+#include "CgiHandler.hpp"
+POST_REFLECT_GETTER(CgiHandler, string, _extension, string, _program);
 
 // for vector
 template <typename T> struct ReprWrapper<vector<T> > {

@@ -1,4 +1,7 @@
+#include <signal.h>
+
 #include "HttpServer.hpp"
+#include "Logger.hpp"
 
 HttpServer::~HttpServer() {
   TRACE_DTOR;
@@ -35,18 +38,18 @@ std::ostream &operator<<(std::ostream &os, const HttpServer &httpServer) {
   return os << static_cast<string>(httpServer);
 }
 
+// clang-format off
 void HttpServer::run() {
-  while (_running) {
-    MultPlexFds readyFds = getReadyFds(_monitorFds); // block until: 1) new client
-                                                     //              2) client that can be written to
-                                                     //              (response) 3) client that can be read from
-                                                     //              (request) 4) Constants::multiplexTimeout
-                                                     //              milliseconds is over
-    handleReadyFds(readyFds);                        // 1) accept new client and add to pool
-                                                     // 2) write pending data for Constants::chunkSize bytes (and
-                                                     // remove this disposition if done writing) 3) read data for
-                                                     // Constants::chunkSize bytes (or remove client if
-                                                     // appropriate) 4) do nothing
-    checkForInactiveClients();
-  }
+	while (_running) {
+		MultPlexFds readyFds = getReadyFds(_monitorFds); // block until: 1) new client
+														 //              2) client that can be written to (response)
+														 //              3) client that can be read from (request)
+														 //              4) Constants::multiplexTimeout milliseconds is over
+		handleReadyFds(readyFds); // 1) accept new client and add to pool
+								  // 2) write pending data for Constants::chunkSize bytes (and remove this disposition if done writing)
+								  // 3) read data for Constants::chunkSize bytes (or remove client if appropriate)
+								  // 4) do nothing
+		checkForInactiveClients();
+	}
 }
+// clang-format on

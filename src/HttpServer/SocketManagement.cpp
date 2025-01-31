@@ -1,4 +1,9 @@
+#include "Constants.hpp"
 #include "HttpServer.hpp"
+
+using Constants::EPOLL;
+using Constants::POLL;
+using Constants::SELECT;
 
 void HttpServer::updatePollEvents(MultPlexFds &monitorFds, int clientSocket, short events, bool add) {
   for (size_t i = 0; i < monitorFds.pollFds.size(); ++i) {

@@ -1,7 +1,10 @@
+#include <algorithm>
+
+#include <unistd.h>
+
 #include "CgiHandler.hpp"
-#include "ReprCgi.hpp"
-#include <cstdio>
-#include <cstring>
+#include "HttpServer.hpp"
+#include "Logger.hpp"
 
 #define PIPE_READ 0
 #define PIPE_WRITE 1
@@ -140,7 +143,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
   string rootPath = getFirstDirective(location.second, "root")[0];
 
   // Validate script permissions
-  if (access(scriptPath.c_str(), X_OK) != 0) {
+  if (::access(scriptPath.c_str(), X_OK) != 0) {
     _server.sendError(clientSocket, 403, &location);
     return;
   }

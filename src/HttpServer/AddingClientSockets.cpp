@@ -1,5 +1,17 @@
-#include "HttpServer.hpp"
+#include <cerrno>
+
 #include <fcntl.h>
+#include <unistd.h>
+
+#include "Constants.hpp"
+#include "HttpServer.hpp"
+#include "Logger.hpp"
+#include "Utils.hpp"
+
+using Constants::EPOLL;
+using Constants::POLL;
+using Constants::SELECT;
+using Utils::STR;
 
 void HttpServer::addClientSocketToPollFds(MultPlexFds &monitorFds, int clientSocket) {
   struct pollfd pfd;
@@ -34,7 +46,7 @@ void HttpServer::addNewClient(int listeningSocket) {
     Logger::logError(string("accept failed: ") + strerror(errno));
     return; // don't add client on this kind of failure
   }
-  if (::fcntl(clientSocket, F_SETFD, FD_CLOEXEC) < 0) {
+  if (::fcntl(clientSocket, F_SETFD, FD_CLOEXEC) < 0) { // TODO: @timo: use accept4 maybe
     Logger::logError(string("fcntl failed: ") + strerror(errno));
     return; // don't add client on this kind of failure
   }

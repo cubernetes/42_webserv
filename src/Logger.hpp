@@ -1,4 +1,7 @@
 #pragma once /* Logger.hpp */
+// This file MUST be included AFTER all of the following includes (to avoid circular dependencies)
+// - HttpServer.hpp
+// - CgiHandler.hpp
 
 #include <exception>
 #include <string>

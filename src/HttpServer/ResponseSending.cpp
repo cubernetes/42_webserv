@@ -1,4 +1,13 @@
+#include <cstdlib>
+#include <fstream>
+
+#include <unistd.h>
+
 #include "HttpServer.hpp"
+#include "Logger.hpp"
+#include "Utils.hpp"
+
+using Utils::STR;
 
 void HttpServer::queueWrite(int clientSocket, const string &data) {
   if (_pendingWrites.find(clientSocket) == _pendingWrites.end())
@@ -63,9 +72,9 @@ void HttpServer::writeToClient(int clientSocket) {
   ssize_t bytesSent;
   std::cout << "Writing this data [" << data << "] to fd clientSocket " << clientSocket << std::endl;
   if (_cgiToClient.count(clientSocket)) // it's a writeFd for the CGI, can't use send
-    bytesSent = write(clientSocket, data, dataSize);
+    bytesSent = ::write(clientSocket, data, dataSize);
   else
-    bytesSent = send(clientSocket, data, dataSize, 0);
+    bytesSent = ::send(clientSocket, data, dataSize, 0);
   if (bytesSent < 0) {
     // TODO: @all: remove pending closes? clear pending writes?
     removeClient(clientSocket);
@@ -118,7 +127,7 @@ static string getErrorPagePath(int statusCode, const LocationCtx &location) {
        ++errPages) {
     Arguments::const_iterator code = errPages->begin(), before = --errPages->end();
     for (; code != before; ++code) {
-      if (atoi(code->c_str()) == statusCode) {
+      if (std::atoi(code->c_str()) == statusCode) {
         return errPages->back();
       }
     }

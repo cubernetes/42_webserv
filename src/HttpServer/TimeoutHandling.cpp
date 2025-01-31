@@ -1,6 +1,9 @@
-#include "Constants.hpp"
-#include "HttpServer.hpp"
 #include <ctime>
+
+#include <signal.h>
+#include <sys/wait.h>
+
+#include "HttpServer.hpp"
 
 static bool isTimedOut(const HttpServer::CgiProcess &process) {
   std::time_t lastActive = process.lastActive;
@@ -17,8 +20,8 @@ void HttpServer::checkForInactiveClients() {
     CgiProcess &process = it->second;
 
     if (isTimedOut(process)) {
-      kill(process.pid, SIGKILL);
-      waitpid(process.pid, NULL, WNOHANG);
+      ::kill(process.pid, SIGKILL);
+      ::waitpid(process.pid, NULL, WNOHANG);
       sendError(process.clientSocket, 504, process.location);
 
       closeAndRemoveMultPlexFd(_monitorFds, it->first);

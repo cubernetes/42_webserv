@@ -1,10 +1,6 @@
 #pragma once /* CgiHandler.hpp */
 
 #include "HttpServer.hpp"
-#include <fcntl.h>
-#include <sstream>
-#include <sys/resource.h>
-#include <sys/time.h>
 
 using std::string;
 

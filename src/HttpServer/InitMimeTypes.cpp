@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "HttpServer.hpp"
 
 string HttpServer::getMimeType(const string &path) {
