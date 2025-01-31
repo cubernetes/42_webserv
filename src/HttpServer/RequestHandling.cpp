@@ -24,11 +24,18 @@ void HttpServer::handleCgiRead(int cgiFd) {
 		sendError(cgiFd, 502, NULL);
 		return;
 	}
-
 	CgiProcess& process = it->second;
-	char buffer[CONSTANTS_CHUNK_SIZE];
 
+	// std::cout << "This is the cgiToClient map: " << _cgiToClient << std::endl;
+	if (_cgiToClient.count(process.writeFd) > 0 && _cgiToClient[process.writeFd] == clientSocket)
+		return; // there's still pending writes (from client POST) to this CGI process
+
+	char buffer[CONSTANTS_CHUNK_SIZE];
+	std::cout << "Has the 'data' been written to fd " << process.writeFd << "? " << ((_cgiToClient.count(process.writeFd) == 0) ? "YES" : "NO") << std::endl;
+	std::cout << "_cgiToClient[process.writeFd]: " << ((_cgiToClient.count(process.writeFd) == 0) ? "Not in map" : STR(_cgiToClient[process.writeFd])) << std::endl;
+	std::cout << "[Ok before the read]" << std::endl;
 	ssize_t bytesRead = ::read(cgiFd, buffer, sizeof(buffer) - 1);
+	std::cout << "[Ok after the read, we got this in buffer: {" << buffer << "}]" << std::endl;
 	if (bytesRead < 0) {
 		kill(process.pid, SIGKILL);
 		sendError(process.clientSocket, 502, process.location);
@@ -73,6 +80,9 @@ void HttpServer::handleCgiRead(int cgiFd) {
 		size_t headerEnd = process.response.find("\r\n\r\n");
 		if (headerEnd != string::npos) {
 			// Found headers, prepare full response with HTTP/1.1
+			std::cout << "So this is the process: " << process << std::endl;
+			std::cout << "And it's writeFd maps to: " << _cgiToClient[process.writeFd] << std::endl;
+			std::cout << "THIS IS THE PROCESS RESPONSE " << process.response << std::endl;
 			string headers = process.response.substr(0, headerEnd);
 			string body = process.response.substr(headerEnd + 4);
 			
@@ -87,12 +97,11 @@ void HttpServer::handleCgiRead(int cgiFd) {
 			fullResponse << headers << "\r\n\r\n" << body;
 			
 			process.headersSent = true;
+			std::cout << "Queueing write to " << cgiFd << " with data [" << fullResponse.str() << "]" << std::endl;
 			queueWrite(process.clientSocket, fullResponse.str());
 			process.response.clear();
 
-			closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
-			_clientToCgi.erase(clientSocket); // TODO: @timo: rename _clientToCgi to something like _clientFdToCgiProcess
-			_cgiToClient.erase(cgiFd); // TODO: @timo: rename _cgiToClient to something like _cgiFdToClientFd
+			std::cout << "Closing cgiReadFd " << cgiFd << std::endl;
 		} else if (process.response.length() > 8192) { // Headers too long
 			kill(process.pid, SIGKILL);
 			sendError(process.clientSocket, 502, process.location);

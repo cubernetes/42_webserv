@@ -18,10 +18,14 @@ void HttpServer::checkForInactiveClients() {
 
 		if (isTimedOut(process)) {
 			kill(process.pid, SIGKILL);
-			waitpid(process.pid, NULL, 0); // TODO: @all: Should be WNOHANG, otherwise blocking!, although, SIGKILL should do the job yeah
+			waitpid(process.pid, NULL, WNOHANG);
 			sendError(process.clientSocket, 504, process.location);
 			
 			closeAndRemoveMultPlexFd(_monitorFds, it->first);
+			deleteFromClientToCgi.push_back(it->first);
+			deleteFromCgiToClient.push_back(it->second.readFd);
+		} else if (waitpid(process.pid, NULL, WNOHANG) > 0) {
+			closeAndRemoveMultPlexFd(_monitorFds, it->second.readFd);
 			deleteFromClientToCgi.push_back(it->first);
 			deleteFromCgiToClient.push_back(it->second.readFd);
 		}
