@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 
 #include "HttpServer.hpp"
+#include "Repr.hpp"
 
 static bool isTimedOut(const HttpServer::CgiProcess &process) {
   std::time_t lastActive = process.lastActive;
@@ -20,17 +21,20 @@ void HttpServer::checkForInactiveClients() {
     CgiProcess &process = it->second;
 
     if (isTimedOut(process)) {
+      log.warn() << "Timed out CGI process: " << repr(process) << std::endl;
       ::kill(process.pid, SIGKILL);
       ::waitpid(process.pid, NULL, WNOHANG);
       sendError(process.clientSocket, 504, process.location);
 
-      closeAndRemoveMultPlexFd(_monitorFds, it->first);
       deleteFromClientToCgi.push_back(it->first);
       deleteFromCgiToClient.push_back(it->second.readFd);
+      // closeAndRemoveMultPlexFd(_monitorFds, it->first);
+      // _pendingWrites.erase(it->first);
     } else if (waitpid(process.pid, NULL, WNOHANG) > 0) {
+      log.debug() << "Reaped CGI process: " << repr(process) << std::endl;
       closeAndRemoveMultPlexFd(_monitorFds, it->second.readFd);
-      deleteFromClientToCgi.push_back(it->first);
       deleteFromCgiToClient.push_back(it->second.readFd);
+      // _pendingWrites.erase(it->first);
     }
   }
   for (size_t i = 0; i < deleteFromClientToCgi.size(); ++i) {

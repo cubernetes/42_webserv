@@ -19,12 +19,22 @@ using std::runtime_error;
 using Utils::STR;
 
 bool HttpServer::requestIsForCgi(const HttpRequest &request, const LocationCtx &location) {
-  if (!directiveExists(location.second, "cgi_dir"))
+  log.debug() << "Checking if request is for CGI" << std::endl;
+  log.trace() << "Request is " << repr(request) << std::endl;
+  if (!directiveExists(location.second, "cgi_dir")) {
+    log.debug() << "Request is not for CGI, because cgi_dir directive is missing from the location: " << repr(location)
+                << std::endl;
     return false;
+  }
   string uri = request.path;
   string cgi_dir = getFirstDirective(location.second, "cgi_dir")[0];
-  if (!Utils::isPrefix(cgi_dir, uri))
+  if (!Utils::isPrefix(cgi_dir, uri)) {
+    log.debug() << "Request is not for CGI, because cgi_dir directive " << cgi_dir
+                << " is not a prefix of the request path: " << uri << std::endl;
     return false;
+  }
+  log.debug() << "Request IS for CGI, because cgi_dir directive " << cgi_dir
+              << " is a prefix of the request path: " << uri << std::endl;
   return true;
 }
 
@@ -71,6 +81,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
     return;
   }
 
+  process.lastActive = std::time(NULL);
   buffer[bytesRead] = '\0';
   process.totalSize += static_cast<unsigned long>(bytesRead);
 
@@ -248,16 +259,24 @@ void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest &re
 }
 
 bool HttpServer::methodAllowed(const HttpRequest &request, const LocationCtx &location) {
-  if (!Utils::allUppercase(request.method))
+  if (!Utils::allUppercase(request.method)) {
+    log.debug() << "Method not allowed, not all uppercase" << std::endl;
     return false;
-  else if (!directiveExists(location.second, "limit_except"))
+  } else if (!directiveExists(location.second, "limit_except")) {
+    log.debug() << "Method maybe allowed, limit_except directive doesn't exist and request is all uppercase"
+                << std::endl;
     return true;
+  }
   string limit_except = "limit_except";
   const Arguments &allowedMethods = getFirstDirective(location.second, limit_except);
+  log.debug() << "Checking if method is one of " << repr(allowedMethods) << std::endl;
   for (Arguments::const_iterator method = allowedMethods.begin(); method != allowedMethods.end(); ++method) {
-    if (*method == request.method)
+    if (*method == request.method) {
+      log.debug() << "Method allowed, since " << *method << " == " << request.method << std::endl;
       return true;
+    }
   }
+  log.debug() << "Method not allowed, since it was not one of the allowed directives" << std::endl;
   return false;
 }
 
@@ -273,6 +292,7 @@ void HttpServer::rewriteRequest(int clientSocket, int statusCode, const string &
 
 // MAYBE: refactor
 void HttpServer::handleRequest(int clientSocket, const HttpRequest &request, const LocationCtx &location) {
+  log.info() << "Handling request: " << repr(request) << " to location " << repr(location) << std::endl;
   if (!methodAllowed(request, location))
     sendError(clientSocket, 405, &location);
   else if (directiveExists(location.second, "return"))
@@ -485,6 +505,7 @@ void HttpServer::finalizeRequest(int clientSocket, HttpRequest &request) {
   try {
     const LocationCtx &location = requestToLocation(clientSocket, request);
     bound = true;
+    log.debug() << "Found location " << repr(location) << " for request " << repr(request) << std::endl;
     handleRequest(clientSocket, request, location);
   } catch (const runtime_error &err) {
     if (!bound)

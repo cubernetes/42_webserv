@@ -75,7 +75,7 @@ template <typename T> static inline string repr(const T &value, bool json = fals
 }
 
 // convenience wrapper for arrays with size
-template <typename T> static inline string reprArr(const T *value, unsigned int size, bool json = false) {
+template <typename T> static inline string reprArr(const T *value, size_t size, bool json) {
   std::ostringstream oss;
   if (json)
     oss << "[";
@@ -83,7 +83,7 @@ template <typename T> static inline string reprArr(const T *value, unsigned int 
     oss << punct("{");
   else
     oss << punct("[");
-  for (unsigned int i = 0; i < size; ++i) {
+  for (size_t i = 0; i < size; ++i) {
     if (i != 0) {
       if (json)
         oss << ", ";
@@ -143,24 +143,34 @@ template <> struct ReprWrapper<string> {
   }
 };
 
-template <> struct ReprWrapper<char *> {
-  static inline string repr(const char *const &value, bool json = false) {
-    if (json)
-      return string("\"") + Utils::jsonEscape(value) + "\"";
-    else
-      return str(string("\"") + Utils::jsonEscape(value) + "\"");
-  }
-};
-
 // print generic pointers
 template <typename T> struct ReprWrapper<T *> {
   static inline string repr(const T *const &value, bool json = false) {
     std::ostringstream oss;
-    oss << value;
+    if (value)
+      oss << value;
+    else
+      oss << num("NULL");
     if (json)
       return oss.str();
     else
       return num(oss.str());
+  }
+};
+
+template <> struct ReprWrapper<char *> {
+  static inline string repr(const char *const &value, bool json = false) {
+    if (json) {
+      if (value)
+        return "\"" + Utils::jsonEscape(value) + "\"";
+      else
+        return ReprWrapper<const void *>::repr(value, false);
+    } else {
+      if (value)
+        return str("\"" + Utils::jsonEscape(value) + "\"");
+      else
+        return ReprWrapper<const void *>::repr(value);
+    }
   }
 };
 
@@ -271,7 +281,7 @@ template <typename T> struct ReprWrapper<vector<T> > {
       oss << kwrd("std") + punct("::") + kwrd("vector") + punct("({");
     else
       oss << punct("[");
-    for (unsigned int i = 0; i < value.size(); ++i) {
+    for (size_t i = 0; i < value.size(); ++i) {
       if (i != 0) {
         if (json)
           oss << ", ";

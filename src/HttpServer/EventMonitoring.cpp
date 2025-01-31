@@ -2,6 +2,7 @@
 #include <stdexcept>
 
 #include "HttpServer.hpp"
+#include "Repr.hpp"
 
 using Constants::EPOLL;
 using Constants::POLL;
@@ -58,7 +59,10 @@ HttpServer::MultPlexFds HttpServer::getReadyFds(MultPlexFds &monitorFds) {
   }
 }
 
+// #include <unistd.h>
 void HttpServer::handleReadyFds(const MultPlexFds &readyFds) {
+  // log.debug() << "Have the following ready fds: " << repr(readyFds) << std::endl;
+  // sleep(5);
   size_t nReadyFds = readyFds.fdStates.size();
   for (size_t i = 0; i < nReadyFds; ++i) {
     int fd = multPlexFdToRawFd(readyFds, i);

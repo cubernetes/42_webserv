@@ -28,7 +28,7 @@ private:
   string _program;
   Logger &log;
 
-  char **exportEnvironment(const std::map<string, string> &env);
+  char **exportEnvironment(const std::map<string, string> &env, size_t &n);
   std::map<string, string> setupEnvironment(const HttpServer::HttpRequest &request, const LocationCtx &location);
 };
 

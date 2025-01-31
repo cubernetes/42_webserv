@@ -14,6 +14,7 @@ void finish(int signal) {
 }
 
 void HttpServer::initSignals() {
+  ::signal(SIGPIPE, SIG_IGN); // writing to dead cgi -> sigpipe -> don't care just continue
   ::signal(SIGINT, &finish);
   ::signal(SIGTERM, &finish);
 }
@@ -50,6 +51,8 @@ void HttpServer::run() {
 								  // 3) read data for Constants::chunkSize bytes (or remove client if appropriate)
 								  // 4) do nothing
 		checkForInactiveClients();
+    //log.debug() << "Have the following clientFd to CGI Process map: " << repr(_clientToCgi) << std::endl;
+    //log.debug() << "Have the following _pendingWrites" << repr(_pendingWrites) << std::endl;
 	}
   log.warn() << "Shutting server down" << std::endl;
 }

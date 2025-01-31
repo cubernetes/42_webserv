@@ -2,6 +2,7 @@
 #include <stdexcept>
 
 #include "HttpServer.hpp"
+#include "Repr.hpp"
 #include "Utils.hpp"
 
 using std::runtime_error;
@@ -58,10 +59,12 @@ size_t HttpServer::findMatchingServer(const string &host, const struct in_addr &
 size_t HttpServer::findMatchingLocation(const Server &server, const string &path) const {
   int bestIdx = -1;
   int bestScore = -1;
+  log.debug() << "For path " << path << ": Trying to find a location in this server: " << repr(server) << std::endl;
   for (size_t i = 0; i < server.locations.size(); ++i) {
     LocationCtx loc = server.locations[i];
     const string &locPath = loc.first;
     if (Utils::isPrefix(locPath, path)) {
+      log.debug() << "Match: Location path " << locPath << " is a prefix of path " << path << std::endl;
       pair<string::const_iterator, string::const_iterator> matcher =
           std::mismatch(locPath.begin(), locPath.end(), path.begin());
       int currentScore = static_cast<int>(std::distance(locPath.begin(), matcher.first));
@@ -69,6 +72,8 @@ size_t HttpServer::findMatchingLocation(const Server &server, const string &path
         bestScore = currentScore;
         bestIdx = static_cast<int>(i);
       }
+    } else {
+      log.debug() << "Location path " << locPath << " was not a prefix of path " << path << std::endl;
     }
   }
   return static_cast<size_t>(bestIdx +
@@ -76,7 +81,7 @@ size_t HttpServer::findMatchingLocation(const Server &server, const string &path
                                  // end of the location vector that SHOULD always match (every path must start with /)
 }
 
-static string getHost(const HttpServer::HttpRequest &request) {
+string getHost(const HttpServer::HttpRequest &request) {
   string host;
   if (request.headers.find("Host") != request.headers.end()) {
     if (request.headers.find("Host") != request.headers.end()) {

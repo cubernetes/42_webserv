@@ -357,7 +357,7 @@ static inline bool checkCgiExt(const string &ctx, const string &directive, const
   if (directive == "cgi_ext") {
     ensureArity(ctx, directive, arguments, 1, 2);
     if (arguments.size() == 2)
-      ensureNotEmpty(ctx, directive, arguments[1]);
+      ensureRootedPath(ctx, directive, arguments[1]);
     return true;
   }
   return false;
@@ -366,7 +366,7 @@ static inline bool checkCgiExt(const string &ctx, const string &directive, const
 static inline bool checkCgiDir(const string &ctx, const string &directive, const Arguments &arguments) {
   if (directive == "cgi_dir") {
     ensureArity(ctx, directive, arguments, 1, 1);
-    ensureNotEmpty(ctx, directive, arguments[0]);
+    ensureRootedPath(ctx, directive, arguments[0]);
     return true;
   }
   return false;

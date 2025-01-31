@@ -5,16 +5,19 @@
 
 #include "HttpServer.hpp"
 #include "Logger.hpp"
+#include "Repr.hpp"
 #include "Utils.hpp"
 
 using Utils::STR;
 
 void HttpServer::queueWrite(int clientSocket, const string &data) {
+  log.debug() << "Queueing a write: [" << data << "]" << std::endl;
   if (_pendingWrites.find(clientSocket) == _pendingWrites.end())
     _pendingWrites[clientSocket] = string(data);
   else
     _pendingWrites[clientSocket] += data;
   startMonitoringForWriteEvents(_monitorFds, clientSocket);
+  log.debug() << "Pending writes is now: " << repr(_pendingWrites) << std::endl;
 }
 
 void HttpServer::terminatePendingCloses(int clientSocket) {
@@ -68,16 +71,27 @@ void HttpServer::writeToClient(int clientSocket) {
   pw = pw.substr(dataSize); // remove chunk (that will be send) from the beginning
   const char *data = dataChunk.c_str();
 
+  log.debug() << "Sending this data to fd " << clientSocket << ": " << Utils::escape(data) << std::endl;
+
   ssize_t bytesSent;
   if (_cgiToClient.count(clientSocket)) // it's a writeFd for the CGI, can't use send
     bytesSent = ::write(clientSocket, data, dataSize);
   else
     bytesSent = ::send(clientSocket, data, dataSize, 0);
+
   if (bytesSent < 0) {
     // TODO: @all: remove pending closes? clear pending writes?
     removeClient(clientSocket);
+    _pendingWrites.erase(clientSocket);
+    _pendingCloses.erase(clientSocket);
+    if (_cgiToClient.count(clientSocket) > 0) {
+      int client = _cgiToClient[clientSocket];
+      log.debug() << "Notifying client " << client << " with a 500, since CGI process died/closed stdin" << std::endl;
+      sendError(client, 500, NULL);
+    }
     return;
   }
+  log.debug() << "Successfully sent " << bytesSent << " bytes to client " << clientSocket << std::endl;
 
   terminateIfNoPendingDataAndNoCgi(it, clientSocket, bytesSent);
 }

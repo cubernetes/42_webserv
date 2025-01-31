@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <cerrno>
 
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "CgiHandler.hpp"
@@ -56,26 +58,33 @@ bool CgiHandler::canHandle(const string &path) const {
   return path.length() > _extension.length() && path.substr(path.length() - _extension.length()) == _extension;
 }
 
+string getHost(const HttpServer::HttpRequest &request);
+
 std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequest &request,
                                                       const LocationCtx &location) {
   std::map<string, string> env;
 
   string rootPath = getFirstDirective(location.second, "root")[0];
   string relativePath = request.path;
+  string extension = request.path.substr(request.path.rfind("."));
   if (Utils::isPrefix(rootPath, request.path)) {
     relativePath = request.path.substr(rootPath.length());
   }
 
   // Find any path info after the script name
-  size_t scriptEnd = request.path.rfind(".py");
-  env["PATH_INFO"] =
-      (scriptEnd != string::npos && scriptEnd + 3 < request.path.length()) ? request.path.substr(scriptEnd + 3) : "/";
+  size_t scriptEnd = request.path.find(extension);
+  env["PATH_INFO"] = (scriptEnd != string::npos && scriptEnd + extension.length() < request.path.length())
+                         ? request.path.substr(scriptEnd + extension.length())
+                         : "/";
 
   env["GATEWAY_INTERFACE"] = "CGI/1.1";
   env["SERVER_PROTOCOL"] = "HTTP/1.1";
   env["SERVER_SOFTWARE"] = "webserv/1.0";
   env["REQUEST_METHOD"] = request.method;
-  env["SCRIPT_FILENAME"] = rootPath + relativePath; // TODO: @all: it should be with cgi_dir directive
+  env["SCRIPT_FILENAME"] = rootPath + relativePath;
+  env["SCRIPT_NAME"] = relativePath;
+  env["SERVER_NAME"] = getHost(request);
+  // env["REMOTE_ADDR"] = getHost(request); // TODO: @all: maybe a different time
   env["QUERY_STRING"] = "";
 
   size_t queryPos = request.path.find('?');
@@ -102,7 +111,7 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
   return env;
 }
 
-char **CgiHandler::exportEnvironment(const std::map<string, string> &env) {
+char **CgiHandler::exportEnvironment(const std::map<string, string> &env, size_t &n) {
   size_t size = env.size();
   char **envArr = new char *[size + 1];
   size_t i = 0;
@@ -113,6 +122,7 @@ char **CgiHandler::exportEnvironment(const std::map<string, string> &env) {
     ++i;
   }
   envArr[i] = NULL;
+  n = i;
   return envArr;
 }
 
@@ -143,12 +153,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
   std::map<string, string> env = setupEnvironment(request, location);
   string scriptPath = env["SCRIPT_FILENAME"];
   string rootPath = getFirstDirective(location.second, "root")[0];
-
-  // Validate script permissions
-  if (::access(scriptPath.c_str(), X_OK) != 0) {
-    _server.sendError(clientSocket, 403, &location);
-    return;
-  }
+  string cgiDir = getFirstDirective(location.second, "cgi_dir")[0];
 
   int toCgi[2];
   int fromCgi[2];
@@ -157,14 +162,10 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
   if (pipe(fromCgi) < 0)
     throw std::runtime_error("Failed to create output pipe for CGI");
 
-  // (deprecated) Make both ends non-blocking
-  // fcntl(toCgi[PIPE_READ], F_SETFL, O_NONBLOCK);
-  // fcntl(toCgi[PIPE_WRITE], F_SETFL, O_NONBLOCK);
-  // fcntl(fromCgi[PIPE_READ], F_SETFL, O_NONBLOCK);
-  // fcntl(fromCgi[PIPE_WRITE], F_SETFL, O_NONBLOCK);
-
+  log.debug() << "Calling fork()" << std::endl;
   pid_t pid = fork();
   if (pid < 0) {
+    log.debug() << "Error with fork(): " << strerror(errno) << std::endl;
     close(toCgi[PIPE_READ]);
     close(toCgi[PIPE_WRITE]);
     close(fromCgi[PIPE_READ]);
@@ -172,7 +173,8 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
     throw std::runtime_error("Fork failed for CGI execution");
   }
 
-  if (pid == 0) {              // we are in child
+  if (pid == 0) { // we are in child
+    log.debug() << "Child: Entered, about to close FDs" << std::endl;
     close(toCgi[PIPE_WRITE]);  // doesn't need to write to itself
     close(fromCgi[PIPE_READ]); // doesn't need to read from itself
 
@@ -184,16 +186,23 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
     close(toCgi[PIPE_READ]);
     close(fromCgi[PIPE_WRITE]);
 
-    if (chdir(rootPath.c_str()) < 0) { // TODO: @all: use cgi_dir as well
+    log.debug() << "Child: Changing dir to " << rootPath + cgiDir << std::endl;
+    if (chdir((rootPath + cgiDir).c_str()) < 0) {
       exit(1);
     }
 
-    char **cgiEnviron = exportEnvironment(env); // allocates on the heap!
+    // cgiDir is guaranteed to be a prefix, and needs to be removed since we cd'd into it
+    /*       /foo  - /foo/test.py -> /test.py -> .//test.py
+     *       /foo/ - /foo/test.py ->  test.py ->  ./test.py
+     */
+    scriptPath = "./" + request.path.substr(cgiDir.length());
 
-    // for some reason if relative specified before it doesn't work at all
-    if (Utils::isPrefix(rootPath + "/", scriptPath)) { // TODO: @all: use cgi_dir as well
-      scriptPath = scriptPath.substr(rootPath.length() + 1);
-    }
+    char *a = ::getcwd(NULL, 0);
+    log.debug() << "CWD: " << a << std::endl;
+    ::free(a);
+
+    size_t n;
+    char **cgiEnviron = exportEnvironment(env, n); // allocates on the heap!
 
     string argv0, argv1;
     if (!_program.empty()) {
@@ -203,9 +212,11 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
       argv0 = scriptPath;
       argv1 = "";
     }
-    char *args[] = {const_cast<char *>(argv0.c_str()),
-                    const_cast<char *>(scriptPath.empty() ? NULL : scriptPath.c_str()), NULL};
+    char *args[] = {const_cast<char *>(argv0.c_str()), const_cast<char *>(argv1.empty() ? NULL : argv1.c_str()), NULL};
+    log.debug() << "Child: Calling execve(" << repr(args[0]) << ", " << reprArr((char **)args, 2, Constants::jsonTrace)
+                << ", " << reprArr(cgiEnviron, n + 1, Constants::jsonTrace) << ")" << std::endl;
     execve(args[0], args, cgiEnviron);
+    log.warn() << "Child: execve failed" << std::endl;
     exit(1);
   }
 
@@ -238,5 +249,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
   _server._cgiToClient[cgiWriteFd] = clientSocket;
   _server._monitorFds.pollFds.push_back(pfd2);
 
+  log.debug() << "Parent: Queueing data to write to CGI process (fd=" << cgiWriteFd << "): [" << Utils::escape(cgiDir)
+              << "]" << std::endl;
   _server.queueWrite(cgiWriteFd, request.body);
 }

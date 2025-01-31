@@ -6,7 +6,7 @@
 using std::string;
 
 namespace Constants {
-  const int cgiTimeout = 50000;
+  const int cgiTimeout = 100000;
   const int multiplexTimeout = 1000;
   const size_t chunkSize = CONSTANTS_CHUNK_SIZE;
   const string defaultConfPath = "conf/default.conf";
