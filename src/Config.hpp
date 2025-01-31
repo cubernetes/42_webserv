@@ -1,10 +1,10 @@
 #pragma once /* Config.hpp */
 
+#include <deque>
 #include <map>
+#include <string>
 #include <utility>
 #include <vector>
-#include <deque>
-#include <string>
 
 using std::string;
 
@@ -20,12 +20,12 @@ typedef std::pair<Directives, ServerCtxs> Config;
 typedef std::vector<Arguments> ArgResults;
 
 enum TokenType {
-	TOK_SEMICOLON,
-	TOK_OPENING_BRACE,
-	TOK_CLOSING_BRACE,
-	TOK_WORD,
-	TOK_EOF,
-	TOK_UNKNOWN,
+  TOK_SEMICOLON,
+  TOK_OPENING_BRACE,
+  TOK_CLOSING_BRACE,
+  TOK_WORD,
+  TOK_EOF,
+  TOK_UNKNOWN,
 };
 typedef enum TokenType TokenType;
 
@@ -35,6 +35,6 @@ typedef std::deque<Token> Tokens;
 string readConfig(string configPath);
 Config parseConfig(string rawConfig);
 
-bool directiveExists(const Directives& directives, const string& directive);
-const Arguments& getFirstDirective(const Directives& directives, const string& directive);
-ArgResults getAllDirectives(const Directives& directives, const string& directive);
+bool directiveExists(const Directives &directives, const string &directive);
+const Arguments &getFirstDirective(const Directives &directives, const string &directive);
+ArgResults getAllDirectives(const Directives &directives, const string &directive);
