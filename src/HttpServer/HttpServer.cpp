@@ -51,6 +51,6 @@ void HttpServer::run() {
 								  // 4) do nothing
 		checkForInactiveClients();
 	}
-  log.warn << "Shutting server down" << std::endl;
+  log.warn() << "Shutting server down" << std::endl;
 }
 // clang-format on

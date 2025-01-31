@@ -147,7 +147,7 @@ bool HttpServer::sendErrorPage(int clientSocket, int statusCode, const LocationC
 // pass NULL as location if errorPages should not be served
 void HttpServer::sendError(int clientSocket, int statusCode, const LocationCtx *const location) {
   if (location == NULL || !sendErrorPage(clientSocket, statusCode, *location)) {
-    log.debug << "Sending hardcoded error with status code: " << statusCode << std::endl;
+    log.debug() << "Sending hardcoded error with status code: " << statusCode << std::endl;
     string errorContent =
         wrapInHtmlBody("<h1>\r\n\t\t\t" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "\r\n\t\t</h1>");
     sendString(
@@ -159,7 +159,7 @@ void HttpServer::sendError(int clientSocket, int statusCode, const LocationCtx *
 
 void HttpServer::sendString(int clientSocket, const string &payload, int statusCode, const string &contentType,
                             bool onlyHeaders) {
-  log.debug << "Preparing to send string response with status code: " << statusCode << std::endl;
+  log.debug() << "Preparing to send string response with status code: " << statusCode << std::endl;
   std::ostringstream response;
 
   response << _httpVersionString << " " << statusCode << " " << statusTextFromCode(statusCode) << "\r\n"

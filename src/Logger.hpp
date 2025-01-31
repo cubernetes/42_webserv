@@ -13,14 +13,16 @@ class Logger;
 void swap(Logger &a, Logger &b) /* noexcept */;
 
 class Logger {
+  std::ostream &os;
+
 public:
   enum Level { FATAL, ERR, WARN, INFO, DEBUG, TRACE };
+  Level logLevel;
 
-private:
   class StreamWrapper {
   public:
     StreamWrapper(std::ostream &_os, Level _thisLevel, Level &_logLevel)
-        : os(_os), thisLevel(_thisLevel), logLevel(_logLevel), prefix() {
+        : prefix(), os(_os), thisLevel(_thisLevel), logLevel(_logLevel) {
       switch (thisLevel) {
       case FATAL:
         prefix = "[ " + ansi::redBg("FATAL") + " ] ";
@@ -29,10 +31,10 @@ private:
         prefix = "[ " + ansi::red("ERROR") + " ] ";
         break;
       case WARN:
-        prefix = "[ " + ansi::yellow(" WARN") + " ] ";
+        prefix = "[ " + ansi::yellow("WARN ") + " ] ";
         break;
       case INFO:
-        prefix = "[ " + ansi::white(" INFO") + " ] ";
+        prefix = "[ " + ansi::white("INFO ") + " ] ";
         break;
       case DEBUG:
         prefix = "[ " + ansi::rgbP("DEBUG", 146, 131, 116) + " ] ";
@@ -43,9 +45,16 @@ private:
       }
     }
 
+    StreamWrapper &operator()(bool printPrefix = true) {
+      if (printPrefix)
+        return *this << prefix;
+      else
+        return *this;
+    }
+
     template <typename T> StreamWrapper &operator<<(const T &value) {
       if (thisLevel <= logLevel) {
-        os << prefix << value;
+        os << value;
       }
       return *this;
     }
@@ -56,21 +65,22 @@ private:
       }
       return *this;
     }
+    std::string prefix;
 
   private:
     std::ostream &os;
     Level thisLevel;
     Level &logLevel;
-    std::string prefix;
   };
 
-  std::ostream &os;
-  Level logLevel;
-
-public:
   Logger(std::ostream &_os, Level _logLevel = INFO)
       : os(_os), logLevel(_logLevel), fatal(os, FATAL, logLevel), error(os, ERR, logLevel), warn(os, WARN, logLevel),
-        info(os, INFO, logLevel), debug(os, DEBUG, logLevel), trace(os, TRACE, logLevel) {}
+        info(os, INFO, logLevel), debug(os, DEBUG, logLevel), trace(os, TRACE, logLevel) {
+    if (logLevel == DEBUG)
+      debug() << "Initialized Logger with logLevel: " << debug.prefix << std::endl;
+    else if (logLevel == TRACE)
+      debug() << "Initialized Logger with logLevel: " << trace.prefix << std::endl;
+  }
   Logger()
       : os(std::cout), logLevel(INFO), fatal(os, FATAL, logLevel), error(os, ERR, logLevel), warn(os, WARN, logLevel),
         info(os, INFO, logLevel), debug(os, DEBUG, logLevel), trace(os, TRACE, logLevel) {}

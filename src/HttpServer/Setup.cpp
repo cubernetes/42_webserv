@@ -111,8 +111,8 @@ void HttpServer::setupServers(const Config &config) {
     server.port = getServerPort(*serverCtx);
 
     setupListeningSocket(server);
-    std::cout << cmt("Server with names ") << repr(server.serverNames) << cmt(" is listening on ")
-              << num(getServerIpStr(*serverCtx)) << num(":") << repr(ntohs(server.port)) << '\n';
+    log.info() << cmt("Server with names ") << repr(server.serverNames) << cmt(" is listening on ")
+               << num(getServerIpStr(*serverCtx)) << num(":") << repr(ntohs(server.port)) << '\n';
 
     _servers.push_back(server);
 

@@ -195,7 +195,16 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
       scriptPath = scriptPath.substr(rootPath.length() + 1);
     }
 
-    char *args[] = {const_cast<char *>(_program.c_str()), const_cast<char *>(scriptPath.c_str()), NULL};
+    string argv0, argv1;
+    if (!_program.empty()) {
+      argv0 = _program;
+      argv1 = scriptPath;
+    } else {
+      argv0 = scriptPath;
+      argv1 = "";
+    }
+    char *args[] = {const_cast<char *>(argv0.c_str()),
+                    const_cast<char *>(scriptPath.empty() ? NULL : scriptPath.c_str()), NULL};
     execve(args[0], args, cgiEnviron);
     exit(1);
   }

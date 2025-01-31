@@ -282,11 +282,10 @@ void HttpServer::handleRequest(int clientSocket, const HttpRequest &request, con
     handleRequestInternally(clientSocket, request, location);
   else
     try {
-      // Get CGI configuration TODO: @sonia do the executeDirectly case
       ArgResults cgiExts = getAllDirectives(location.second, "cgi_ext");
       for (ArgResults::const_iterator ext = cgiExts.begin(); ext != cgiExts.end(); ++ext) {
         string extension = (*ext)[0];
-        string program = ext->size() > 1 ? (*ext)[1] : "/usr/bin/python3";
+        string program = ext->size() > 1 ? (*ext)[1] : "";
 
         CgiHandler handler(*this, extension, program, log);
         if (handler.canHandle(request.path)) {
@@ -298,7 +297,7 @@ void HttpServer::handleRequest(int clientSocket, const HttpRequest &request, con
       // No matching CGI handler found
       sendError(clientSocket, 404, &location);
     } catch (const std::exception &e) {
-      log.error << string("CGI execution failed: ") << e.what() << std::endl;
+      log.error() << string("CGI execution failed: ") << e.what() << std::endl;
       sendError(clientSocket, 500, &location);
     }
 }
@@ -310,7 +309,7 @@ ssize_t HttpServer::recvToBuffer(int clientSocket, char *buffer, size_t bufSiz) 
     if (bytesRead == 0)
       removeClient(clientSocket);
     else
-      log.error << string("recv failed: ") << strerror(errno) << std::endl;
+      log.error() << string("recv failed: ") << strerror(errno) << std::endl;
     return 0;
   }
 
@@ -345,26 +344,26 @@ void HttpServer::processContentLength(HttpRequest &request) {
 bool HttpServer::validateRequest(const HttpRequest &request) const {
   // First check headers are complete
   if (!isHeaderComplete(request)) {
-    log.debug << "Invalid request: incomplete headers" << std::endl;
+    log.debug() << "Invalid request: incomplete headers" << std::endl;
     return false;
   }
 
   // Check HTTP method
   if (request.method != "GET" && request.method != "HEAD" && request.method != "POST" && request.method != "DELETE" &&
       request.method != "PUT" && request.method != "FTFT") {
-    log.debug << "Invalid request: unsupported method: " << request.method << std::endl;
+    log.debug() << "Invalid request: unsupported method: " << request.method << std::endl;
     return false;
   }
 
   // Check HTTP version
   if (request.httpVersion != "HTTP/1.1") {
-    log.debug << "Invalid request: unsupported HTTP version: " << request.httpVersion << std::endl;
+    log.debug() << "Invalid request: unsupported HTTP version: " << request.httpVersion << std::endl;
     return false;
   }
 
   // For POST requests, verify content info
   if (request.method == "POST" && !request.chunkedTransfer && request.contentLength == 0) {
-    log.debug << "Invalid POST request: no content length or chunked transfer" << std::endl;
+    log.debug() << "Invalid POST request: no content length or chunked transfer" << std::endl;
     return false;
   }
 
@@ -376,7 +375,7 @@ size_t HttpServer::getRequestSizeLimit(int clientSocket, const HttpRequest &requ
     const LocationCtx &loc = requestToLocation(clientSocket, request);
     return Utils::convertSizeToBytes(getFirstDirective(loc.second, "client_max_body_size")[0]);
   } catch (const runtime_error &error) {
-    log.error << error.what() << std::endl;
+    log.error() << error.what() << std::endl;
     return Utils::convertSizeToBytes("1m");
   }
 }
@@ -400,7 +399,7 @@ bool HttpServer::checkRequestSize(int clientSocket, const HttpRequest &request, 
 
 bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, const string &rawData) {
   size_t headerEnd = rawData.find("\r\n\r\n");
-  log.debug << "Looking for headers end marker. Found: " << (headerEnd != string::npos) << std::endl;
+  log.debug() << "Looking for headers end marker. Found: " << (headerEnd != string::npos) << std::endl;
   if (headerEnd == string::npos) {
     return false; // Need more data
   }
@@ -410,31 +409,31 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
 
   // Parse request line (GET /path HTTP/1.1)
   if (!std::getline(stream, line) || !parseRequestLine(line, request)) {
-    log.debug << "Failed to parse request line: [" << Utils::escape(line) << "]" << std::endl;
+    log.debug() << "Failed to parse request line: [" << Utils::escape(line) << "]" << std::endl;
     sendError(clientSocket, 400, NULL);
     removeClientAndRequest(clientSocket);
     return false;
   }
-  log.debug << "Parsed request line: " << request.method << " " + request.path << std::endl;
+  log.debug() << "Parsed request line: " << request.method << " " + request.path << std::endl;
   // Parse headers (Key: Value)
   while (std::getline(stream, line) && line != "\r") {
     if (!parseHeader(line, request)) {
-      log.debug << "Failed to parse header line: [" << Utils::escape(line) << "]" << std::endl;
+      log.debug() << "Failed to parse header line: [" << Utils::escape(line) << "]" << std::endl;
       sendError(clientSocket, 400, NULL);
       removeClientAndRequest(clientSocket);
       return false;
     }
-    log.debug << "Parsed header line: [" << Utils::escape(line) << "]" << std::endl;
+    log.debug() << "Parsed header line: [" << Utils::escape(line) << "]" << std::endl;
   }
 
   // Process Content-Length and chunked transfer headers
   processContentLength(request);
-  log.debug << "Content length detected: " << request.contentLength << std::endl;
-  log.debug << "Chunked transfer: " << request.chunkedTransfer << std::endl;
+  log.debug() << "Content length detected: " << request.contentLength << std::endl;
+  log.debug() << "Chunked transfer: " << request.chunkedTransfer << std::endl;
 
   // Validate the request
   if (!validateRequest(request)) {
-    log.debug << "Request validation failed" << std::endl;
+    log.debug() << "Request validation failed" << std::endl;
     sendError(clientSocket, 400,
               NULL); // TODO: @discuss: changed from 405 (method not allowed) to 400 (invalid request)
     // TODO: @discuss: what about removing clientSocket from _pendingRequests
@@ -447,7 +446,7 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
   if (headerEnd + 4 < rawData.size()) {
     request.body = rawData.substr(headerEnd + 4);
     request.bytesRead = request.body.size();
-    log.debug << "Moved " << request.bytesRead << " bytes to body" << std::endl;
+    log.debug() << "Moved " << request.bytesRead << " bytes to body" << std::endl;
   } else {
     request.body.clear();
     request.bytesRead = 0;
@@ -458,7 +457,7 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
 
   // If no body expected, mark as complete
   if (!request.chunkedTransfer && (request.contentLength == 0 || request.bytesRead >= request.contentLength)) {
-    log.debug << "No body expected, marking as complete" << std::endl;
+    log.debug() << "No body expected, marking as complete" << std::endl;
     request.state = REQUEST_COMPLETE;
   }
 
@@ -490,24 +489,24 @@ void HttpServer::finalizeRequest(int clientSocket, HttpRequest &request) {
   } catch (const runtime_error &err) {
     if (!bound)
       throw; // requestToLocation may throw, but if handleRequest throws, we got bigger problems, thus, rethrowing
-    log.error << err.what() << std::endl;
+    log.error() << err.what() << std::endl;
   }
   _pendingRequests.erase(clientSocket);
 }
 
 void HttpServer::handleIncomingData(int clientSocket, const char *buffer, ssize_t bytesRead) {
 
-  log.debug << "Received data length: " << bytesRead << std::endl;
-  log.debug << "Raw data: [" << Utils::escape(string(buffer, static_cast<size_t>(bytesRead))) << "]" << std::endl;
+  log.debug() << "Received data length: " << bytesRead << std::endl;
+  log.debug() << "Raw data: [" << Utils::escape(string(buffer, static_cast<size_t>(bytesRead))) << "]" << std::endl;
   // Get or create request state
   HttpRequest &request = _pendingRequests[clientSocket];
-  log.debug << "Current request state: " << static_cast<int>(request.state) << std::endl;
+  log.debug() << "Current request state: " << static_cast<int>(request.state) << std::endl;
 
   // Process based on current state
   if (request.state == READING_HEADERS) {
     // During header reading, we temporarily accumulate data
     string rawData = request.temporaryBuffer + string(buffer, static_cast<size_t>(bytesRead));
-    log.debug << "Accumulated data length: " << rawData.size() << std::endl;
+    log.debug() << "Accumulated data length: " << rawData.size() << std::endl;
 
     // Check accumulated size
     // DONT check in headers, must only check body size
@@ -519,13 +518,13 @@ void HttpServer::handleIncomingData(int clientSocket, const char *buffer, ssize_
 
     // Try to process headers
     if (processRequestHeaders(clientSocket, request, rawData)) {
-      log.debug << "Headers processed. Body size so far: " << request.body.size() << std::endl;
-      log.debug << "Expected content length: " << request.contentLength << std::endl;
+      log.debug() << "Headers processed. Body size so far: " << request.body.size() << std::endl;
+      log.debug() << "Expected content length: " << request.contentLength << std::endl;
       request.temporaryBuffer.clear();
     }
   } else if (request.state == READING_BODY) {
-    log.debug << "Reading body. Current size: " << request.bytesRead << " Expected: " << request.contentLength
-              << std::endl;
+    log.debug() << "Reading body. Current size: " << request.bytesRead << " Expected: " << request.contentLength
+                << std::endl;
     if (!processRequestBody(clientSocket, request, buffer, static_cast<size_t>(bytesRead))) {
       return;
     }
@@ -535,7 +534,7 @@ void HttpServer::handleIncomingData(int clientSocket, const char *buffer, ssize_
     if (!checkRequestSize(clientSocket, request, request.body.length()))
       return;
 
-    log.debug << "Request complete. Processing..." << std::endl;
+    log.debug() << "Request complete. Processing..." << std::endl;
     finalizeRequest(clientSocket, request);
   }
 }
