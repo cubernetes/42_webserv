@@ -102,9 +102,6 @@ void HttpServer::handleCgiRead(int cgiFd) {
 			process.response.clear();
 
 			std::cout << "Closing cgiReadFd " << cgiFd << std::endl;
-			closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
-			_clientToCgi.erase(clientSocket); // TODO: @timo: rename _clientToCgi to something like _clientFdToCgiProcess
-			_cgiToClient.erase(cgiFd); // TODO: @timo: rename _cgiToClient to something like _cgiFdToClientFd
 		} else if (process.response.length() > 8192) { // Headers too long
 			kill(process.pid, SIGKILL);
 			sendError(process.clientSocket, 502, process.location);

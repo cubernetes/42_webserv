@@ -5,17 +5,6 @@ HttpServer::~HttpServer() {
 	closeAndRemoveAllMultPlexFd(_monitorFds);
 }
 
-void reap(int signal) {
-	(void)signal;
-	int pid = ::waitpid(-1, NULL, WNOHANG);
-	if (pid < 0)
-		std::cout << "No child processes" << std::endl;
-	else if (pid == 0)
-		std::cout << "CGI still running" << std::endl;
-	else if (pid > 0)
-		std::cout << "Got this PID " << pid << std::endl;
-}
-
 void finish(int signal) {
 	(void)signal;
 	Logger::logInfo("\nShutting down");
@@ -23,8 +12,8 @@ void finish(int signal) {
 }
 
 void HttpServer::initSignals() {
-	::signal(SIGCHLD, &reap);
 	::signal(SIGINT, &finish);
+	::signal(SIGTERM, &finish);
 }
 
 bool HttpServer::_running = true;
