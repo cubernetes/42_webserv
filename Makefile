@@ -153,6 +153,7 @@ $(OBJDIR_C2):
 	$(MKDIR) $@
 
 $(CATCH2):
+	1>/dev/null 2>&1 command -v cmake || { printf '\033[31m%s\033[m\n' 'Cannot build Catch2 without cmake, please install it or remove "$$(CATCH2)" as a dependency of "all_c2" (in the Makefile) if you have Catch2 installed globally (adjust CFLAGS accordingly).'; exit 1; }
 	git clone https://github.com/catchorg/Catch2 && \
 		cd Catch2 && \
 		cmake --install-prefix="$(HOME)/.local" -Bbuild -H. -DBUILD_TESTING=OFF && \
