@@ -1,5 +1,7 @@
 #pragma once /* Utils.hpp */
 
+#include <cstddef>
+#include <ios>
 #include <sstream>
 #include <string>
 #include <vector>

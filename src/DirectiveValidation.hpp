@@ -1,5 +1,7 @@
 #pragma once /* AllowedDirectives.hpp */
 
+#include <cstddef>
+
 #include "Config.hpp"
 
 namespace DirectiveValidation {

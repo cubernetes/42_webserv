@@ -1,4 +1,4 @@
-# Subject
+# Configuration Requirements as per [Subject](webserv-subject.pdf), explained line by line
 
 ## 1. choose port and host for each server
 
