@@ -1,3 +1,7 @@
+#include <cstddef>
+#include <stdexcept>
+#include <sys/poll.h>
+
 #include "Constants.hpp"
 #include "HttpServer.hpp"
 

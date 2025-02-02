@@ -1,6 +1,10 @@
+#include <ostream>
 #include <signal.h>
 
+#include "Config.hpp"
+#include "Constants.hpp"
 #include "HttpServer.hpp"
+#include "Logger.hpp"
 #include "Repr.hpp"
 
 HttpServer::~HttpServer() {

@@ -1,4 +1,7 @@
 #include <algorithm>
+#include <cctype>
+#include <cstddef>
+#include <cstdlib>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -31,7 +34,7 @@ bool Utils::isPrefix(string prefix, string longerString) {
 
 string Utils::strToLower(const string &str) {
   string newStr = str;
-  std::transform(newStr.begin(), newStr.end(), newStr.begin(), ::tolower);
+  std::transform(newStr.begin(), newStr.end(), newStr.begin(), static_cast<int (*)(int)>(std::tolower));
   return newStr;
 }
 

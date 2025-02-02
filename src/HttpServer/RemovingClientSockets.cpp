@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <unistd.h>
 
 #include "Constants.hpp"

@@ -1,5 +1,8 @@
 #include <algorithm>
+#include <cctype>
+#include <cstddef>
 
+#include "Constants.hpp"
 #include "HttpServer.hpp"
 
 string HttpServer::getMimeType(const string &path) {
@@ -8,9 +11,11 @@ string HttpServer::getMimeType(const string &path) {
     return Constants::defaultMimeType; // file without an extension
 
   string ext = path.substr(dotPos + 1);
-  std::transform(ext.begin(), ext.end(), ext.begin(),
-                 ::tolower); // a malicious MIME type could contain negative chars, leading to undefined behaviour with
-                             // ::tolower, see https://stackoverflow.com/questions/5270780/what-does-the-mean-in-tolower
+  std::transform(
+      ext.begin(), ext.end(), ext.begin(),
+      static_cast<int (*)(int)>(
+          ::tolower)); // a malicious MIME type could contain negative chars, leading to undefined behaviour with
+                       // ::tolower, see https://stackoverflow.com/questions/5270780/what-does-the-mean-in-tolower
   MimeTypes::const_iterator it = _mimeTypes.find(ext);
   if (it != _mimeTypes.end())
     return it->second;               // MIME type found

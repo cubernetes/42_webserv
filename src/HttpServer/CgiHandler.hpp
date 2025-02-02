@@ -1,6 +1,13 @@
 #pragma once /* CgiHandler.hpp */
 
+#include <cstddef>
+#include <map>
+#include <ostream>
+#include <string>
+
+#include "Config.hpp"
 #include "HttpServer.hpp"
+#include "Logger.hpp"
 
 using std::string;
 

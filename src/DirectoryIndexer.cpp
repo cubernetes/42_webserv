@@ -3,6 +3,8 @@
 #include <cstring>
 #include <dirent.h>
 #include <iomanip>
+#include <ios>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <sys/stat.h>
@@ -68,9 +70,7 @@ string DirectoryIndexer::indexDirectory(string location, string path) {
   for (Entries::iterator it = entries.begin(); it != entries.end(); ++it) {
     result << "<tr>";
     {
-      result << "<td>"
-             << "<a href=\"" << location << it->first << "\">" << it->first << "</a>"
-             << "</td>";
+      result << "<td>" << "<a href=\"" << location << it->first << "\">" << it->first << "</a>" << "</td>";
       // result << "<td>" << it->second.first << "<td>"; // not readable
       result << "<td>" << formatSizeReadable(it->second.second) << "<td>";
     }

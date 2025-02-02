@@ -1,4 +1,6 @@
+#include <cstddef>
 #include <sstream>
+#include <string>
 
 #include "HttpServer.hpp"
 #include "Utils.hpp"

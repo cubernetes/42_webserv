@@ -1,14 +1,25 @@
+#include <cerrno>
 #include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <exception>
 #include <fstream>
+#include <ostream>
+#include <sstream>
 #include <stdexcept>
-
-#include <signal.h>
+#include <string>
 #include <stdio.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include "CgiHandler.hpp"
+#include "Config.hpp"
+#include "Constants.hpp"
 #include "DirectiveValidation.hpp"
 #include "HttpServer.hpp"
 #include "Logger.hpp"
@@ -16,7 +27,6 @@
 #include "Utils.hpp"
 
 using std::runtime_error;
-using Utils::STR;
 
 bool HttpServer::requestIsForCgi(const HttpRequest &request, const LocationCtx &location) {
   log.debug() << "Checking if request is for CGI" << std::endl;

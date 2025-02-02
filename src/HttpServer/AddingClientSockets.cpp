@@ -1,6 +1,12 @@
 #include <cerrno>
 
+#include <cstring>
 #include <fcntl.h>
+#include <netinet/in.h>
+#include <ostream>
+#include <stdexcept>
+#include <sys/poll.h>
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include "Constants.hpp"

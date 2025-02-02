@@ -6,8 +6,13 @@
 #include <map>
 #include <netinet/in.h>
 #include <set>
+#include <sstream>
+#include <string>
 #include <sys/epoll.h>
 #include <sys/poll.h>
+#include <sys/select.h>
+#include <sys/types.h>
+#include <time.h>
 #include <utility>
 #include <vector>
 
@@ -197,13 +202,13 @@ private:
       : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(),
         _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(),
         _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), defaultLogger(),
-        log(defaultLogger) {};
+        log(defaultLogger){};
   // Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a server and its config
   HttpServer(const HttpServer &)
       : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(),
         _pollFds(_monitorFds.pollFds), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(),
         _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), defaultLogger(),
-        log(defaultLogger) {};
+        log(defaultLogger){};
   // HttpServer cannot be assigned to
   HttpServer &operator=(const HttpServer &) { return *this; };
 

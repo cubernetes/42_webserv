@@ -4,16 +4,20 @@
 // - CgiHandler.hpp
 
 #include <ctime>
+#include <iostream>
 #include <map>
 #include <netinet/in.h>
+#include <ostream>
 #include <set>
 #include <sstream>
 #include <string>
 #include <sys/poll.h>
+#include <time.h>
 #include <utility>
 #include <vector>
 
 #include "Ansi.hpp"
+#include "Config.hpp"
 #include "Constants.hpp"
 #include "Reflection.hpp"
 #include "Utils.hpp"
@@ -468,7 +472,7 @@ template <> struct ReprWrapper<struct in_addr> {
         char third;
         char fourth;
       };
-      uint32_t s_addr;
+      unsigned int s_addr;
     } addr;
     addr.s_addr = value.s_addr;
     std::ostringstream oss;
@@ -628,8 +632,6 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 #include <string>
 
 #include "MacroMagic.h"
-
-using std::cout;
 
 #define TRACE_COPY_ASSIGN_OP                                                                                           \
   do {                                                                                                                 \

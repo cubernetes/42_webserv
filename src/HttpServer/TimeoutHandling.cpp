@@ -1,8 +1,9 @@
 #include <ctime>
-
+#include <ostream>
 #include <signal.h>
 #include <sys/wait.h>
 
+#include "Constants.hpp"
 #include "HttpServer.hpp"
 #include "Repr.hpp"
 

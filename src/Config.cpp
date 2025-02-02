@@ -1,3 +1,4 @@
+#include <cctype>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -283,7 +284,7 @@ static Tokens lexConfig(string rawConfig) {
   prevC = '\0';
   for (std::string::iterator it = rawConfig.begin(); it != rawConfig.end(); ++it) {
     c = *it;
-    if (!quoted && (isspace(c) || c == '"' || c == ';' || c == '{' || c == '}' || isspace(prevC) || prevC == '"' ||
+    if (!quoted && (std::isspace(c) || c == '"' || c == ';' || c == '{' || c == '}' || isspace(prevC) || prevC == '"' ||
                     prevC == ';' || prevC == '{' || prevC == '}')) {
       if (!tokens.empty()) {
         createNewToken = true;

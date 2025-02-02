@@ -1,5 +1,7 @@
 #include <string>
 
+#include "Config.hpp"
+#include "Constants.hpp"
 #include "Errors.hpp"
 #include "Repr.hpp"
 

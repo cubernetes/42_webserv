@@ -1,6 +1,14 @@
+#include <algorithm>
 #include <cerrno>
+#include <cstddef>
+#include <cstring>
+#include <iterator>
+#include <netinet/in.h>
+#include <ostream>
 #include <stdexcept>
+#include <sys/socket.h>
 
+#include "Config.hpp"
 #include "HttpServer.hpp"
 #include "Repr.hpp"
 #include "Utils.hpp"
@@ -88,7 +96,7 @@ string getHost(const HttpServer::HttpRequest &request) {
       host = request.headers.at("Host");
       size_t colonPos = host.find(':');
       if (colonPos != string::npos)
-        host.substr(0, colonPos);
+        (void)host.substr(0, colonPos);
     }
   }
   return host; // empty string should match default server_name

@@ -1,0 +1,11 @@
+CompileFlags:
+  CompilationDatabase: .
+
+Diagnostics:
+  MissingIncludes: Strict
+
+InlayHints:
+  BlockEnd: Yes
+
+Hover:
+  ShowAKA: Yes # Doesn't seem to do anything

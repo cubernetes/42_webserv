@@ -21,10 +21,10 @@
 #define BITAND_1(y) y
 
 #define INC(x) PRIMITIVE_CAT(INC_, x)
-#include "DecMacros.h"
+#include "DecMacros.h" // IWYU pragma: export
 
 #define DEC(x) PRIMITIVE_CAT(DEC_, x)
-#include "IncMacros.h"
+#include "IncMacros.h" // IWYU pragma: export
 
 #define CHECK_N(x, n, ...) n
 #define CHECK_(...) CHECK_N(__VA_ARGS__, 0, )
@@ -173,7 +173,7 @@
 #define FOR_EACH_IDX_INDIRECT() FOR_EACH_IDX_
 
 #define DECL_N(n, type, name, ...)                                                                                     \
-  void CAT(reflectMember, n)() { reflectMember((ReprClosure)&Self::CAT(reprClosure, n), #name, &name); }               \
+  void CAT(reflectMember, n)() { reflectMember((ReprClosure) & Self::CAT(reprClosure, n), #name, &name); }             \
   string CAT(reprClosure, n)(bool json) const { return ::repr(name, json); }                                           \
   type name DEFER(IF)(NOT_EMPTY(__VA_ARGS__))(= __VA_ARGS__, );
 

@@ -1,6 +1,10 @@
 #include <cerrno>
+#include <cstddef>
+#include <cstring>
 #include <stdexcept>
+#include <sys/poll.h>
 
+#include "Constants.hpp"
 #include "HttpServer.hpp"
 #include "Repr.hpp"
 

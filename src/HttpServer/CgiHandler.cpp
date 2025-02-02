@@ -1,13 +1,27 @@
 #include <algorithm>
+#include <cctype>
 #include <cerrno>
 
+#include <cstdlib>
+#include <cstring>
+#include <map>
+#include <ostream>
+#include <sstream>
+#include <stdexcept>
 #include <stdlib.h>
+#include <string>
+#include <sys/poll.h>
+#include <sys/types.h>
 #include <unistd.h>
+#include <utility>
 
 #include "CgiHandler.hpp"
+#include "Config.hpp"
+#include "Constants.hpp"
 #include "HttpServer.hpp"
 #include "Logger.hpp"
 #include "Repr.hpp"
+#include "Utils.hpp"
 
 #define PIPE_READ 0
 #define PIPE_WRITE 1
@@ -94,7 +108,7 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
 
   for (std::map<string, string>::const_iterator it = request.headers.begin(); it != request.headers.end(); ++it) {
     string headerName = "HTTP_" + it->first;
-    std::transform(headerName.begin(), headerName.end(), headerName.begin(), ::toupper);
+    std::transform(headerName.begin(), headerName.end(), headerName.begin(), static_cast<int (*)(int)>(std::toupper));
     std::replace(headerName.begin(), headerName.end(), '-', '_');
     env[headerName] = it->second;
   }

@@ -1,9 +1,12 @@
 #pragma once /* DirectoryIndexer.hpp */
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "Logger.hpp"
+
+using std::string;
 
 typedef std::vector<std::pair<std::string, std::pair<long, long long> > > Entries;
 

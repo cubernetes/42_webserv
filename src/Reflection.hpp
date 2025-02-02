@@ -51,5 +51,5 @@ protected:
 };
 void swap(Reflection &a, Reflection &b) /* noexcept */;
 
-#include "MacroMagic.h"
-#include "Repr.hpp"
+#include "MacroMagic.h" // IWYU pragma: export
+#include "Repr.hpp"     // IWYU pragma: export
