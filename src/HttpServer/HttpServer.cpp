@@ -1,8 +1,11 @@
+#include <cstddef>
+#include <iostream>
 #include <ostream>
 #include <signal.h>
 
 #include "Config.hpp"
 #include "Constants.hpp"
+#include "Exceptions.hpp"
 #include "HttpServer.hpp"
 #include "Logger.hpp"
 #include "Repr.hpp"
@@ -24,13 +27,19 @@ void HttpServer::initSignals() {
 }
 
 bool HttpServer::_running = true;
-HttpServer::HttpServer(const string &configPath, Logger &_log)
+HttpServer::HttpServer(const string &configPath, Logger &_log, size_t onlyCheckConfig)
     : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(),
       _pollFds(_monitorFds.pollFds), _httpVersionString(Constants::httpVersionString),
       _rawConfig(readConfig(configPath)), _config(parseConfig(_rawConfig)), _mimeTypes(), _statusTexts(),
       _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), defaultLogger(),
       log(_log) {
     TRACE_ARG_CTOR(const string &, configPath);
+    if (onlyCheckConfig > 0) {
+        if (onlyCheckConfig > 1)
+            std::cout << _rawConfig;
+        std::cout << "Config valid" << std::endl;
+        throw OnlyCheckConfigException();
+    }
     initSignals();
     initStatusTexts(_statusTexts);
     initMimeTypes(_mimeTypes);

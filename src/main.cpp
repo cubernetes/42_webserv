@@ -1,21 +1,30 @@
 #include <cstdlib>
 #include <exception>
 #include <iostream>
-#include <string>
 
+#include "Ansi.hpp"
+#include "Constants.hpp"
+#include "Exceptions.hpp"
 #include "HttpServer.hpp"
 #include "Logger.hpp"
-#include "Utils.hpp"
+#include "Options.hpp"
 
 int main(int ac, char **av) {
-    Logger log(std::cerr, std::getenv("DEBUG") ? Logger::DEBUG : Logger::INFO);
     try {
-        std::string configPath = Utils::parseArgs(ac, av);
-        HttpServer server(configPath, log);
+        Options options(ac, av);
+        if (options.printHelp || options.printVersion) {
+            std::cout << (options.printHelp ? Constants::helpText : "webserv v" + Constants::webservVersion)
+                      << std::endl;
+            return EXIT_SUCCESS;
+        }
+        Logger log(std::cerr, options.logLevel);
+        HttpServer server(options.configPath, log, options.onlyCheckConfig);
         server.run();
         return EXIT_SUCCESS;
+    } catch (const OnlyCheckConfigException &exception) {
+        return EXIT_SUCCESS;
     } catch (const std::exception &exception) {
-        log.fatal() << exception.what() << std::endl;
+        std::cout << "[ " + ansi::redBg("FATAL") + " ] " << exception.what() << std::endl;
         return EXIT_FAILURE;
     }
 }
