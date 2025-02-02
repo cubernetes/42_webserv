@@ -111,6 +111,40 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
   return env;
 }
 
+static size_t ft_strlen(char const *s) {
+  size_t length;
+
+  length = 0;
+  while (*s++)
+    length++;
+  return (length);
+}
+
+static size_t ft_strlcpy(char *dst, char const *src, size_t size) {
+  size_t len;
+
+  len = 0;
+  while (len + 1 < size && src[len])
+    *dst++ = src[len++];
+  if (size)
+    *dst = 0;
+  while (src[len])
+    len++;
+  return (len);
+}
+
+static char *ft_strdup(char const *s) {
+  char *s2;
+  size_t length;
+
+  length = ft_strlen(s);
+  s2 = new char[length + 1];
+  if (!s2)
+    return (0);
+  ft_strlcpy(s2, s, length + 1);
+  return (s2);
+}
+
 char **CgiHandler::exportEnvironment(const std::map<string, string> &env, size_t &n) {
   size_t size = env.size();
   char **envArr = new char *[size + 1];
@@ -118,7 +152,7 @@ char **CgiHandler::exportEnvironment(const std::map<string, string> &env, size_t
   for (std::map<string, string>::const_iterator it = env.begin(); it != env.end(); ++it) {
     if (it->first.empty() || it->first.find('=') != string::npos)
       continue;
-    envArr[i] = ::strdup((it->first + "=" + it->second).c_str());
+    envArr[i] = ft_strdup((it->first + "=" + it->second).c_str());
     ++i;
   }
   envArr[i] = NULL;
