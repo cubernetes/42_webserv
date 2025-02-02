@@ -37,7 +37,7 @@ HttpServer::HttpServer(const string &configPath, Logger &_log, size_t onlyCheckC
     if (onlyCheckConfig > 0) {
         if (onlyCheckConfig > 1)
             std::cout << _rawConfig;
-        std::cout << "Config valid" << std::endl;
+        std::cerr << "Config valid" << std::endl;
         throw OnlyCheckConfigException();
     }
     initSignals();

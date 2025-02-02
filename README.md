@@ -3,8 +3,8 @@
 ## Supported options
 
 - `-c file`: Use an alterantive configuration file.
-- `-l LEVEL`: Specify loglevel. Supported loglevels are FATAL/1, ERR/ERROR/2, WARN/WARNING/3, INFO/4, DEBUG/5, TRACE/6. Default is INFO.
-- `-t`: Do not run, just test the configuration file.
+- `-l LEVEL`: Specify loglevel. Supported loglevels are `FATAL`/`1`, `ERR`/`ERROR`/`2`, `WARN`/`WARNING`/`3`, `INFO`/`4`, `DEBUG`/`5`, `TRACE`/`6`. Default is `INFO`.
+- `-t`: Do not run, just test the configuration file and print confirmation to standard error.
 - `-T`: Same as `-t`, but additionally dump the configuration file to standard output.
 - `-v`: Print version information.
 - `-h`: Print help information.
