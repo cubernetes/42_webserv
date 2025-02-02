@@ -148,6 +148,8 @@ bool HttpServer::parseRequestLine(const string &line, HttpRequest &request) {
         return false;
     }
 
+    if (iss.rdbuf()->in_avail())
+        return false;
     request.path = canonicalizePath(request.path);
     request.pathParsed = true;
     return true;
