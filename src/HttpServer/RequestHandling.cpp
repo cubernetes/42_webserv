@@ -148,6 +148,8 @@ bool HttpServer::parseRequestLine(const string &line, HttpRequest &request) {
         return false;
     }
 
+    if (iss.rdbuf()->in_avail())
+        return false;
     request.path = canonicalizePath(request.path);
     request.pathParsed = true;
     return true;
@@ -373,10 +375,11 @@ void HttpServer::processContentLength(HttpRequest &request) {
         request.chunkedTransfer = true;
 }
 
-bool HttpServer::validateRequest(const HttpRequest &request) const {
+bool HttpServer::validateRequest(const HttpRequest &request, int clientSocket) {
     // First check headers are complete
     if (!isHeaderComplete(request)) {
         log.debug() << "Invalid request: incomplete headers" << std::endl;
+        sendError(clientSocket, 400, NULL);
         return false;
     }
 
@@ -384,18 +387,21 @@ bool HttpServer::validateRequest(const HttpRequest &request) const {
     if (request.method != "GET" && request.method != "HEAD" && request.method != "POST" && request.method != "DELETE" &&
         request.method != "PUT" && request.method != "FTFT") {
         log.debug() << "Invalid request: unsupported method: " << request.method << std::endl;
+        sendError(clientSocket, 405, NULL);
         return false;
     }
 
     // Check HTTP version
     if (request.httpVersion != "HTTP/1.1") {
         log.debug() << "Invalid request: unsupported HTTP version: " << request.httpVersion << std::endl;
+        sendError(clientSocket, 505, NULL);
         return false;
     }
 
     // For POST requests, verify content info
     if (request.method == "POST" && !request.chunkedTransfer && request.contentLength == 0) {
         log.debug() << "Invalid POST request: no content length or chunked transfer" << std::endl;
+        sendError(clientSocket, 400, NULL);
         return false;
     }
 
@@ -443,7 +449,7 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
     if (!std::getline(stream, line) || !parseRequestLine(line, request)) {
         log.debug() << "Failed to parse request line: [" << Utils::escape(line) << "]" << std::endl;
         sendError(clientSocket, 400, NULL);
-        removeClientAndRequest(clientSocket);
+        _pendingRequests.erase(clientSocket);
         return false;
     }
     log.debug() << "Parsed request line: " << request.method << " " + request.path << std::endl;
@@ -452,7 +458,7 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
         if (!parseHeader(line, request)) {
             log.debug() << "Failed to parse header line: [" << Utils::escape(line) << "]" << std::endl;
             sendError(clientSocket, 400, NULL);
-            removeClientAndRequest(clientSocket);
+            _pendingRequests.erase(clientSocket);
             return false;
         }
         log.debug() << "Parsed header line: [" << Utils::escape(line) << "]" << std::endl;
@@ -464,10 +470,8 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
     log.debug() << "Chunked transfer: " << request.chunkedTransfer << std::endl;
 
     // Validate the request
-    if (!validateRequest(request)) {
+    if (!validateRequest(request, clientSocket)) {
         log.debug() << "Request validation failed" << std::endl;
-        sendError(clientSocket, 400,
-                  NULL); // TODO: @discuss: changed from 405 (method not allowed) to 400 (invalid request)
         // TODO: @discuss: what about removing clientSocket from _pendingRequests
         // removeClientAndRequest(clientSocket);
         _pendingRequests.erase(clientSocket);
