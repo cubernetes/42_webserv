@@ -7,9 +7,9 @@ NAME := webserv
 # source files must still be specified with their extension
 EXT := cpp
 TEST := c2_unit_tests
-UNIT_TEST_DIR := tests/unit_tests
+UNIT_TEST_DIR := test/unit_tests
 CATCH2 := Catch2
-TOOLS := tools
+TOOLS := script
 
 # tools
 # Not using CXX since it defaults to g++, invalidating the logic needed
