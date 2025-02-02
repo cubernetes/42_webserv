@@ -30,7 +30,7 @@ using std::vector;
 class HttpServer {
   public:
     ~HttpServer();
-    HttpServer(const string &configPath, Logger &log);
+    HttpServer(const string &configPath, Logger &log, size_t onlyCheckConfig = 0);
     operator string() const;
 
     // entry point, will run forever unless interrupted by signals or exceptions
