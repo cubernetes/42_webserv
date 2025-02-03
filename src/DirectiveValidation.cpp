@@ -21,12 +21,12 @@
 #include "Logger.hpp"
 #include "Utils.hpp"
 
-#define CHECKFN(ctx, checkFunction)                                                                                    \
-    if (checkFunction(ctx, directive, arguments) && ++counts[directive] <= 1)                                          \
+#define CHECKFN(ctx, checkFunction)                                                      \
+    if (checkFunction(ctx, directive, arguments) && ++counts[directive] <= 1)            \
     continue
 
-#define CHECKFN_MULTI(ctx, checkFunction)                                                                              \
-    if (checkFunction(ctx, directive, arguments))                                                                      \
+#define CHECKFN_MULTI(ctx, checkFunction)                                                \
+    if (checkFunction(ctx, directive, arguments))                                        \
     continue
 
 using std::map;
@@ -36,27 +36,34 @@ using std::string;
 using std::vector;
 
 // (max < 0 -> no maximum
-static inline void ensureArity(const string &ctx, const string &directive, const Arguments &arguments, int min,
-                               int max) {
+static inline void ensureArity(const string &ctx, const string &directive,
+                               const Arguments &arguments, int min, int max) {
     int ac = static_cast<int>(arguments.size());
     if (ac >= min && (ac <= max || max < 0))
         return;
-    throw runtime_error(Errors::Config::InvalidDirectiveArgumentCount(ctx, directive, ac, min, max));
+    throw runtime_error(
+        Errors::Config::InvalidDirectiveArgumentCount(ctx, directive, ac, min, max));
 }
 
-static inline void ensureOneOfStrings(const string &ctx, const string &directive, const string &argument,
+static inline void ensureOneOfStrings(const string &ctx, const string &directive,
+                                      const string &argument,
                                       const Arguments &possibilities) {
-    if (std::find(possibilities.begin(), possibilities.end(), argument) == possibilities.end()) {
-        throw runtime_error(Errors::Config::InvalidDirectiveArgument(ctx, directive, argument, possibilities));
+    if (std::find(possibilities.begin(), possibilities.end(), argument) ==
+        possibilities.end()) {
+        throw runtime_error(Errors::Config::InvalidDirectiveArgument(
+            ctx, directive, argument, possibilities));
     }
 }
 
-static inline void ensureRootedPath(const string &ctx, const string &directive, const string &argument) {
+static inline void ensureRootedPath(const string &ctx, const string &directive,
+                                    const string &argument) {
     if (argument.empty() || argument[0] != '/')
-        throw runtime_error(Errors::Config::DirectiveArgumentNotRootedPath(ctx, directive, argument));
+        throw runtime_error(
+            Errors::Config::DirectiveArgumentNotRootedPath(ctx, directive, argument));
 }
 
-static inline void ensureNotEmpty(const string &ctx, const string &directive, const string &argument) {
+static inline void ensureNotEmpty(const string &ctx, const string &directive,
+                                  const string &argument) {
     if (argument.empty())
         throw runtime_error(Errors::Config::DirectiveArgumentEmpty(ctx, directive));
 }
@@ -86,7 +93,9 @@ bool DirectiveValidation::isDoubleQuoted(const string &str) {
 }
 
 bool DirectiveValidation::isHttpUri(const string &str) {
-    size_t len = Utils::isPrefix("http://", str) ? 7 : Utils::isPrefix("https://", str) ? 8 : 0;
+    size_t len = Utils::isPrefix("http://", str)    ? 7
+                 : Utils::isPrefix("https://", str) ? 8
+                                                    : 0;
     if (len == 0)
         return false;
     string withoutScheme = str.substr(len);
@@ -143,29 +152,36 @@ string DirectiveValidation::decodeDoubleQuotedString(const string &str) {
     return newStr;
 }
 
-static inline void ensureValidDoubleQuotedString(const string &ctx, const string &directive, const string &argument) {
+static inline void ensureValidDoubleQuotedString(const string &ctx,
+                                                 const string &directive,
+                                                 const string &argument) {
     if (!DirectiveValidation::isDoubleQuoted(argument))
-        throw runtime_error(Errors::Config::DirectiveArgumentInvalidDoubleQuotedString(ctx, directive, argument));
+        throw runtime_error(Errors::Config::DirectiveArgumentInvalidDoubleQuotedString(
+            ctx, directive, argument));
 }
 
-static inline void ensureValidHttpUri(const string &ctx, const string &directive, const string &argument) {
+static inline void ensureValidHttpUri(const string &ctx, const string &directive,
+                                      const string &argument) {
     if (!DirectiveValidation::isHttpUri(argument))
         throw runtime_error(Errors::Config::DirectiveArgumentInvalidHttpUri(
-            ctx, directive, argument)); // TODO: normally, you'd use a regex to validate the domain, but hell nah we are
-                                        // not implementing a NFA from scratch
+            ctx, directive,
+            argument)); // TODO: normally, you'd use a regex to validate the domain, but
+                        // hell nah we are not implementing a NFA from scratch
 }
 
-// was only needed for the int argument to the worker_processes directive, which is not needed anymore
-// static inline void ensureInt(const string& ctx, const string& directive, const string& argument) {
-// 	ensureNotEmpty(ctx, directive, argument);
+// was only needed for the int argument to the worker_processes directive, which is not
+// needed anymore static inline void ensureInt(const string& ctx, const string& directive,
+// const string& argument) { 	ensureNotEmpty(ctx, directive, argument);
 // 	string::const_iterator c = argument.begin();
 // 	while (c != argument.end() && std::isdigit(*c)) ++c;
 // 	if (c == argument.end())
 // 		return;
-// 	throw runtime_error(Errors::Config::DirectiveArgumentNotNumeric(ctx, directive, argument));
+// 	throw runtime_error(Errors::Config::DirectiveArgumentNotNumeric(ctx, directive,
+// argument));
 // }
 
-static inline void ensureValidSize(const string &ctx, const string &directive, const string &argument) {
+static inline void ensureValidSize(const string &ctx, const string &directive,
+                                   const string &argument) {
     ensureNotEmpty(ctx, directive, argument);
     string::const_iterator c = argument.begin();
     while (c != argument.end() && std::isdigit(*c))
@@ -174,10 +190,12 @@ static inline void ensureValidSize(const string &ctx, const string &directive, c
         return;
     if (std::strchr("kmgt", std::tolower(*c)) && c + 1 == argument.end())
         return;
-    throw runtime_error(Errors::Config::DirectiveInvalidSizeArgument(ctx, directive, argument));
+    throw runtime_error(
+        Errors::Config::DirectiveInvalidSizeArgument(ctx, directive, argument));
 }
 
-static inline void ensureOnOff(const string &ctx, const string &directive, string &argument) {
+static inline void ensureOnOff(const string &ctx, const string &directive,
+                               string &argument) {
     if (argument == "on" || argument == "yes" || argument == "true") {
         argument = "on";
         return;
@@ -186,25 +204,31 @@ static inline void ensureOnOff(const string &ctx, const string &directive, strin
         argument = "off";
         return;
     }
-    throw runtime_error(Errors::Config::DirectiveInvalidBooleanArgument(ctx, directive, argument));
+    throw runtime_error(
+        Errors::Config::DirectiveInvalidBooleanArgument(ctx, directive, argument));
 }
 
 // only allow official status codes, might even prune this list even further
 // https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
-static inline void ensureStatusCode(const string &ctx, const string &directive, const string &argument) {
+static inline void ensureStatusCode(const string &ctx, const string &directive,
+                                    const string &argument) {
     static const char *validCodesArr[] = {
-        "100", "101", "102", "103", "200", "201", "202", "203", "204", "205", "206", "207", "208", "226", "300", "301",
-        "302", "303", "304", "305", "306", "307", "308", "400", "401", "402", "403", "404", "405", "406", "407", "408",
-        "409", "410", "411", "412", "413", "414", "415", "416", "417", "418", "421", "422", "423", "424", "425", "426",
-        "428", "429", "431", "451", "500", "501", "502", "503", "504", "505", "506", "507", "508", "510", "511"};
-    static const vector<string> validCodes(validCodesArr,
-                                           validCodesArr + sizeof(validCodesArr) / sizeof(validCodesArr[0]));
+        "100", "101", "102", "103", "200", "201", "202", "203", "204", "205", "206",
+        "207", "208", "226", "300", "301", "302", "303", "304", "305", "306", "307",
+        "308", "400", "401", "402", "403", "404", "405", "406", "407", "408", "409",
+        "410", "411", "412", "413", "414", "415", "416", "417", "418", "421", "422",
+        "423", "424", "425", "426", "428", "429", "431", "451", "500", "501", "502",
+        "503", "504", "505", "506", "507", "508", "510", "511"};
+    static const vector<string> validCodes(
+        validCodesArr, validCodesArr + sizeof(validCodesArr) / sizeof(validCodesArr[0]));
     if (std::find(validCodes.begin(), validCodes.end(), argument) != validCodes.end())
         return;
-    throw runtime_error(Errors::Config::DirectiveInvalidStatusCodeArgument(ctx, directive, argument));
+    throw runtime_error(
+        Errors::Config::DirectiveInvalidStatusCodeArgument(ctx, directive, argument));
 }
 
-static inline void ensureValidHost(const string &ctx, const string &directive, string &argument) {
+static inline void ensureValidHost(const string &ctx, const string &directive,
+                                   string &argument) {
     if (argument == "*") {
         argument = "0.0.0.0";
         return;
@@ -214,27 +238,34 @@ static inline void ensureValidHost(const string &ctx, const string &directive, s
         return;
     if (inet_pton(AF_INET6, argument.c_str(), &buf) == 1)
         throw runtime_error(Errors::Config::DirectiveIPv6NotSupported(ctx, directive));
-    throw runtime_error(Errors::Config::DirectiveInvalidIpAddressArgument(ctx, directive, argument));
+    throw runtime_error(
+        Errors::Config::DirectiveInvalidIpAddressArgument(ctx, directive, argument));
 }
 
-static inline void ensureValidPort(const string &ctx, const string &directive, const string &argument) {
+static inline void ensureValidPort(const string &ctx, const string &directive,
+                                   const string &argument) {
     char *end;
     long l;
 
     errno = 0;
     l = strtol(argument.c_str(), &end, 10);
     if ((errno == ERANGE && l == LONG_MAX) || l > Constants::highestPort)
-        throw runtime_error(Errors::Config::DirectiveArgumentPortNumberTooHigh(ctx, directive, argument));
+        throw runtime_error(
+            Errors::Config::DirectiveArgumentPortNumberTooHigh(ctx, directive, argument));
     if ((errno == ERANGE && l == LONG_MIN) || l < 1)
-        throw runtime_error(Errors::Config::DirectiveArgumentPortNumberTooLow(ctx, directive, argument));
+        throw runtime_error(
+            Errors::Config::DirectiveArgumentPortNumberTooLow(ctx, directive, argument));
     if (argument.empty() || *end != '\0')
-        throw runtime_error(Errors::Config::DirectiveArgumentInvalidPort(ctx, directive, argument));
+        throw runtime_error(
+            Errors::Config::DirectiveArgumentInvalidPort(ctx, directive, argument));
 }
 
-static inline bool checkIndex(const string &ctx, const string &directive, const Arguments &arguments) {
+static inline bool checkIndex(const string &ctx, const string &directive,
+                              const Arguments &arguments) {
     if (directive == "index") {
         ensureArity(ctx, directive, arguments, 1, -1);
-        for (Arguments::const_iterator argument = arguments.begin(); argument != arguments.end(); ++argument) {
+        for (Arguments::const_iterator argument = arguments.begin();
+             argument != arguments.end(); ++argument) {
             ensureNotEmpty(ctx, directive, *argument);
         }
         return true;
@@ -242,7 +273,8 @@ static inline bool checkIndex(const string &ctx, const string &directive, const 
     return false;
 }
 
-static inline bool checkRoot(const string &ctx, const string &directive, const Arguments &arguments) {
+static inline bool checkRoot(const string &ctx, const string &directive,
+                             const Arguments &arguments) {
     if (directive == "root") {
         ensureArity(ctx, directive, arguments, 1, 1);
         ensureNotEmpty(ctx, directive, arguments[0]);
@@ -271,7 +303,8 @@ static inline Arguments processIPv4Address(const string &host) {
     return newArgs;
 }
 
-static inline bool checkListen(const string &ctx, const string &directive, Arguments &arguments) {
+static inline bool checkListen(const string &ctx, const string &directive,
+                               Arguments &arguments) {
     if (directive == "listen") {
         ensureArity(ctx, directive, arguments, 1, 1);
         Arguments ipAndPort = processIPv4Address(arguments[0]);
@@ -283,7 +316,8 @@ static inline bool checkListen(const string &ctx, const string &directive, Argum
     return false;
 }
 
-static inline bool checkServerName(const string &ctx, const string &directive, const Arguments &arguments) {
+static inline bool checkServerName(const string &ctx, const string &directive,
+                                   const Arguments &arguments) {
     if (directive == "server_name") {
         ensureArity(ctx, directive, arguments, 1, -1);
         return true;
@@ -291,7 +325,8 @@ static inline bool checkServerName(const string &ctx, const string &directive, c
     return false;
 }
 
-static inline bool checkClientMaxBodySize(const string &ctx, const string &directive, const Arguments &arguments) {
+static inline bool checkClientMaxBodySize(const string &ctx, const string &directive,
+                                          const Arguments &arguments) {
     if (directive == "client_max_body_size") {
         ensureArity(ctx, directive, arguments, 1, 1);
         ensureValidSize(ctx, directive, arguments[0]);
@@ -300,18 +335,23 @@ static inline bool checkClientMaxBodySize(const string &ctx, const string &direc
     return false;
 }
 
-static inline bool checkLimitExcept(const string &ctx, const string &directive, const Arguments &arguments) {
+static inline bool checkLimitExcept(const string &ctx, const string &directive,
+                                    const Arguments &arguments) {
     if (directive == "limit_except") {
         ensureArity(ctx, directive, arguments, 1, -1);
-        for (Arguments::const_iterator argument = arguments.begin(); argument != arguments.end(); ++argument) {
-            ensureOneOfStrings(ctx, directive, *argument, VEC(string, "GET", "HEAD", "POST", "DELETE", "PUT", "FTFT"));
+        for (Arguments::const_iterator argument = arguments.begin();
+             argument != arguments.end(); ++argument) {
+            ensureOneOfStrings(
+                ctx, directive, *argument,
+                VEC(string, "GET", "HEAD", "POST", "DELETE", "PUT", "FTFT"));
         }
         return true;
     }
     return false;
 }
 
-static inline bool checkAlias(const string &ctx, const string &directive, const Arguments &arguments) {
+static inline bool checkAlias(const string &ctx, const string &directive,
+                              const Arguments &arguments) {
     if (directive == "alias") {
         ensureArity(ctx, directive, arguments, 1, 1);
         ensureRootedPath(ctx, directive, arguments[0]);
@@ -320,7 +360,8 @@ static inline bool checkAlias(const string &ctx, const string &directive, const 
     return false;
 }
 
-static inline bool checkReturn(const string &ctx, const string &directive, const Arguments &arguments) {
+static inline bool checkReturn(const string &ctx, const string &directive,
+                               const Arguments &arguments) {
     if (directive == "return") {
         ensureArity(ctx, directive, arguments, 2, 2);
         ensureStatusCode(ctx, directive, arguments[0]);
@@ -334,7 +375,8 @@ static inline bool checkReturn(const string &ctx, const string &directive, const
     return false;
 }
 
-static inline bool checkAutoindex(const string &ctx, const string &directive, Arguments &arguments) {
+static inline bool checkAutoindex(const string &ctx, const string &directive,
+                                  Arguments &arguments) {
     if (directive == "autoindex") {
         ensureArity(ctx, directive, arguments, 1, 1);
         ensureOnOff(ctx, directive, arguments[0]);
@@ -343,7 +385,8 @@ static inline bool checkAutoindex(const string &ctx, const string &directive, Ar
     return false;
 }
 
-static inline bool checkErrorPage(const string &ctx, const string &directive, const Arguments &arguments) {
+static inline bool checkErrorPage(const string &ctx, const string &directive,
+                                  const Arguments &arguments) {
     if (directive == "error_page") {
         ensureArity(ctx, directive, arguments, 2, -1);
         size_t i;
@@ -356,7 +399,8 @@ static inline bool checkErrorPage(const string &ctx, const string &directive, co
     return false;
 }
 
-static inline bool checkCgiExt(const string &ctx, const string &directive, const Arguments &arguments) {
+static inline bool checkCgiExt(const string &ctx, const string &directive,
+                               const Arguments &arguments) {
     if (directive == "cgi_ext") {
         ensureArity(ctx, directive, arguments, 1, 2);
         if (arguments.size() == 2)
@@ -366,7 +410,8 @@ static inline bool checkCgiExt(const string &ctx, const string &directive, const
     return false;
 }
 
-static inline bool checkCgiDir(const string &ctx, const string &directive, const Arguments &arguments) {
+static inline bool checkCgiDir(const string &ctx, const string &directive,
+                               const Arguments &arguments) {
     if (directive == "cgi_dir") {
         ensureArity(ctx, directive, arguments, 1, 1);
         ensureRootedPath(ctx, directive, arguments[0]);
@@ -375,7 +420,8 @@ static inline bool checkCgiDir(const string &ctx, const string &directive, const
     return false;
 }
 
-static inline bool checkUploadDir(const string &ctx, const string &directive, const Arguments &arguments) {
+static inline bool checkUploadDir(const string &ctx, const string &directive,
+                                  const Arguments &arguments) {
     if (directive == "upload_dir") {
         ensureArity(ctx, directive, arguments, 1, 1);
         if (arguments[0].empty())
@@ -443,7 +489,8 @@ static void checkLocationDirectives(Directives &directives) {
         CHECKFN("location", checkRoot);
         CHECKFN("location", checkUploadDir);
         if (counts[directive] > 1)
-            throw runtime_error(Errors::Config::DirectiveNotUnique("location", directive));
+            throw runtime_error(
+                Errors::Config::DirectiveNotUnique("location", directive));
         throw runtime_error(Errors::Config::UnknownDirective("location", directive));
     }
 }
@@ -452,7 +499,8 @@ static inline bool addrSame(const struct in_addr &addr1, const struct in_addr &a
     return std::memcmp(&addr1, &addr2, sizeof(addr1)) == 0;
 }
 
-static bool listenDirectivesSame(const Arguments &listenDirective, const Arguments &otherListenDirective) {
+static bool listenDirectivesSame(const Arguments &listenDirective,
+                                 const Arguments &otherListenDirective) {
     /*
     const char wildcardStr[] = "0.0.0.0";
     struct in_addr wildcard;
@@ -485,11 +533,14 @@ static bool listenDirectivesSame(const Arguments &listenDirective, const Argumen
     return hostSame && portSame;
 }
 
-static bool overlapListen(const ArgResults &listenDirectives, const ArgResults &otherListenDirectives) {
+static bool overlapListen(const ArgResults &listenDirectives,
+                          const ArgResults &otherListenDirectives) {
     for (ArgResults::const_iterator listenDirective = listenDirectives.begin();
          listenDirective != listenDirectives.end(); ++listenDirective) {
-        for (ArgResults::const_iterator otherListenDirective = otherListenDirectives.begin();
-             otherListenDirective != otherListenDirectives.end(); ++otherListenDirective) {
+        for (ArgResults::const_iterator otherListenDirective =
+                 otherListenDirectives.begin();
+             otherListenDirective != otherListenDirectives.end();
+             ++otherListenDirective) {
             if (listenDirectivesSame(*listenDirective, *otherListenDirective)) {
                 return true;
             }
@@ -502,14 +553,19 @@ static void ensureNoOverlapServerName(const ArgResults &serverNameDirectives,
                                       const ArgResults &otherServerNameDirectives) {
     for (ArgResults::const_iterator serverNameDirective = serverNameDirectives.begin();
          serverNameDirective != serverNameDirectives.end(); ++serverNameDirective) {
-        for (ArgResults::const_iterator otherServerNameDirective = otherServerNameDirectives.begin();
-             otherServerNameDirective != otherServerNameDirectives.end(); ++otherServerNameDirective) {
+        for (ArgResults::const_iterator otherServerNameDirective =
+                 otherServerNameDirectives.begin();
+             otherServerNameDirective != otherServerNameDirectives.end();
+             ++otherServerNameDirective) {
             for (Arguments::const_iterator serverName = serverNameDirective->begin();
                  serverName != serverNameDirective->end(); ++serverName) {
-                for (Arguments::const_iterator otherServerName = otherServerNameDirective->begin();
-                     otherServerName != otherServerNameDirective->end(); ++otherServerName) {
+                for (Arguments::const_iterator otherServerName =
+                         otherServerNameDirective->begin();
+                     otherServerName != otherServerNameDirective->end();
+                     ++otherServerName) {
                     if (*serverName == *otherServerName) {
-                        throw runtime_error("Config error: duplicate server_name values between servers");
+                        throw runtime_error(
+                            "Config error: duplicate server_name values between servers");
                     }
                 }
             }
@@ -517,7 +573,8 @@ static void ensureNoOverlapServerName(const ArgResults &serverNameDirectives,
     }
 }
 
-static void ensureServerUniqueness(const Directives &directives, const ServerCtxs &servers) {
+static void ensureServerUniqueness(const Directives &directives,
+                                   const ServerCtxs &servers) {
     ArgResults listenDirectives = getAllDirectives(directives, "listen");
     ArgResults serverNameDirectives = getAllDirectives(directives, "server_name");
 
@@ -528,17 +585,20 @@ static void ensureServerUniqueness(const Directives &directives, const ServerCtx
             if (listenDirective == otherListenDirective)
                 continue;
             if (listenDirectivesSame(*listenDirective, *otherListenDirective)) {
-                throw runtime_error("Config error: duplicate listen values in the same server");
+                throw runtime_error(
+                    "Config error: duplicate listen values in the same server");
             }
         }
     }
 
-    for (ServerCtxs::const_iterator server = servers.begin(); server != servers.end(); ++server) {
+    for (ServerCtxs::const_iterator server = servers.begin(); server != servers.end();
+         ++server) {
         if (&directives == &server->first)
             continue;
 
         ArgResults otherListenDirectives = getAllDirectives(server->first, "listen");
-        ArgResults otherServerNameDirectives = getAllDirectives(server->first, "server_name");
+        ArgResults otherServerNameDirectives =
+            getAllDirectives(server->first, "server_name");
 
         if (overlapListen(listenDirectives, otherListenDirectives)) {
             ensureNoOverlapServerName(serverNameDirectives, otherServerNameDirectives);
@@ -547,19 +607,28 @@ static void ensureServerUniqueness(const Directives &directives, const ServerCtx
 }
 
 void DirectiveValidation::checkDirectives(Config &config) {
-    Logger::lastInstance().trace() << "Validating semantics of http directives" << std::endl;
+    Logger::lastInstance().trace()
+        << "Validating semantics of http directives" << std::endl;
     checkHttpDirectives(config.first);
-    for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
-        Logger::lastInstance().trace() << "Validating semantics of server directives" << std::endl;
+    for (ServerCtxs::iterator server = config.second.begin();
+         server != config.second.end(); ++server) {
+        Logger::lastInstance().trace()
+            << "Validating semantics of server directives" << std::endl;
         checkServerDirectives(server->first);
-        for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
-            Logger::lastInstance().trace() << "Validating semantics of location directives" << std::endl;
+        for (LocationCtxs::iterator location = server->second.begin();
+             location != server->second.end(); ++location) {
+            Logger::lastInstance().trace()
+                << "Validating semantics of location directives" << std::endl;
             checkLocationDirectives(location->second);
         }
     }
-    // we have to do it in a separate loop, since in the first loop, all the listen directives must be validated first
-    for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
-        Logger::lastInstance().trace() << "Ensuring that listen & server_name directives have no conflict" << std::endl;
+    // we have to do it in a separate loop, since in the first loop, all the listen
+    // directives must be validated first
+    for (ServerCtxs::iterator server = config.second.begin();
+         server != config.second.end(); ++server) {
+        Logger::lastInstance().trace()
+            << "Ensuring that listen & server_name directives have no conflict"
+            << std::endl;
         ensureServerUniqueness(server->first, config.second);
     }
 }

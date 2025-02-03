@@ -9,7 +9,8 @@
 
 void HttpServer::redirectClient(int clientSocket, const string &newUri, int statusCode) {
     std::ostringstream response;
-    response << _httpVersionString << " " << statusCode << " " << statusTextFromCode(statusCode) << "\r\n"
+    response << _httpVersionString << " " << statusCode << " "
+             << statusTextFromCode(statusCode) << "\r\n"
              << "Location: " << newUri << "\r\n"
              << "Connection: close\r\n\r\n";
     string responseStr = response.str();
@@ -27,14 +28,15 @@ bool HttpServer::handleDirectoryRedirect(int clientSocket, const string &uri) {
 }
 
 // TODO: @timo: precompute indexes and validate so that they don't contain slashes
-bool HttpServer::handleIndexes(int clientSocket, const string &diskPath, const HttpRequest &request,
-                               const LocationCtx &location) {
+bool HttpServer::handleIndexes(int clientSocket, const string &diskPath,
+                               const HttpRequest &request, const LocationCtx &location) {
     ArgResults res = getAllDirectives(location.second, "index");
     Arguments indexes;
     for (ArgResults::const_iterator args = res.begin(); args != res.end(); ++args) {
         indexes.insert(indexes.end(), args->begin(), args->end());
     }
-    for (Arguments::const_iterator index = indexes.begin(); index != indexes.end(); ++index) {
+    for (Arguments::const_iterator index = indexes.begin(); index != indexes.end();
+         ++index) {
         string indexPath = diskPath + *index;
         HttpRequest newRequest = request;
         newRequest.path += *index;
@@ -44,7 +46,8 @@ bool HttpServer::handleIndexes(int clientSocket, const string &diskPath, const H
     return false;
 }
 
-void HttpServer::handleUriWithSlash(int clientSocket, const string &diskPath, const HttpRequest &request,
+void HttpServer::handleUriWithSlash(int clientSocket, const string &diskPath,
+                                    const HttpRequest &request,
                                     const LocationCtx &location, bool sendErrorMsg) {
     struct stat fileStat;
     int fileExists = stat(diskPath.c_str(), &fileStat) == 0;
@@ -66,12 +69,14 @@ void HttpServer::handleUriWithSlash(int clientSocket, const string &diskPath, co
             return;
         }
         DirectoryIndexer di(log);
-        sendString(clientSocket, di.indexDirectory(request.path, diskPath), 200, "text/html", request.method == "HEAD");
+        sendString(clientSocket, di.indexDirectory(request.path, diskPath), 200,
+                   "text/html", request.method == "HEAD");
         return;
     }
 }
 
-bool HttpServer::handleUriWithoutSlash(int clientSocket, const string &diskPath, const HttpRequest &request,
+bool HttpServer::handleUriWithoutSlash(int clientSocket, const string &diskPath,
+                                       const HttpRequest &request,
                                        const LocationCtx &location, bool sendErrorMsg) {
     struct stat fileStat;
     int fileExists = stat(diskPath.c_str(), &fileStat) == 0;
@@ -88,15 +93,18 @@ bool HttpServer::handleUriWithoutSlash(int clientSocket, const string &diskPath,
         }
         return true;
     } else if (S_ISREG(fileStat.st_mode)) {
-        return sendFileContent(clientSocket, diskPath, location, 200, "", request.method == "HEAD");
+        return sendFileContent(clientSocket, diskPath, location, 200, "",
+                               request.method == "HEAD");
     }
     if (sendErrorMsg)
         sendError(clientSocket, 403,
-                  &location); // sometimes it's also 404, or 500, but haven't figured out the pattern yet
+                  &location); // sometimes it's also 404, or 500, but haven't figured out
+                              // the pattern yet
     return false;
 }
 
-string HttpServer::determineDiskPath(const HttpRequest &request, const LocationCtx &location) {
+string HttpServer::determineDiskPath(const HttpRequest &request,
+                                     const LocationCtx &location) {
     string path;
     if (directiveExists(location.second, "alias")) { // TODO: @timo: sanitziation?
         string alias = getFirstDirective(location.second, "alias")[0];
@@ -109,7 +117,8 @@ string HttpServer::determineDiskPath(const HttpRequest &request, const LocationC
     return getFirstDirective(location.second, "root")[0] + path;
 }
 
-void HttpServer::serveStaticContent(int clientSocket, const HttpRequest &request, const LocationCtx &location) {
+void HttpServer::serveStaticContent(int clientSocket, const HttpRequest &request,
+                                    const LocationCtx &location) {
     string diskPath = determineDiskPath(request, location);
 
     if (diskPath[diskPath.length() - 1] == '/')

@@ -28,18 +28,21 @@
 
 using std::string;
 using std::swap;
-typedef HttpServer::ClientFdToCgiMap CgiProcessMap; // not sure why using doesn't work with this one
+typedef HttpServer::ClientFdToCgiMap
+    CgiProcessMap; // not sure why using doesn't work with this one
 
 // De- & Constructors
 CgiHandler::~CgiHandler() { TRACE_DTOR; }
 
-CgiHandler::CgiHandler(HttpServer &server, const string &extension, const string &program, Logger &_log)
+CgiHandler::CgiHandler(HttpServer &server, const string &extension, const string &program,
+                       Logger &_log)
     : _server(server), _extension(extension), _program(program), log(_log) {
     TRACE_ARG_CTOR(string, extension, string, program);
 }
 
 CgiHandler::CgiHandler(const CgiHandler &other)
-    : _server(other._server), _extension(other._extension), _program(other._program), log(other.log) {
+    : _server(other._server), _extension(other._extension), _program(other._program),
+      log(other.log) {
     TRACE_COPY_CTOR;
 }
 
@@ -66,16 +69,20 @@ CgiHandler::operator string() const { return ::repr(*this); }
 
 void swap(CgiHandler &a, CgiHandler &b) /* noexcept */ { a.swap(b); }
 
-std::ostream &operator<<(std::ostream &os, const CgiHandler &other) { return os << static_cast<string>(other); }
+std::ostream &operator<<(std::ostream &os, const CgiHandler &other) {
+    return os << static_cast<string>(other);
+}
 
 bool CgiHandler::canHandle(const string &path) const {
-    return path.length() > _extension.length() && path.substr(path.length() - _extension.length()) == _extension;
+    return path.length() > _extension.length() &&
+           path.substr(path.length() - _extension.length()) == _extension;
 }
 
 string getHost(const HttpServer::HttpRequest &request);
 
-std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequest &request,
-                                                      const LocationCtx &location) {
+std::map<string, string>
+CgiHandler::setupEnvironment(const HttpServer::HttpRequest &request,
+                             const LocationCtx &location) {
     std::map<string, string> env;
 
     string rootPath = getFirstDirective(location.second, "root")[0];
@@ -87,7 +94,8 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
 
     // Find any path info after the script name
     size_t scriptEnd = request.path.find(extension);
-    env["PATH_INFO"] = (scriptEnd != string::npos && scriptEnd + extension.length() < request.path.length())
+    env["PATH_INFO"] = (scriptEnd != string::npos &&
+                        scriptEnd + extension.length() < request.path.length())
                            ? request.path.substr(scriptEnd + extension.length())
                            : "/";
 
@@ -106,7 +114,8 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
         env["QUERY_STRING"] = request.path.substr(queryPos + 1);
     }
 
-    for (std::map<string, string>::const_iterator it = request.headers.begin(); it != request.headers.end(); ++it) {
+    for (std::map<string, string>::const_iterator it = request.headers.begin();
+         it != request.headers.end(); ++it) {
         string headerName = "HTTP_" + it->first;
         std::transform(headerName.begin(), headerName.end(), headerName.begin(),
                        static_cast<int (*)(int)>(std::toupper));
@@ -164,7 +173,8 @@ char **CgiHandler::exportEnvironment(const std::map<string, string> &env, size_t
     size_t size = env.size();
     char **envArr = new char *[size + 1];
     size_t i = 0;
-    for (std::map<string, string>::const_iterator it = env.begin(); it != env.end(); ++it) {
+    for (std::map<string, string>::const_iterator it = env.begin(); it != env.end();
+         ++it) {
         if (it->first.empty() || it->first.find('=') != string::npos)
             continue;
         envArr[i] = ft_strdup((it->first + "=" + it->second).c_str());
@@ -197,7 +207,8 @@ bool CgiHandler::validateHeaders(const string &headers) {
     return true;
 }
 
-void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &request, const LocationCtx &location) {
+void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &request,
+                         const LocationCtx &location) {
 
     std::map<string, string> env = setupEnvironment(request, location);
     string scriptPath = env["SCRIPT_FILENAME"];
@@ -228,9 +239,11 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
         close(fromCgi[PIPE_READ]); // doesn't need to read from itself
 
         dup2(toCgi[PIPE_READ],
-             STDIN_FILENO); // whenever something writes to toCgi WRITE end, then CGI will receive it via stdin
+             STDIN_FILENO); // whenever something writes to toCgi WRITE end, then CGI will
+                            // receive it via stdin
         dup2(fromCgi[PIPE_WRITE],
-             STDOUT_FILENO); // whenever CGI writes something to stdout, it will go to WRITE end of formCgi pipe
+             STDOUT_FILENO); // whenever CGI writes something to stdout, it will go to
+                             // WRITE end of formCgi pipe
 
         close(toCgi[PIPE_READ]);
         close(fromCgi[PIPE_WRITE]);
@@ -240,7 +253,8 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
             exit(1);
         }
 
-        // cgiDir is guaranteed to be a prefix, and needs to be removed since we cd'd into it
+        // cgiDir is guaranteed to be a prefix, and needs to be removed since we cd'd into
+        // it
         /*       /foo  - /foo/test.py -> /test.py -> .//test.py
          *       /foo/ - /foo/test.py ->  test.py ->  ./test.py
          */
@@ -261,10 +275,11 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
             argv0 = scriptPath;
             argv1 = "";
         }
-        char *args[] = {const_cast<char *>(argv0.c_str()), const_cast<char *>(argv1.empty() ? NULL : argv1.c_str()),
-                        NULL};
-        log.debug() << "Child: Calling execve(" << repr(args[0]) << ", " << reprArr((char **)args, 2) << ", "
-                    << reprArr(cgiEnviron, n + 1) << ")" << std::endl;
+        char *args[] = {const_cast<char *>(argv0.c_str()),
+                        const_cast<char *>(argv1.empty() ? NULL : argv1.c_str()), NULL};
+        log.debug() << "Child: Calling execve(" << repr(args[0]) << ", "
+                    << reprArr((char **)args, 2) << ", " << reprArr(cgiEnviron, n + 1)
+                    << ")" << std::endl;
         execve(args[0], args, cgiEnviron);
         log.warn() << "Child: execve failed" << std::endl;
         exit(1);
@@ -277,14 +292,16 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
 
     std::pair<CgiProcessMap::iterator, bool> result;
     result = _server._clientToCgi.insert(
-        std::make_pair(clientSocket, HttpServer::CgiProcess(pid, cgiReadFd, cgiWriteFd, clientSocket, &location)));
+        std::make_pair(clientSocket, HttpServer::CgiProcess(pid, cgiReadFd, cgiWriteFd,
+                                                            clientSocket, &location)));
     (void)result;
 
     // from timo: commented out for now
     // if (!result.second) {
     // 	// If key already exists, update the existing entry
     // 	// TODO: @discuss: is this even correct? what happens to the old CgiProcess entry?
-    // 	result.first->second = HttpServer::CgiProcess(pid, cgiReadFd, clientSocket, &location);
+    // 	result.first->second = HttpServer::CgiProcess(pid, cgiReadFd, clientSocket,
+    // &location);
     // }
 
     struct pollfd pfd;
@@ -299,7 +316,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
     _server._cgiToClient[cgiWriteFd] = clientSocket;
     _server._monitorFds.pollFds.push_back(pfd2);
 
-    log.debug() << "Parent: Queueing data to write to CGI process (fd=" << cgiWriteFd << "): [" << Utils::escape(cgiDir)
-                << "]" << std::endl;
+    log.debug() << "Parent: Queueing data to write to CGI process (fd=" << cgiWriteFd
+                << "): [" << Utils::escape(cgiDir) << "]" << std::endl;
     _server.queueWrite(cgiWriteFd, request.body);
 }

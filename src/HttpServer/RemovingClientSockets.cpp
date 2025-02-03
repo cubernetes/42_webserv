@@ -9,7 +9,8 @@ using Constants::POLL;
 using Constants::SELECT;
 
 void HttpServer::removePollFd(MultPlexFds &monitorFds, int fd) {
-    for (PollFds::iterator pollFd = monitorFds.pollFds.begin(); pollFd != monitorFds.pollFds.end(); ++pollFd) {
+    for (PollFds::iterator pollFd = monitorFds.pollFds.begin();
+         pollFd != monitorFds.pollFds.end(); ++pollFd) {
         if (pollFd->fd == fd) {
             monitorFds.pollFds.erase(pollFd);
             break;
@@ -18,7 +19,8 @@ void HttpServer::removePollFd(MultPlexFds &monitorFds, int fd) {
 }
 
 void HttpServer::closeAndRemoveAllPollFd(MultPlexFds &monitorFds) {
-    for (PollFds::iterator pollFd = monitorFds.pollFds.begin(); pollFd != monitorFds.pollFds.end(); ++pollFd) {
+    for (PollFds::iterator pollFd = monitorFds.pollFds.begin();
+         pollFd != monitorFds.pollFds.end(); ++pollFd) {
         if (pollFd->fd >= 0) {
             ::close(pollFd->fd);
             pollFd->fd = -1;
@@ -61,7 +63,7 @@ void HttpServer::closeAndRemoveAllMultPlexFd(MultPlexFds &monitorFds) {
 }
 
 void HttpServer::removeClient(int clientSocket) {
-    // TODO: @all: this function should actually be the one that removes all PendingWrites, PendingCloses,
-    // PendingRequests, cgi stuff
+    // TODO: @all: this function should actually be the one that removes all
+    // PendingWrites, PendingCloses, PendingRequests, cgi stuff
     closeAndRemoveMultPlexFd(_monitorFds, clientSocket);
 }

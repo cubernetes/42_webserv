@@ -23,21 +23,25 @@ std::string DirectoryIndexer::formatSizeReadable(long long size) {
     } else if (size < 1024 * 1024) {
         oss << std::fixed << std::setprecision(2) << (double)size / (1024.0) << " KB";
     } else if (size < 1024 * 1024 * 1024) {
-        oss << std::fixed << std::setprecision(2) << (double)size / (1024.0 * 1024.0) << " MB";
+        oss << std::fixed << std::setprecision(2) << (double)size / (1024.0 * 1024.0)
+            << " MB";
     } else {
-        oss << std::fixed << std::setprecision(2) << (double)size / (1024.0 * 1024.0 * 1024.0) << " GB";
+        oss << std::fixed << std::setprecision(2)
+            << (double)size / (1024.0 * 1024.0 * 1024.0) << " GB";
     }
 
     return oss.str();
 }
 
-void DirectoryIndexer::iterateOverDirEntries(Entries &entries, struct dirent *&entry, const string &path) {
+void DirectoryIndexer::iterateOverDirEntries(Entries &entries, struct dirent *&entry,
+                                             const string &path) {
     if (std::strcmp(entry->d_name, ".") == 0)
         return;
     string entryPath = path + "/" + entry->d_name;
     struct stat st;
     if (stat(entryPath.c_str(), &st) == -1) {
-        log.debug() << "indexDirectory: Failed to stat file " << entryPath << ": " << std::strerror(errno) << std::endl;
+        log.debug() << "indexDirectory: Failed to stat file " << entryPath << ": "
+                    << std::strerror(errno) << std::endl;
         ;
         return;
     }
@@ -71,7 +75,8 @@ string DirectoryIndexer::indexDirectory(string location, string path) {
     for (Entries::iterator it = entries.begin(); it != entries.end(); ++it) {
         result << "<tr>";
         {
-            result << "<td>" << "<a href=\"" << location << it->first << "\">" << it->first << "</a>" << "</td>";
+            result << "<td>" << "<a href=\"" << location << it->first << "\">"
+                   << it->first << "</a>" << "</td>";
             // result << "<td>" << it->second.first << "<td>"; // not readable
             result << "<td>" << formatSizeReadable(it->second.second) << "<td>";
         }

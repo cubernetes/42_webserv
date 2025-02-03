@@ -16,7 +16,8 @@ string HttpServer::percentDecode(const string &str) {
             oss << str[i];
             continue;
         }
-        if (!Utils::isHexDigitNoCase(str[i + 1]) || !Utils::isHexDigitNoCase(str[i + 2])) {
+        if (!Utils::isHexDigitNoCase(str[i + 1]) ||
+            !Utils::isHexDigitNoCase(str[i + 2])) {
             oss << str[i];
             continue;
         }

@@ -16,16 +16,20 @@
 using std::runtime_error;
 using Utils::STR;
 
-size_t HttpServer::getIndexOfServerByHost(const string &requestedHost, const struct in_addr &addr,
+size_t HttpServer::getIndexOfServerByHost(const string &requestedHost,
+                                          const struct in_addr &addr,
                                           in_port_t port) const {
     string requestedHostLower = Utils::strToLower(requestedHost);
     for (size_t i = 0; i < _servers.size(); ++i) {
         const Server &server = _servers[i];
-        if (server.port == port && (memcmp(&server.ip, &addr, sizeof(addr)) == 0 || server.ip.s_addr == INADDR_ANY)) {
+        if (server.port == port && (memcmp(&server.ip, &addr, sizeof(addr)) == 0 ||
+                                    server.ip.s_addr == INADDR_ANY)) {
             for (size_t j = 0; j < server.serverNames.size(); ++j) {
                 if (requestedHostLower ==
                     Utils::strToLower(
-                        server.serverNames[j])) { // see https://datatracker.ietf.org/doc/html/rfc2616#section-3.2.3
+                        server.serverNames
+                            [j])) { // see
+                                    // https://datatracker.ietf.org/doc/html/rfc2616#section-3.2.3
                     return i + 1;
                 }
             }
@@ -34,7 +38,8 @@ size_t HttpServer::getIndexOfServerByHost(const string &requestedHost, const str
     return 0;
 }
 
-size_t HttpServer::getIndexOfDefaultServer(const struct in_addr &addr, in_port_t port) const {
+size_t HttpServer::getIndexOfDefaultServer(const struct in_addr &addr,
+                                           in_port_t port) const {
     AddrPort addrPort(addr, port);
     DefaultServers::const_iterator exactMatch = _defaultServers.find(addrPort);
     if (exactMatch != _defaultServers.end()) {
@@ -51,7 +56,8 @@ size_t HttpServer::getIndexOfDefaultServer(const struct in_addr &addr, in_port_t
     return 0;
 }
 
-size_t HttpServer::findMatchingServer(const string &host, const struct in_addr &addr, in_port_t port) const {
+size_t HttpServer::findMatchingServer(const string &host, const struct in_addr &addr,
+                                      in_port_t port) const {
     string requestedHost = host;
     size_t colonPos = requestedHost.rfind(':');
     if (colonPos != string::npos)
@@ -67,26 +73,32 @@ size_t HttpServer::findMatchingServer(const string &host, const struct in_addr &
 size_t HttpServer::findMatchingLocation(const Server &server, const string &path) const {
     int bestIdx = -1;
     int bestScore = -1;
-    log.debug() << "For path " << path << ": Trying to find a location in this server: " << repr(server) << std::endl;
+    log.debug() << "For path " << path
+                << ": Trying to find a location in this server: " << repr(server)
+                << std::endl;
     for (size_t i = 0; i < server.locations.size(); ++i) {
         LocationCtx loc = server.locations[i];
         const string &locPath = loc.first;
         if (Utils::isPrefix(locPath, path)) {
-            log.debug() << "Match: Location path " << locPath << " is a prefix of path " << path << std::endl;
+            log.debug() << "Match: Location path " << locPath << " is a prefix of path "
+                        << path << std::endl;
             pair<string::const_iterator, string::const_iterator> matcher =
                 std::mismatch(locPath.begin(), locPath.end(), path.begin());
-            int currentScore = static_cast<int>(std::distance(locPath.begin(), matcher.first));
+            int currentScore =
+                static_cast<int>(std::distance(locPath.begin(), matcher.first));
             if (currentScore > bestScore) {
                 bestScore = currentScore;
                 bestIdx = static_cast<int>(i);
             }
         } else {
-            log.debug() << "Location path " << locPath << " was not a prefix of path " << path << std::endl;
+            log.debug() << "Location path " << locPath << " was not a prefix of path "
+                        << path << std::endl;
         }
     }
     return static_cast<size_t>(
-        bestIdx + 1); // will be 0 when nothing was found. a default / location block is always added at the
-                      // end of the location vector that SHOULD always match (every path must start with /)
+        bestIdx + 1); // will be 0 when nothing was found. a default / location block is
+                      // always added at the end of the location vector that SHOULD always
+                      // match (every path must start with /)
 }
 
 string getHost(const HttpServer::HttpRequest &request) {
@@ -113,7 +125,8 @@ struct sockaddr_in HttpServer::getSockaddrIn(int clientSocket) {
     return addr;
 }
 
-const LocationCtx &HttpServer::requestToLocation(int clientSocket, const HttpRequest &request) {
+const LocationCtx &HttpServer::requestToLocation(int clientSocket,
+                                                 const HttpRequest &request) {
     struct sockaddr_in addr = getSockaddrIn(clientSocket);
 
     // Get host from request headers
@@ -123,16 +136,20 @@ const LocationCtx &HttpServer::requestToLocation(int clientSocket, const HttpReq
     size_t serverIdx;
     if (!(serverIdx = findMatchingServer(host, addr.sin_addr, addr.sin_port))) {
         sendError(clientSocket, 404, NULL); // TODO: @all: is 404 rlly correct?
-        throw runtime_error(string("Couldn't find a server for hostname '") + host + "' and addr:port being " +
-                            STR(ntohl(addr.sin_addr.s_addr)) + ":" + STR(ntohs(addr.sin_port)));
+        throw runtime_error(string("Couldn't find a server for hostname '") + host +
+                            "' and addr:port being " + STR(ntohl(addr.sin_addr.s_addr)) +
+                            ":" + STR(ntohs(addr.sin_port)));
     }
-    const Server &server = _servers[serverIdx - 1]; // serverIdx=0 indicates failure, so 1 is the first server
+    const Server &server =
+        _servers[serverIdx -
+                 1]; // serverIdx=0 indicates failure, so 1 is the first server
 
     // find location by matching against request uri
     size_t locationIdx;
     if (!(locationIdx = findMatchingLocation(server, request.path))) {
         sendError(clientSocket, 404, NULL); // TODO: @all: is 404 rlly correct?
-        throw runtime_error(string("Couldn't find a location for URI '") + request.path + "'");
+        throw runtime_error(string("Couldn't find a location for URI '") + request.path +
+                            "'");
     }
     return server.locations[locationIdx - 1];
 }

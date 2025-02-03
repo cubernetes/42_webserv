@@ -14,8 +14,10 @@ string HttpServer::getMimeType(const string &path) {
     std::transform(
         ext.begin(), ext.end(), ext.begin(),
         static_cast<int (*)(int)>(
-            ::tolower)); // a malicious MIME type could contain negative chars, leading to undefined behaviour with
-                         // ::tolower, see https://stackoverflow.com/questions/5270780/what-does-the-mean-in-tolower
+            ::tolower)); // a malicious MIME type could contain negative chars, leading to
+                         // undefined behaviour with
+                         // ::tolower, see
+                         // https://stackoverflow.com/questions/5270780/what-does-the-mean-in-tolower
     MimeTypes::const_iterator it = _mimeTypes.find(ext);
     if (it != _mimeTypes.end())
         return it->second;             // MIME type found
@@ -23,7 +25,8 @@ string HttpServer::getMimeType(const string &path) {
 }
 
 void initMimeTypes(HttpServer::MimeTypes &mimeTypes) {
-    Logger::lastInstance().debug() << "Initializing extension to MIME type mapping" << std::endl;
+    Logger::lastInstance().debug()
+        << "Initializing extension to MIME type mapping" << std::endl;
 
     // Web content
     mimeTypes["html"] = "text/html";

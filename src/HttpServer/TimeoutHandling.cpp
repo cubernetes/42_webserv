@@ -18,7 +18,8 @@ static bool isTimedOut(const HttpServer::CgiProcess &process) {
 void HttpServer::checkForInactiveClients() {
     vector<int> deleteFromClientToCgi;
     vector<int> deleteFromCgiToClient;
-    for (ClientFdToCgiMap::iterator it = _clientToCgi.begin(); it != _clientToCgi.end(); ++it) {
+    for (ClientFdToCgiMap::iterator it = _clientToCgi.begin(); it != _clientToCgi.end();
+         ++it) {
         CgiProcess &process = it->second;
 
         if (isTimedOut(process)) {

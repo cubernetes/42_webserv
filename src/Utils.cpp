@@ -34,7 +34,8 @@ bool Utils::isPrefix(string prefix, string longerString) {
 
 string Utils::strToLower(const string &str) {
     string newStr = str;
-    std::transform(newStr.begin(), newStr.end(), newStr.begin(), static_cast<int (*)(int)>(std::tolower));
+    std::transform(newStr.begin(), newStr.end(), newStr.begin(),
+                   static_cast<int (*)(int)>(std::tolower));
     return newStr;
 }
 
@@ -54,8 +55,9 @@ char Utils::decodeTwoHexChars(const char _c1, const char _c2) {
 }
 
 bool Utils::isHexDigitNoCase(const char c) {
-    if (('0' <= c && c <= '9') || c == 'a' || c == 'A' || c == 'b' || c == 'B' || c == 'c' || c == 'C' || c == 'd' ||
-        c == 'D' || c == 'e' || c == 'E' || c == 'f' || c == 'F')
+    if (('0' <= c && c <= '9') || c == 'a' || c == 'A' || c == 'b' || c == 'B' ||
+        c == 'c' || c == 'C' || c == 'd' || c == 'D' || c == 'e' || c == 'E' ||
+        c == 'f' || c == 'F')
         return true;
     return false;
 }

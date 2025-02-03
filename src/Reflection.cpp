@@ -12,7 +12,8 @@ using std::string;
 using std::swap;
 
 Reflection::Reflection() : _class(), _members() {}
-Reflection::Reflection(const Reflection &other) : _class(other._class), _members(other._members) {}
+Reflection::Reflection(const Reflection &other)
+    : _class(other._class), _members(other._members) {}
 Reflection &Reflection::operator=(Reflection other) {
     ::swap(*this, other);
     return *this;
@@ -42,7 +43,8 @@ string Reflection::reprStruct(string name, Members members) const {
     return out.str();
 }
 
-void Reflection::reflectMember(ReprClosure reprClosure, const char *memberId, const void *memberPtr) {
+void Reflection::reflectMember(ReprClosure reprClosure, const char *memberId,
+                               const void *memberPtr) {
     _members[memberId] = std::make_pair(reprClosure, memberPtr);
 }
 

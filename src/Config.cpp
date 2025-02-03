@@ -17,22 +17,27 @@
 using std::runtime_error;
 using std::string;
 
-static inline void addIfNotExists(Directives &directives, const string &directive, const string &value) {
+static inline void addIfNotExists(Directives &directives, const string &directive,
+                                  const string &value) {
     if (directives.find(directive) == directives.end())
         directives.insert(std::make_pair(directive, VEC(string, value)));
 }
 
-static inline void add(Directives &directives, const string &directive, const string &value) {
+static inline void add(Directives &directives, const string &directive,
+                       const string &value) {
     directives.insert(std::make_pair(directive, VEC(string, value)));
 }
 
-static inline void addIfNotExistsVec(Directives &directives, const string &directive, const Arguments &value) {
+static inline void addIfNotExistsVec(Directives &directives, const string &directive,
+                                     const Arguments &value) {
     if (directives.find(directive) == directives.end())
         directives.insert(std::make_pair(directive, value));
 }
 
-static inline void addVecs(Directives &directives, const string &directive, const ArgResults &values) {
-    for (ArgResults::const_iterator result = values.begin(); result != values.end(); ++result) {
+static inline void addVecs(Directives &directives, const string &directive,
+                           const ArgResults &values) {
+    for (ArgResults::const_iterator result = values.begin(); result != values.end();
+         ++result) {
         directives.insert(std::make_pair(directive, *result));
     }
 }
@@ -44,7 +49,8 @@ bool directiveExists(const Directives &directives, const string &directive) {
     return true;
 }
 
-const Arguments &getFirstDirective(const Directives &directives, const string &directive) {
+const Arguments &getFirstDirective(const Directives &directives,
+                                   const string &directive) {
     Directives::const_iterator result_itr = directives.find(directive);
     if (result_itr == directives.end())
         throw runtime_error(Errors::MultimapIndex(directive));
@@ -52,35 +58,44 @@ const Arguments &getFirstDirective(const Directives &directives, const string &d
 }
 
 ArgResults getAllDirectives(const Directives &directives, const string &directive) {
-    std::pair<Directives::const_iterator, Directives::const_iterator> result_itr = directives.equal_range(directive);
+    std::pair<Directives::const_iterator, Directives::const_iterator> result_itr =
+        directives.equal_range(directive);
     ArgResults allArgs;
 
-    for (Directives::const_iterator it = result_itr.first; it != result_itr.second; ++it) {
+    for (Directives::const_iterator it = result_itr.first; it != result_itr.second;
+         ++it) {
         allArgs.push_back(it->second);
     }
     return allArgs;
 }
 
-static inline void takeFromParentOrSet(Directives &directives, Directives &parentDirectives, const string &directive,
-                                       const string &value) {
+static inline void takeFromParentOrSet(Directives &directives,
+                                       Directives &parentDirectives,
+                                       const string &directive, const string &value) {
     if (parentDirectives.find(directive) == parentDirectives.end())
         addIfNotExists(directives, directive, value);
     else
-        addIfNotExistsVec(directives, directive, getFirstDirective(parentDirectives, directive));
+        addIfNotExistsVec(directives, directive,
+                          getFirstDirective(parentDirectives, directive));
 }
 
-static inline void takeMultipleFromParentAndAdd(Directives &directives, Directives &parentDirectives,
-                                                const string &directive, const string &value) {
+static inline void takeMultipleFromParentAndAdd(Directives &directives,
+                                                Directives &parentDirectives,
+                                                const string &directive,
+                                                const string &value) {
     add(directives, directive, value);
     addVecs(directives, directive, getAllDirectives(parentDirectives, directive));
 }
 
-static inline void takeFromParent(Directives &directives, Directives &parentDirectives, const string &directive) {
+static inline void takeFromParent(Directives &directives, Directives &parentDirectives,
+                                  const string &directive) {
     if (parentDirectives.find(directive) != parentDirectives.end())
-        addIfNotExistsVec(directives, directive, getFirstDirective(parentDirectives, directive));
+        addIfNotExistsVec(directives, directive,
+                          getFirstDirective(parentDirectives, directive));
 }
 
-static inline void takeMultipleFromParent(Directives &directives, Directives &parentDirectives,
+static inline void takeMultipleFromParent(Directives &directives,
+                                          Directives &parentDirectives,
                                           const string &directive) {
     addVecs(directives, directive, getAllDirectives(parentDirectives, directive));
 }
@@ -94,7 +109,8 @@ static inline void populateDefaultHttpDirectives(Directives &directives) {
     addIfNotExists(directives, "upload_dir", "");
 }
 
-static inline void populateDefaultServerDirectives(Directives &directives, Directives &httpDirectives) {
+static inline void populateDefaultServerDirectives(Directives &directives,
+                                                   Directives &httpDirectives) {
     Logger::lastInstance().trace() << "Updating missing server directives" << std::endl;
     takeMultipleFromParentAndAdd(directives, httpDirectives, "index", "index.html");
     takeFromParentOrSet(directives, httpDirectives, "autoindex", "off");
@@ -110,7 +126,8 @@ static inline void populateDefaultServerDirectives(Directives &directives, Direc
     addIfNotExists(directives, "server_name", "");
 }
 
-static inline void populateDefaultLocationDirectives(Directives &directives, Directives &serverDirectives) {
+static inline void populateDefaultLocationDirectives(Directives &directives,
+                                                     Directives &serverDirectives) {
     Logger::lastInstance().trace() << "Updating missing location directives" << std::endl;
     takeMultipleFromParentAndAdd(directives, serverDirectives, "index", "index.html");
     takeFromParentOrSet(directives, serverDirectives, "autoindex", "off");
@@ -153,8 +170,8 @@ static Directive parseDirective(Tokens &tokens) {
 static Directives parseDirectives(Tokens &tokens) {
     Directives directives;
     while (true) {
-        if (tokens.empty() || tokens.front().second == "location" || tokens.front().second == "server" ||
-            tokens.front().second == "}")
+        if (tokens.empty() || tokens.front().second == "location" ||
+            tokens.front().second == "server" || tokens.front().second == "}")
             break;
         Directive directive = parseDirective(tokens);
         if (directive.first.empty())
@@ -246,9 +263,11 @@ string removeComments(const string &rawConfig) {
     string cleanedConfig;
     size_t count = 0;
 
-    Logger::lastInstance().debug() << "Removing hashtag comments from config" << std::endl;
+    Logger::lastInstance().debug()
+        << "Removing hashtag comments from config" << std::endl;
     while (std::getline(iss, line)) {
-        Logger::lastInstance().trace() << "Checking line for comment removal: " << repr(line) << std::endl;
+        Logger::lastInstance().trace()
+            << "Checking line for comment removal: " << repr(line) << std::endl;
         string newLine;
         char prevC = '\0';
         for (string::iterator c = line.begin(); c != line.end(); ++c) {
@@ -257,21 +276,24 @@ string removeComments(const string &rawConfig) {
                 prevC = *c;
                 continue;
             } else if (prevC == '\\') {
-                Logger::lastInstance().trace() << "Found escaped comment symbol! Continuing parse" << std::endl;
+                Logger::lastInstance().trace()
+                    << "Found escaped comment symbol! Continuing parse" << std::endl;
                 newLine[newLine.length() - 1] = *c;
                 continue;
             }
             Logger::lastInstance().trace()
-                << "Found unescaped comment symbol! Parsed line: " << repr(newLine) << std::endl;
+                << "Found unescaped comment symbol! Parsed line: " << repr(newLine)
+                << std::endl;
             ++count;
             break;
         }
         if (!newLine.empty())
             cleanedConfig += newLine + '\n';
     }
-    Logger::lastInstance().debug() << "Removed " << count << " comments from config" << std::endl;
-    Logger::lastInstance().trace() << "Final config is (inside config tag):\n<config>" << cleanedConfig << "</config>"
-                                   << std::endl;
+    Logger::lastInstance().debug()
+        << "Removed " << count << " comments from config" << std::endl;
+    Logger::lastInstance().trace() << "Final config is (inside config tag):\n<config>"
+                                   << cleanedConfig << "</config>" << std::endl;
     return cleanedConfig;
 }
 
@@ -291,16 +313,19 @@ static void updateTokenType(Tokens &tokens) {
         tokens.back().first = TOK_EOF;
     else
         tokens.back().first = TOK_WORD;
-    Logger::lastInstance().trace() << "Identified new token " << repr(tokens.back().second) << " of type "
-                                   << repr(tokens.back().first) << std::endl;
+    Logger::lastInstance().trace()
+        << "Identified new token " << repr(tokens.back().second) << " of type "
+        << repr(tokens.back().first) << std::endl;
 }
 
 static bool updateQuoted(bool &quoted, const string &stringSoFar) {
-    bool isRealQuote = DirectiveValidation::evenNumberOfBackslashes(stringSoFar, stringSoFar.length() - 1);
+    bool isRealQuote = DirectiveValidation::evenNumberOfBackslashes(
+        stringSoFar, stringSoFar.length() - 1);
     if (isRealQuote) {
         quoted = !quoted;
-        Logger::lastInstance().trace() << "Found unescaped double quote, toggling quoting context to " << repr(quoted)
-                                       << std::endl;
+        Logger::lastInstance().trace()
+            << "Found unescaped double quote, toggling quoting context to "
+            << repr(quoted) << std::endl;
         return true;
     }
     return false;
@@ -317,8 +342,9 @@ static Tokens lexConfig(string rawConfig) {
     prevC = '\0';
     for (std::string::iterator it = rawConfig.begin(); it != rawConfig.end(); ++it) {
         c = *it;
-        if (!quoted && (std::isspace(c) || c == '"' || c == ';' || c == '{' || c == '}' || isspace(prevC) ||
-                        prevC == '"' || prevC == ';' || prevC == '{' || prevC == '}')) {
+        if (!quoted && (std::isspace(c) || c == '"' || c == ';' || c == '{' || c == '}' ||
+                        isspace(prevC) || prevC == '"' || prevC == ';' || prevC == '{' ||
+                        prevC == '}')) {
             if (!tokens.empty()) {
                 createNewToken = true;
                 updateTokenType(tokens);
@@ -338,18 +364,21 @@ static Tokens lexConfig(string rawConfig) {
         tokens.back().second += c;
     }
     Logger::lastInstance().debug() << "Lexed " << tokens.size() << " tokens" << std::endl;
-    Logger::lastInstance().trace() << "Tokens from lexing are: " << repr(tokens) << std::endl;
+    Logger::lastInstance().trace()
+        << "Tokens from lexing are: " << repr(tokens) << std::endl;
     return tokens;
 }
 
 static void updateDefaults(Config &config) {
     populateDefaultHttpDirectives(config.first);
-    for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
+    for (ServerCtxs::iterator server = config.second.begin();
+         server != config.second.end(); ++server) {
         populateDefaultServerDirectives(server->first, config.first);
         LocationCtx defaultLocation;
         defaultLocation.first = "/";
         server->second.push_back(defaultLocation);
-        for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
+        for (LocationCtxs::iterator location = server->second.begin();
+             location != server->second.end(); ++location) {
             populateDefaultLocationDirectives(location->second, server->first);
         }
     }
@@ -370,11 +399,13 @@ Config parseConfig(string rawConfig) {
         throw runtime_error(Errors::Config::ParseError(tokens));
     Config config = std::make_pair(directives, servers);
 
-    Logger::lastInstance().debug() << "Applying inheriting logic to config (http -> server, server -> location)"
-                                   << std::endl;
+    Logger::lastInstance().debug()
+        << "Applying inheriting logic to config (http -> server, server -> location)"
+        << std::endl;
     updateDefaults(config);
 
-    Logger::lastInstance().debug() << "Validating semantics of all directives" << std::endl;
+    Logger::lastInstance().debug()
+        << "Validating semantics of all directives" << std::endl;
     DirectiveValidation::checkDirectives(config);
 
     if (config.second.empty())
@@ -456,12 +487,14 @@ let's keep it MVP) [ { "index": [ "index.html" ], "listen": [ "127.0.0.1:80" ],
 */
 
 string readConfig(string configPath) {
-    Logger::lastInstance().debug() << "Trying to read config with path " << repr(configPath) << std::endl;
+    Logger::lastInstance().debug()
+        << "Trying to read config with path " << repr(configPath) << std::endl;
     std::ifstream is(configPath.c_str());
     if (!is.good())
         throw runtime_error(Errors::Config::OpeningError(configPath));
     std::stringstream ss;
     ss << is.rdbuf();
-    Logger::lastInstance().debug() << "Successfully read config, size in bytes: " << ss.str().length() << std::endl;
+    Logger::lastInstance().debug()
+        << "Successfully read config, size in bytes: " << ss.str().length() << std::endl;
     return ss.str();
 }

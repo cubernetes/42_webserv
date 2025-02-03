@@ -14,9 +14,11 @@ const string &Logger::trace5Prefix = "[ " + ansi::rgbP("TRACE5", 111, 97, 91) + 
 // clang-format on
 
 Logger::Logger(std::ostream &_os, Level _logLevel)
-    : os(_os), logLevel(_logLevel), fatal(os, FATAL, logLevel), error(os, ERR, logLevel), warn(os, WARN, logLevel),
-      info(os, INFO, logLevel), debug(os, DEBUG, logLevel), trace(os, TRACE, logLevel), trace2(os, TRACE2, logLevel),
-      trace3(os, TRACE3, logLevel), trace4(os, TRACE4, logLevel), trace5(os, TRACE5, logLevel) {
+    : os(_os), logLevel(_logLevel), fatal(os, FATAL, logLevel), error(os, ERR, logLevel),
+      warn(os, WARN, logLevel), info(os, INFO, logLevel), debug(os, DEBUG, logLevel),
+      trace(os, TRACE, logLevel), trace2(os, TRACE2, logLevel),
+      trace3(os, TRACE3, logLevel), trace4(os, TRACE4, logLevel),
+      trace5(os, TRACE5, logLevel) {
     if (logLevel == DEBUG)
         debug() << "Initialized Logger with logLevel: " << debug.prefix << std::endl;
     else if (logLevel == TRACE)
@@ -37,14 +39,17 @@ Logger &Logger::lastInstance(Logger *instance) {
 }
 
 Logger::Logger()
-    : os(std::cout), logLevel(INFO), fatal(os, FATAL, logLevel), error(os, ERR, logLevel), warn(os, WARN, logLevel),
-      info(os, INFO, logLevel), debug(os, DEBUG, logLevel), trace(os, TRACE, logLevel), trace2(os, TRACE2, logLevel),
-      trace3(os, TRACE3, logLevel), trace4(os, TRACE4, logLevel), trace5(os, TRACE5, logLevel) {}
+    : os(std::cout), logLevel(INFO), fatal(os, FATAL, logLevel), error(os, ERR, logLevel),
+      warn(os, WARN, logLevel), info(os, INFO, logLevel), debug(os, DEBUG, logLevel),
+      trace(os, TRACE, logLevel), trace2(os, TRACE2, logLevel),
+      trace3(os, TRACE3, logLevel), trace4(os, TRACE4, logLevel),
+      trace5(os, TRACE5, logLevel) {}
 
 Logger::Logger(const Logger &other)
-    : os(other.os), logLevel(other.logLevel), fatal(other.fatal), error(other.error), warn(other.warn),
-      info(other.info), debug(other.debug), trace(other.trace), trace2(other.trace2), trace3(other.trace3),
-      trace4(other.trace4), trace5(other.trace5) {}
+    : os(other.os), logLevel(other.logLevel), fatal(other.fatal), error(other.error),
+      warn(other.warn), info(other.info), debug(other.debug), trace(other.trace),
+      trace2(other.trace2), trace3(other.trace3), trace4(other.trace4),
+      trace5(other.trace5) {}
 
 Logger &Logger::operator=(Logger &other) {
     (void)other;
@@ -57,7 +62,8 @@ void Logger::swap(Logger &other) /* noexcept */ {
     // kinda wrong, but can't swap stream in c++98, so yeah, just to make it compile
 }
 
-Logger::StreamWrapper::StreamWrapper(std::ostream &_os, Level _thisLevel, Level &_logLevel)
+Logger::StreamWrapper::StreamWrapper(std::ostream &_os, Level _thisLevel,
+                                     Level &_logLevel)
     : prefix(), os(_os), thisLevel(_thisLevel), logLevel(_logLevel) {
     switch (thisLevel) {
     case FATAL:
@@ -100,7 +106,8 @@ Logger::StreamWrapper &Logger::StreamWrapper::operator()(bool printPrefix) {
         return *this;
 }
 
-Logger::StreamWrapper &Logger::StreamWrapper::operator<<(std::ostream &(*manip)(std::ostream &)) {
+Logger::StreamWrapper &
+Logger::StreamWrapper::operator<<(std::ostream &(*manip)(std::ostream &)) {
     if (thisLevel <= logLevel) {
         os << manip;
     }
