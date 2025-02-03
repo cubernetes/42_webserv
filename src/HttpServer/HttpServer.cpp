@@ -54,6 +54,7 @@ std::ostream &operator<<(std::ostream &os, const HttpServer &httpServer) {
 
 // clang-format off
 void HttpServer::run() {
+    log.debug() << "Starting mainloop" << std::endl;
 	while (_running) {
 		MultPlexFds readyFds = getReadyFds(_monitorFds); // block until: 1) new client
 														 //              2) client that can be written to (response)
@@ -64,8 +65,6 @@ void HttpServer::run() {
 								  // 3) read data for Constants::chunkSize bytes (or remove client if appropriate)
 								  // 4) do nothing
 		checkForInactiveClients();
-    //log.debug() << "Have the following clientFd to CGI Process map: " << repr(_clientToCgi) << std::endl;
-    //log.debug() << "Have the following _pendingWrites" << repr(_pendingWrites) << std::endl;
 	}
   log.warn() << "Shutting server down" << std::endl;
 }

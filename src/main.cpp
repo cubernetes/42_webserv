@@ -13,7 +13,7 @@ int main(int ac, char **av) {
     try {
         Options options(ac, av);
         if (options.printHelp || options.printVersion) {
-            std::cout << (options.printHelp ? Constants::helpText : "webserv v" + Constants::webservVersion)
+            std::cout << (options.printHelp ? Constants::helpText : "webserv version " + Constants::webservVersion)
                       << std::endl;
             return EXIT_SUCCESS;
         }
