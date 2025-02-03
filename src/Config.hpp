@@ -20,12 +20,12 @@ typedef std::pair<Directives, ServerCtxs> Config;
 typedef std::vector<Arguments> ArgResults;
 
 enum TokenType {
-  TOK_SEMICOLON,
-  TOK_OPENING_BRACE,
-  TOK_CLOSING_BRACE,
-  TOK_WORD,
-  TOK_EOF,
-  TOK_UNKNOWN,
+    TOK_SEMICOLON,
+    TOK_OPENING_BRACE,
+    TOK_CLOSING_BRACE,
+    TOK_WORD,
+    TOK_EOF,
+    TOK_UNKNOWN,
 };
 typedef enum TokenType TokenType;
 

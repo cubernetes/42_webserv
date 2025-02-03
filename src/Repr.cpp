@@ -10,13 +10,13 @@ using ansi::rgbBg;
 using std::string;
 
 void reprInit() {
-  if (!noColor())
-    std::cout << ANSI_FG;
+    if (!noColor())
+        std::cout << ANSI_FG;
 }
 
 void reprDone() {
-  if (!noColor())
-    std::cout << ANSI_RST << '\n';
+    if (!noColor())
+        std::cout << ANSI_RST << '\n';
 }
 
 string ReprClr::str(string s) { return rgbBg(rgb(s, ANSI_STR), ANSI_FG); }
