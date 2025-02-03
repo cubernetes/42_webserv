@@ -19,7 +19,7 @@ int main(int ac, char **av) {
                       << std::endl;
             return EXIT_SUCCESS;
         }
-        Logger log(std::cerr, options.logLevel);
+        Logger log(std::cout, options.logLevel);
         HttpServer server(options.configPath, log, options.onlyCheckConfig);
         server.run();
         return EXIT_SUCCESS;

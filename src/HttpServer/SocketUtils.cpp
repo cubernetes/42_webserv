@@ -1,10 +1,12 @@
 #include <algorithm>
 #include <cstddef>
+#include <ostream>
 #include <stdexcept>
 #include <sys/poll.h>
 
 #include "Constants.hpp"
 #include "HttpServer.hpp"
+#include "Repr.hpp"
 
 using Constants::EPOLL;
 using Constants::POLL;
@@ -20,6 +22,8 @@ int HttpServer::multPlexFdToRawFd(const MultPlexFds &readyFds, size_t i) {
     case SELECT:
         throw std::logic_error("Converting select fd type to raw fd not implemented");
     case POLL:
+        log.trace() << "Converting pollfd " << readyFds.pollFds[i] << " to plain FD "
+                    << repr(readyFds.pollFds[i].fd) << std::endl;
         return readyFds.pollFds[i].fd;
     case EPOLL:
         throw std::logic_error("Converting epoll fd type to raw fd not implemented");

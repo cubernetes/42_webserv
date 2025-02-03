@@ -1,12 +1,12 @@
 #include "Logger.hpp"
 
 // clang-format off
-const string &Logger::fatalPrefix = "[ " + ansi::redBg("FATAL") + " ] ";
-const string &Logger::errorPrefix = "[ " + ansi::red("ERROR") + " ] ";
-const string &Logger::warnPrefix = "[ " + ansi::yellow("WARN ") + " ] ";
-const string &Logger::infoPrefix = "[ " + ansi::white("INFO ") + " ] ";
-const string &Logger::debugPrefix = "[ " + ansi::rgbP("DEBUG", 146, 131, 116) + " ] ";
-const string &Logger::tracePrefix = "[ " + ansi::rgbP("TRACE", 111, 97, 91) + " ] ";
+const string &Logger::fatalPrefix = "[ " + ansi::redBg("FATAL") + "  ] ";
+const string &Logger::errorPrefix = "[ " + ansi::red("ERROR") + "  ] ";
+const string &Logger::warnPrefix = "[ " + ansi::yellow("WARN") + "   ] ";
+const string &Logger::infoPrefix = "[ " + ansi::white("INFO") + "   ] ";
+const string &Logger::debugPrefix = "[ " + ansi::rgbP("DEBUG", 146, 131, 116) + "  ] ";
+const string &Logger::tracePrefix = "[ " + ansi::rgbP("TRACE", 111, 97, 91) + "  ] ";
 const string &Logger::trace2Prefix = "[ " + ansi::rgbP("TRACE2", 111, 97, 91) + " ] "; // print full objects on construction/destruction
 const string &Logger::trace3Prefix = "[ " + ansi::rgbP("TRACE3", 111, 97, 91) + " ] "; // print object parameters as keyword-arguments
 const string &Logger::trace4Prefix = "[ " + ansi::rgbP("TRACE4", 111, 97, 91) + " ] "; // print aggregrate types verbosely with std:: prefix any everything

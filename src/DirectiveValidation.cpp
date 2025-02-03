@@ -8,6 +8,7 @@
 #include <map>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <sys/socket.h>
@@ -19,6 +20,7 @@
 #include "DirectiveValidation.hpp"
 #include "Errors.hpp"
 #include "Logger.hpp"
+#include "Repr.hpp"
 #include "Utils.hpp"
 
 #define CHECKFN(ctx, checkFunction)                                                      \
@@ -533,8 +535,8 @@ static bool listenDirectivesSame(const Arguments &listenDirective,
     return hostSame && portSame;
 }
 
-static bool overlapListen(const ArgResults &listenDirectives,
-                          const ArgResults &otherListenDirectives) {
+static string overlapListen(const ArgResults &listenDirectives,
+                            const ArgResults &otherListenDirectives) {
     for (ArgResults::const_iterator listenDirective = listenDirectives.begin();
          listenDirective != listenDirectives.end(); ++listenDirective) {
         for (ArgResults::const_iterator otherListenDirective =
@@ -542,15 +544,17 @@ static bool overlapListen(const ArgResults &listenDirectives,
              otherListenDirective != otherListenDirectives.end();
              ++otherListenDirective) {
             if (listenDirectivesSame(*listenDirective, *otherListenDirective)) {
-                return true;
+                return (*listenDirective)[0] + ":" + (*listenDirective)[1];
             }
         }
     }
-    return false;
+    return "";
 }
 
 static void ensureNoOverlapServerName(const ArgResults &serverNameDirectives,
-                                      const ArgResults &otherServerNameDirectives) {
+                                      const ArgResults &otherServerNameDirectives,
+                                      size_t serverId, size_t otherServerId,
+                                      string listenOverlap) {
     for (ArgResults::const_iterator serverNameDirective = serverNameDirectives.begin();
          serverNameDirective != serverNameDirectives.end(); ++serverNameDirective) {
         for (ArgResults::const_iterator otherServerNameDirective =
@@ -565,7 +569,10 @@ static void ensureNoOverlapServerName(const ArgResults &serverNameDirectives,
                      ++otherServerName) {
                     if (*serverName == *otherServerName) {
                         throw runtime_error(
-                            "Config error: duplicate server_name values between servers");
+                            "Config error: duplicate server_name's between server " +
+                            repr(serverId) + " and server " + repr(otherServerId) + ": " +
+                            repr(*serverName) + " (both listening on " +
+                            num(listenOverlap) + ")");
                     }
                 }
             }
@@ -574,7 +581,7 @@ static void ensureNoOverlapServerName(const ArgResults &serverNameDirectives,
 }
 
 static void ensureServerUniqueness(const Directives &directives,
-                                   const ServerCtxs &servers) {
+                                   const ServerCtxs &servers, size_t serverId) {
     ArgResults listenDirectives = getAllDirectives(directives, "listen");
     ArgResults serverNameDirectives = getAllDirectives(directives, "server_name");
 
@@ -586,49 +593,71 @@ static void ensureServerUniqueness(const Directives &directives,
                 continue;
             if (listenDirectivesSame(*listenDirective, *otherListenDirective)) {
                 throw runtime_error(
-                    "Config error: duplicate listen values in the same server");
+                    "Config error: duplicate listen directives in server " +
+                    repr(serverId) + ": " + repr(*listenDirective) + " and " +
+                    repr(*otherListenDirective));
             }
         }
     }
 
+    size_t otherServerId = 0;
     for (ServerCtxs::const_iterator server = servers.begin(); server != servers.end();
          ++server) {
-        if (&directives == &server->first)
+        if (&directives == &server->first) {
+            ++otherServerId;
             continue;
+        }
 
         ArgResults otherListenDirectives = getAllDirectives(server->first, "listen");
         ArgResults otherServerNameDirectives =
             getAllDirectives(server->first, "server_name");
 
-        if (overlapListen(listenDirectives, otherListenDirectives)) {
-            ensureNoOverlapServerName(serverNameDirectives, otherServerNameDirectives);
+        string listenOverlap;
+        if (!(listenOverlap = overlapListen(listenDirectives, otherListenDirectives))
+                 .empty()) {
+            ensureNoOverlapServerName(serverNameDirectives, otherServerNameDirectives,
+                                      serverId, otherServerId, listenOverlap);
         }
+        ++otherServerId;
     }
 }
 
 void DirectiveValidation::checkDirectives(Config &config) {
     Logger::lastInstance().trace()
         << "Validating semantics of http directives" << std::endl;
+    Logger::lastInstance().trace3()
+        << "http directives: " << repr(config.first) << std::endl;
     checkHttpDirectives(config.first);
+    size_t serverId = 0;
     for (ServerCtxs::iterator server = config.second.begin();
          server != config.second.end(); ++server) {
-        Logger::lastInstance().trace()
-            << "Validating semantics of server directives" << std::endl;
+        Logger::lastInstance().trace() << "Validating semantics of directives in server "
+                                       << repr(serverId) << std::endl;
+        Logger::lastInstance().trace3()
+            << "Server " << repr(serverId) << ": " << repr(*server) << std::endl;
         checkServerDirectives(server->first);
+        size_t locationId = 0;
         for (LocationCtxs::iterator location = server->second.begin();
              location != server->second.end(); ++location) {
-            Logger::lastInstance().trace()
-                << "Validating semantics of location directives" << std::endl;
+            Logger::lastInstance().trace2()
+                << "Validating semantics of directives in location block "
+                << repr(locationId) << " in server " << repr(serverId) << std::endl;
+            Logger::lastInstance().trace3() << "Location block " << repr(locationId)
+                                            << ": " << repr(*location) << std::endl;
             checkLocationDirectives(location->second);
+            ++locationId;
         }
+        ++serverId;
     }
     // we have to do it in a separate loop, since in the first loop, all the listen
     // directives must be validated first
+    serverId = 0;
     for (ServerCtxs::iterator server = config.second.begin();
          server != config.second.end(); ++server) {
         Logger::lastInstance().trace()
-            << "Ensuring that listen & server_name directives have no conflict"
-            << std::endl;
-        ensureServerUniqueness(server->first, config.second);
+            << "Ensuring that listen & server_name directives in server "
+            << repr(serverId) << " don't conflict with other servers" << std::endl;
+        ensureServerUniqueness(server->first, config.second, serverId);
+        ++serverId;
     }
 }

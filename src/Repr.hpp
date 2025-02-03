@@ -822,7 +822,8 @@ static inline std::ostream &operator<<(std::ostream &os,
 
 #define GEN_NAMES_FIRST(type, name) << #type << " " << #name
 
-#define GEN_NAMES(type, name) << punct(", ") << #type << " " << #name
+#define GEN_NAMES(type, name)                                                            \
+    << (log.istrace5() ? ", " : punct(", ")) << #type << " " << #name
 
 #define GEN_REPRS_FIRST(type, name)                                                      \
     << (log.istrace2() ? (log.istrace3() ? cmt(#name) : "") +                            \

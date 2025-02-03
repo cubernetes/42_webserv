@@ -1,6 +1,7 @@
 #include <cerrno>
 #include <cstddef>
 #include <cstring>
+#include <ostream>
 #include <stdexcept>
 #include <sys/poll.h>
 
@@ -51,8 +52,8 @@ HttpServer::MultPlexFds HttpServer::doPoll(MultPlexFds &monitorFds) {
 }
 
 HttpServer::MultPlexFds HttpServer::getReadyFds(MultPlexFds &monitorFds) {
-    log.debug() << "Trying to get ready FDs with multiplexing method '"
-                << repr(monitorFds.multPlexType) << "'" << std::endl;
+    log.debug() << "Trying to get ready FDs with multiplexing method "
+                << repr(monitorFds.multPlexType) << std::endl;
     switch (monitorFds.multPlexType) {
     case SELECT:
         throw std::logic_error("Getting ready FDs from select not implemented yet");

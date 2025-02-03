@@ -85,7 +85,8 @@ static void bindSocket(int listeningSocket, const HttpServer::Server &server) {
 
     Logger::lastInstance().debug()
         << "Binding socket " << repr(listeningSocket) << " to " << repr(server.ip)
-        << num(":") << repr(ntohs(server.port)) << std::endl;
+        << (Logger::lastInstance().istrace5() ? ":" : num(":"))
+        << repr(ntohs(server.port)) << std::endl;
     if (bind(listeningSocket, (struct sockaddr *)&address, sizeof(address)) < 0) {
         ::close(listeningSocket);
         throw runtime_error(string("bind error: ") + strerror(errno));
@@ -111,7 +112,8 @@ static bool alreadyListening(const HttpServer::Server &server,
             (::memcmp(&otherAddr, &server.ip, sizeof(otherAddr)) == 0 ||
              otherAddr.s_addr == INADDR_ANY)) {
             Logger::lastInstance().debug()
-                << "Already listening on addr:port: " << repr(otherAddr) << num(":")
+                << "Already listening on addr:port: " << repr(otherAddr)
+                << (Logger::lastInstance().istrace5() ? ":" : num(":"))
                 << repr(ntohs(otherPort)) << ", skipping" << std::endl;
             return true;
         }
@@ -149,8 +151,8 @@ void HttpServer::setupServers(const Config &config) {
         server.port = getServerPort(*serverCtx);
 
         setupListeningSocket(server);
-        log.info() << cmt("Server with names ") << repr(server.serverNames)
-                   << cmt(" is listening on ")
+        log.info() << "Server with names " << repr(server.serverNames)
+                   << " is listening on "
                    << (log.istrace5() ? getServerIpStr(*serverCtx) + ":"
                                       : num(getServerIpStr(*serverCtx) + ":"))
                    << repr(ntohs(server.port)) << '\n';
@@ -161,8 +163,8 @@ void HttpServer::setupServers(const Config &config) {
         if (_defaultServers.find(addr) == _defaultServers.end()) {
             Logger::lastInstance().debug()
                 << "Setting up the default server for addr:port " << repr(server.ip)
-                << num(":") << repr(ntohs(server.port))
-                << " to the server with server names "
+                << (Logger::lastInstance().istrace5() ? ":" : num(":"))
+                << repr(ntohs(server.port)) << " to the server with server names "
                 << repr(getFirstDirective(_servers.back().directives, "server_name"))
                 << std::endl;
             _defaultServers[addr] = _servers.size() - 1;

@@ -1,5 +1,7 @@
 #include <cctype>
+#include <cstddef>
 #include <fstream>
+#include <ostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -102,16 +104,26 @@ static inline void takeMultipleFromParent(Directives &directives,
 
 static inline void populateDefaultHttpDirectives(Directives &directives) {
     Logger::lastInstance().trace() << "Updating missing http directives" << std::endl;
+    Logger::lastInstance().trace3()
+        << "http directives before adding defaults: " << repr(directives) << std::endl;
     addIfNotExists(directives, "autoindex", "off");
     addIfNotExists(directives, "client_max_body_size", "1m");
     addIfNotExists(directives, "index", "index.html");
     addIfNotExists(directives, "root", "html");
     addIfNotExists(directives, "upload_dir", "");
+    Logger::lastInstance().trace3()
+        << "http directives after adding defaults: " << repr(directives) << std::endl;
 }
 
 static inline void populateDefaultServerDirectives(Directives &directives,
-                                                   Directives &httpDirectives) {
-    Logger::lastInstance().trace() << "Updating missing server directives" << std::endl;
+                                                   Directives &httpDirectives,
+                                                   size_t serverId,
+                                                   const ServerCtx &server) {
+    Logger::lastInstance().trace()
+        << "Updating missing directives in server " + repr(serverId) << std::endl;
+    Logger::lastInstance().trace3()
+        << "Server " + repr(serverId) << " before adding defaults: " << repr(server)
+        << std::endl;
     takeMultipleFromParentAndAdd(directives, httpDirectives, "index", "index.html");
     takeFromParentOrSet(directives, httpDirectives, "autoindex", "off");
     takeFromParentOrSet(directives, httpDirectives, "client_max_body_size", "1m");
@@ -124,11 +136,21 @@ static inline void populateDefaultServerDirectives(Directives &directives,
 
     addIfNotExists(directives, "listen", "*:8000");
     addIfNotExists(directives, "server_name", "");
+    Logger::lastInstance().trace3()
+        << "Server " + repr(serverId)
+        << " after adding defaults & inheriting: " << repr(server) << std::endl;
 }
 
 static inline void populateDefaultLocationDirectives(Directives &directives,
-                                                     Directives &serverDirectives) {
-    Logger::lastInstance().trace() << "Updating missing location directives" << std::endl;
+                                                     Directives &serverDirectives,
+                                                     size_t serverId, size_t locationId,
+                                                     const LocationCtx &location) {
+    Logger::lastInstance().trace2()
+        << "Updating missing directives in location block "
+        << repr(locationId) + " in server " + repr(serverId) << std::endl;
+    Logger::lastInstance().trace3()
+        << "Location block "
+        << repr(locationId) + " before adding defaults: " + repr(location) << std::endl;
     takeMultipleFromParentAndAdd(directives, serverDirectives, "index", "index.html");
     takeFromParentOrSet(directives, serverDirectives, "autoindex", "off");
     takeFromParentOrSet(directives, serverDirectives, "client_max_body_size", "1m");
@@ -138,6 +160,10 @@ static inline void populateDefaultLocationDirectives(Directives &directives,
     takeMultipleFromParent(directives, serverDirectives, "error_page");
     takeMultipleFromParent(directives, serverDirectives, "cgi_ext");
     takeFromParent(directives, serverDirectives, "cgi_dir");
+    Logger::lastInstance().trace3()
+        << "Location block "
+        << repr(locationId) + " after adding defaults & inheriting: " + repr(location)
+        << std::endl;
 }
 
 static inline Arguments parseArguments(Tokens &tokens) {
@@ -198,7 +224,7 @@ static LocationCtx parseLocation(Tokens &tokens) {
         throw runtime_error(Errors::Config::ParseError(tokens));
     tokens.pop_front();
 
-    Logger::lastInstance().trace() << "Parsing location directives" << std::endl;
+    Logger::lastInstance().trace2() << "Parsing location directives" << std::endl;
     location.second = parseDirectives(tokens);
 
     if (tokens.empty() || tokens.front().first != TOK_CLOSING_BRACE)
@@ -213,7 +239,7 @@ static LocationCtxs parseLocations(Tokens &tokens) {
     while (true) {
         if (tokens.empty() || tokens.front().second != "location")
             break;
-        Logger::lastInstance().trace() << "Parsing single location" << std::endl;
+        Logger::lastInstance().trace2() << "Parsing single location" << std::endl;
         LocationCtx location = parseLocation(tokens);
         locations.push_back(location);
     }
@@ -232,7 +258,7 @@ static ServerCtx parseServer(Tokens &tokens) {
 
     Logger::lastInstance().trace() << "Parsing server directives" << std::endl;
     Directives directives = parseDirectives(tokens);
-    Logger::lastInstance().trace() << "Parsing locations" << std::endl;
+    Logger::lastInstance().trace2() << "Parsing locations" << std::endl;
     LocationCtxs locations = parseLocations(tokens);
     server = std::make_pair(directives, locations);
 
@@ -266,7 +292,7 @@ string removeComments(const string &rawConfig) {
     Logger::lastInstance().debug()
         << "Removing hashtag comments from config" << std::endl;
     while (std::getline(iss, line)) {
-        Logger::lastInstance().trace()
+        Logger::lastInstance().trace2()
             << "Checking line for comment removal: " << repr(line) << std::endl;
         string newLine;
         char prevC = '\0';
@@ -276,12 +302,12 @@ string removeComments(const string &rawConfig) {
                 prevC = *c;
                 continue;
             } else if (prevC == '\\') {
-                Logger::lastInstance().trace()
+                Logger::lastInstance().trace2()
                     << "Found escaped comment symbol! Continuing parse" << std::endl;
                 newLine[newLine.length() - 1] = *c;
                 continue;
             }
-            Logger::lastInstance().trace()
+            Logger::lastInstance().trace2()
                 << "Found unescaped comment symbol! Parsed line: " << repr(newLine)
                 << std::endl;
             ++count;
@@ -313,7 +339,7 @@ static void updateTokenType(Tokens &tokens) {
         tokens.back().first = TOK_EOF;
     else
         tokens.back().first = TOK_WORD;
-    Logger::lastInstance().trace()
+    Logger::lastInstance().trace2()
         << "Identified new token " << repr(tokens.back().second) << " of type "
         << repr(tokens.back().first) << std::endl;
 }
@@ -364,23 +390,28 @@ static Tokens lexConfig(string rawConfig) {
         tokens.back().second += c;
     }
     Logger::lastInstance().debug() << "Lexed " << tokens.size() << " tokens" << std::endl;
-    Logger::lastInstance().trace()
+    Logger::lastInstance().trace2()
         << "Tokens from lexing are: " << repr(tokens) << std::endl;
     return tokens;
 }
 
 static void updateDefaults(Config &config) {
     populateDefaultHttpDirectives(config.first);
+    size_t serverId = 0;
     for (ServerCtxs::iterator server = config.second.begin();
          server != config.second.end(); ++server) {
-        populateDefaultServerDirectives(server->first, config.first);
+        populateDefaultServerDirectives(server->first, config.first, serverId, *server);
         LocationCtx defaultLocation;
         defaultLocation.first = "/";
         server->second.push_back(defaultLocation);
+        size_t locationId = 0;
         for (LocationCtxs::iterator location = server->second.begin();
              location != server->second.end(); ++location) {
-            populateDefaultLocationDirectives(location->second, server->first);
+            populateDefaultLocationDirectives(location->second, server->first, serverId,
+                                              locationId, *location);
+            ++locationId;
         }
+        ++serverId;
     }
 }
 
