@@ -178,6 +178,11 @@ fclean: clean
 	$(RM) $(NAME)
 	$(RM) $(TEST)
 
+## Remove intermediate files, build artefacts, Catch2, and untracked files (interactively)
+pristine: fclean
+	$(RM) -r $(CATCH2)
+	git clean -dfi
+
 ## Rebuild project
 re: fclean
 	$(MAKE) all
