@@ -16,6 +16,7 @@ TOOLS := script
 _CXX ?= c++
 #_CXX := clang++ # TODO: @all: make sure it compiles with this
 #_CXX := g++     # TODO: @all: make sure it compiles with this
+CXX := $(notdir $(shell ls -l $$(which $(_CXX)) | awk '{print $$NF}'))
 RM := /bin/rm -f
 MKDIR := /bin/mkdir -p
 
@@ -33,9 +34,9 @@ CFLAGS += -MMD
 CFLAGS += -MP
 
 CFLAGS += -fdiagnostics-color=always
-ifeq ($(strip $(_CXX)),clang++)
+ifeq ($(strip $(CXX)),clang++)
 CFLAGS += -ferror-limit=1
-else
+else ifeq ($(strip $(CXX)),g++)
 CFLAGS += -fmax-errors=1
 endif
 
@@ -131,10 +132,10 @@ DEPS_C2 := $(OBJ_C2:.o=.d)
 all: $(NAME)
 
 $(NAME): $(OBJ)
-	$(_CXX) $(OBJ) $(LDFLAGS) $(LDLIBS) -o $@
+	$(CXX) $(OBJ) $(LDFLAGS) $(LDLIBS) -o $@
 
 $(OBJDIR)/%.o: %.$(EXT) | $(OBJDIR)
-	$(_CXX) $< $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -c -o $@
+	$(CXX) $< $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -c -o $@
 
 $(OBJDIR):
 	$(MKDIR) $@
@@ -144,7 +145,7 @@ all_c2: $(CATCH2)
 	$(MAKE) $(TEST)
 
 $(TEST): $(OBJ_C2)
-	$(_CXX) $(OBJ_C2) $(LDFLAGS) $(LDLIBS) $(C2_LDFLAGS) -o $@
+	$(CXX) $(OBJ_C2) $(LDFLAGS) $(LDLIBS) $(C2_LDFLAGS) -o $@
 
 $(OBJDIR_C2)/%.c2.o: %.$(EXT) | $(OBJDIR_C2)
 	$(_CXX) $< $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) $(C2_CFLAGS) -c -o $@

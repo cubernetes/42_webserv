@@ -31,7 +31,15 @@ export LDFLAGS='-fprofile-arcs -ftest-coverage'
 rm -rf "./${LCOV_OUT_DIR}" || die "Could not remove LCOV_OUT_DIR (${LCOV_OUT_DIR})"
 mkdir -p "${LCOV_OUT_DIR}" || die "Could not create LCOV_OUT_DIR (${LCOV_OUT_DIR})"
 make -sj unit_tests || die "Build failed"
-lcov --quiet --no-external --demangle-cpp --capture --base-directory . --directory obj_c2 --output-file "${LCOV_OUT_DIR}/coverage.info" || die "Failed to generate lcov report"
+
+lcov_version="$(lcov --version | grep -o '[[:digit:]]\+\.[[:digit:]]\+')"
+if printf '1.16\n1.15\n1.14\n1.13\n1.12\n1.11\n' | grep -Fxq "${lcov_version}"; then
+    demangle_option='' # these version don't have that option
+else
+    demangle_option='--demangle-cpp'
+fi
+
+lcov --quiet --no-external ${demangle_option} --capture --base-directory . --directory obj_c2 --output-file "${LCOV_OUT_DIR}/coverage.info" || die "Failed to generate lcov report"
 genhtml --quiet "${LCOV_OUT_DIR}/coverage.info" --output-directory "${LCOV_OUT_DIR}" || die "Failed to generate html from lcov report"
 
 printf "Run 'python3 -m http.server 9999 -d \"${LCOV_OUT_DIR}\"' (y/N): "
