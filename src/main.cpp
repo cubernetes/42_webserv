@@ -24,7 +24,7 @@ int main(int ac, char **av) {
     } catch (const OnlyCheckConfigException &exception) {
         return EXIT_SUCCESS;
     } catch (const std::exception &exception) {
-        std::cout << "[ " + ansi::redBg("FATAL") + " ] " << exception.what() << std::endl;
+        std::cout << Logger::fatalPrefix << exception.what() << std::endl;
         return EXIT_FAILURE;
     }
 }
