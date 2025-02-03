@@ -250,13 +250,19 @@ CHAR_REPR(signed char);
         }                                                                                                              \
     }
 
-POST_REFLECT_MEMBER(struct pollfd, int, fd, short, events, short, revents);
+struct pollevents_helper {
+    short events;
+    pollevents_helper(short e) : events(e) {}
+    pollevents_helper() : events() {}
+};
 
 struct in_port_t_helper {
     in_port_t port;
     in_port_t_helper(in_port_t p) : port(p) {}
     in_port_t_helper() : port() {}
 };
+
+POST_REFLECT_MEMBER(struct pollfd, int, fd, struct pollevents_helper, events, struct pollevents_helper, revents);
 
 #include "HttpServer.hpp"
 POST_REFLECT_MEMBER(HttpServer::Server, struct in_addr, ip, struct in_port_t_helper, port, vector<string>, serverNames,
@@ -534,6 +540,40 @@ template <> struct ReprWrapper<struct in_port_t_helper> {
             return oss.str();
         else
             return num(oss.str());
+    }
+};
+
+static void pollevents_helper_adder(short event, const string &eventName, short events, bool &atLeastOne,
+                                    std::ostringstream &oss) {
+    if (events & event) {
+        if (atLeastOne)
+            oss << punct(", ");
+        oss << num(eventName);
+        atLeastOne = true;
+    }
+}
+
+// for struct pollevents_helper
+template <> struct ReprWrapper<struct pollevents_helper> {
+    static inline string repr(const struct pollevents_helper &value) {
+        std::ostringstream oss;
+        short events = value.events;
+        if (Logger::lastInstance().istrace5()) {
+            oss << events;
+            return oss.str();
+        }
+        bool atLeastOne = false;
+        pollevents_helper_adder(POLLIN, "POLLIN", events, atLeastOne, oss);
+        pollevents_helper_adder(POLLPRI, "POLLPRI", events, atLeastOne, oss);
+        pollevents_helper_adder(POLLOUT, "POLLOUT", events, atLeastOne, oss);
+        pollevents_helper_adder(POLLRDHUP, "POLLRDHUP", events, atLeastOne, oss);
+        pollevents_helper_adder(POLLERR, "POLLERR", events, atLeastOne, oss);
+        pollevents_helper_adder(POLLHUP, "POLLHUP", events, atLeastOne, oss);
+        pollevents_helper_adder(POLLNVAL, "POLLNVAL", events, atLeastOne, oss);
+        string all = oss.str();
+        if (all.empty())
+            return num("NO_EVENTS");
+        return punct("[") + all + punct("]");
     }
 };
 

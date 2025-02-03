@@ -30,13 +30,13 @@ void HttpServer::addClientSocketToPollFds(MultPlexFds &monitorFds, int clientSoc
 void HttpServer::addClientSocketToMonitorFds(MultPlexFds &monitorFds, int clientSocket) {
     switch (monitorFds.multPlexType) {
     case SELECT:
-        throw std::logic_error("Adding select type fds not implemented yet");
+        throw std::logic_error("Adding select type FDs not implemented yet");
         break;
     case POLL:
         addClientSocketToPollFds(monitorFds, clientSocket);
         break;
     case EPOLL:
-        throw std::logic_error("Adding epoll type fds not implemented yet");
+        throw std::logic_error("Adding epoll type FDs not implemented yet");
         break;
     default:
         throw std::logic_error("Adding unknown type of fd not implemented");

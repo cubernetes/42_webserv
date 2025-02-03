@@ -31,13 +31,13 @@ void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds &monitorFds, int fd) {
     ::close(fd); // TODO: @timo: guard every syscall
     switch (monitorFds.multPlexType) {
     case SELECT:
-        throw std::logic_error("Removing select type fds not implemented yet");
+        throw std::logic_error("Removing select type FDs not implemented yet");
         break;
     case POLL:
         removePollFd(monitorFds, fd);
         break;
     case EPOLL:
-        throw std::logic_error("Removing epoll type fds not implemented yet");
+        throw std::logic_error("Removing epoll type FDs not implemented yet");
         break;
     default:
         throw std::logic_error("Removing unknown type of fd not implemented");
@@ -47,13 +47,13 @@ void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds &monitorFds, int fd) {
 void HttpServer::closeAndRemoveAllMultPlexFd(MultPlexFds &monitorFds) {
     switch (monitorFds.multPlexType) {
     case SELECT:
-        throw std::logic_error("Removing all select type fds not implemented yet");
+        throw std::logic_error("Removing all select type FDs not implemented yet");
         break;
     case POLL:
         closeAndRemoveAllPollFd(monitorFds);
         break;
     case EPOLL:
-        throw std::logic_error("Removing all epoll type fds not implemented yet");
+        throw std::logic_error("Removing all epoll type FDs not implemented yet");
         break;
     default:
         throw std::logic_error("Removing all unknown types of fd not implemented");

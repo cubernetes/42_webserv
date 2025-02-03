@@ -52,24 +52,25 @@ HttpServer::MultPlexFds HttpServer::getReadyFds(MultPlexFds &monitorFds) {
                 << std::endl;
     switch (monitorFds.multPlexType) {
     case SELECT:
-        throw std::logic_error("Getting ready fds from select not implemented yet");
+        throw std::logic_error("Getting ready FDs from select not implemented yet");
         break;
     case POLL:
         return doPoll(monitorFds);
         break;
     case EPOLL:
-        throw std::logic_error("Getting ready fds from epoll not implemented yet");
+        throw std::logic_error("Getting ready FDs from epoll not implemented yet");
         break;
     default:
-        throw std::logic_error("Getting ready fds from unknown method not implemented");
+        throw std::logic_error("Getting ready FDs from unknown method not implemented");
     }
 }
 
-// #include <unistd.h>
 void HttpServer::handleReadyFds(const MultPlexFds &readyFds) {
-    // log.debug() << "Have the following ready fds: " << repr(readyFds) << std::endl;
-    // sleep(5);
     size_t nReadyFds = readyFds.fdStates.size();
+    log.debug() << "Number of ready FDs: " << repr(nReadyFds) << std::endl;
+    if (nReadyFds == 0)
+        return;
+    log.debug() << "Handling the following ready FDs: " << repr(readyFds) << std::endl;
     for (size_t i = 0; i < nReadyFds; ++i) {
         int fd = multPlexFdToRawFd(readyFds, i);
         if (readyFds.fdStates[i] == FD_READABLE) {
