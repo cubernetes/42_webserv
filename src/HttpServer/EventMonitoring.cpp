@@ -48,7 +48,8 @@ HttpServer::MultPlexFds HttpServer::doPoll(MultPlexFds &monitorFds) {
 }
 
 HttpServer::MultPlexFds HttpServer::getReadyFds(MultPlexFds &monitorFds) {
-    log.debug() << "Trying to get ready FDs with multiplexing method '" << monitorFds.multPlexType << "'" << std::endl;
+    log.debug() << "Trying to get ready FDs with multiplexing method '" << repr(monitorFds.multPlexType) << "'"
+                << std::endl;
     switch (monitorFds.multPlexType) {
     case SELECT:
         throw std::logic_error("Getting ready fds from select not implemented yet");

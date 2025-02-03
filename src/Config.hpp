@@ -33,6 +33,7 @@ typedef std::pair<TokenType, string> Token;
 typedef std::deque<Token> Tokens;
 
 string readConfig(string configPath);
+string removeComments(const string &rawConfig);
 Config parseConfig(string rawConfig);
 
 bool directiveExists(const Directives &directives, const string &directive);

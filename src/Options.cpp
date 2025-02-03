@@ -27,7 +27,7 @@ static Logger::Level convertStringToLogLevel(const char *str) {
 }
 
 Options::Options(int ac, char **av)
-    : printVersion(), onlyCheckConfig(), configPath(Constants::defaultConfPath), logLevel(Logger::INFO) {
+    : printHelp(), printVersion(), onlyCheckConfig(), configPath(Constants::defaultConfPath), logLevel(Logger::INFO) {
     (void)ac;
     bool configPathSpecified = false;
     ++av;

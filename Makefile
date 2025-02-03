@@ -185,8 +185,8 @@ re: fclean
 ## Build project, then run
 run: all
 	@printf '\n'
-	# This allows $(NAME) to be run using either an absolute, relative or no path.
-	# You can pass arguments like this: make run ARGS="hello ' to this world ! ' ."
+	@# This allows $(NAME) to be run using either an absolute, relative or no path.
+	@# You can pass arguments like this: make run ARGS="hello ' to this world ! ' ."
 	@PATH=".$${PATH:+:$${PATH}}" && $(NAME) $(ARGS)
 
 ## Build project, then run using valgrind memcheck

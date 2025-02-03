@@ -21,8 +21,11 @@ void finish(int signal) {
 }
 
 void HttpServer::initSignals() {
+    log.debug() << "Ignoring SIGPIPE signal (in case CGI process strikes)" << std::endl;
     ::signal(SIGPIPE, SIG_IGN); // writing to dead cgi -> sigpipe -> don't care just continue
+    log.debug() << "Handling SIGINT to finish gracefully" << std::endl;
     ::signal(SIGINT, &finish);
+    log.debug() << "Handling SIGTERM to finish gracefully" << std::endl;
     ::signal(SIGTERM, &finish);
 }
 
@@ -30,9 +33,8 @@ bool HttpServer::_running = true;
 HttpServer::HttpServer(const string &configPath, Logger &_log, size_t onlyCheckConfig)
     : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(),
       _pollFds(_monitorFds.pollFds), _httpVersionString(Constants::httpVersionString),
-      _rawConfig(readConfig(configPath)), _config(parseConfig(_rawConfig)), _mimeTypes(), _statusTexts(),
-      _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), defaultLogger(),
-      log(_log) {
+      _rawConfig(removeComments(readConfig(configPath))), _config(parseConfig(_rawConfig)), _mimeTypes(),
+      _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), log(_log) {
     TRACE_ARG_CTOR(const string &, configPath);
     if (onlyCheckConfig > 0) {
         if (onlyCheckConfig > 1)

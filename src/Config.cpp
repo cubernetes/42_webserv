@@ -10,6 +10,8 @@
 #include "Constants.hpp"
 #include "DirectiveValidation.hpp"
 #include "Errors.hpp"
+#include "Logger.hpp"
+#include "Repr.hpp"
 #include "Utils.hpp"
 
 using std::runtime_error;
@@ -84,6 +86,7 @@ static inline void takeMultipleFromParent(Directives &directives, Directives &pa
 }
 
 static inline void populateDefaultHttpDirectives(Directives &directives) {
+    Logger::lastInstance().trace() << "Updating missing http directives" << std::endl;
     addIfNotExists(directives, "autoindex", "off");
     addIfNotExists(directives, "client_max_body_size", "1m");
     addIfNotExists(directives, "index", "index.html");
@@ -92,6 +95,7 @@ static inline void populateDefaultHttpDirectives(Directives &directives) {
 }
 
 static inline void populateDefaultServerDirectives(Directives &directives, Directives &httpDirectives) {
+    Logger::lastInstance().trace() << "Updating missing server directives" << std::endl;
     takeMultipleFromParentAndAdd(directives, httpDirectives, "index", "index.html");
     takeFromParentOrSet(directives, httpDirectives, "autoindex", "off");
     takeFromParentOrSet(directives, httpDirectives, "client_max_body_size", "1m");
@@ -107,6 +111,7 @@ static inline void populateDefaultServerDirectives(Directives &directives, Direc
 }
 
 static inline void populateDefaultLocationDirectives(Directives &directives, Directives &serverDirectives) {
+    Logger::lastInstance().trace() << "Updating missing location directives" << std::endl;
     takeMultipleFromParentAndAdd(directives, serverDirectives, "index", "index.html");
     takeFromParentOrSet(directives, serverDirectives, "autoindex", "off");
     takeFromParentOrSet(directives, serverDirectives, "client_max_body_size", "1m");
@@ -176,6 +181,7 @@ static LocationCtx parseLocation(Tokens &tokens) {
         throw runtime_error(Errors::Config::ParseError(tokens));
     tokens.pop_front();
 
+    Logger::lastInstance().trace() << "Parsing location directives" << std::endl;
     location.second = parseDirectives(tokens);
 
     if (tokens.empty() || tokens.front().first != TOK_CLOSING_BRACE)
@@ -190,6 +196,7 @@ static LocationCtxs parseLocations(Tokens &tokens) {
     while (true) {
         if (tokens.empty() || tokens.front().second != "location")
             break;
+        Logger::lastInstance().trace() << "Parsing single location" << std::endl;
         LocationCtx location = parseLocation(tokens);
         locations.push_back(location);
     }
@@ -206,7 +213,9 @@ static ServerCtx parseServer(Tokens &tokens) {
         throw runtime_error(Errors::Config::ParseError(tokens));
     tokens.pop_front();
 
+    Logger::lastInstance().trace() << "Parsing server directives" << std::endl;
     Directives directives = parseDirectives(tokens);
+    Logger::lastInstance().trace() << "Parsing locations" << std::endl;
     LocationCtxs locations = parseLocations(tokens);
     server = std::make_pair(directives, locations);
 
@@ -223,6 +232,7 @@ static ServerCtxs parseServers(Tokens &tokens) {
     while (true) {
         if (tokens.empty() || tokens.front().second != "server")
             break;
+        Logger::lastInstance().debug() << "Parsing single server" << std::endl;
         ServerCtx server = parseServer(tokens);
         servers.push_back(server);
     }
@@ -230,28 +240,47 @@ static ServerCtxs parseServers(Tokens &tokens) {
     return servers;
 }
 
-static string removeComments(const string &rawConfig) {
+string removeComments(const string &rawConfig) {
     std::istringstream iss(rawConfig);
     string line;
     string cleanedConfig;
+    size_t count = 0;
 
+    Logger::lastInstance().debug() << "Removing hashtag comments from config" << std::endl;
     while (std::getline(iss, line)) {
+        Logger::lastInstance().trace() << "Checking line for comment removal: " << repr(line) << std::endl;
         string newLine;
+        char prevC = '\0';
         for (string::iterator c = line.begin(); c != line.end(); ++c) {
             if (*c != Constants::commentSymbol) {
                 newLine += *c;
+                prevC = *c;
+                continue;
+            } else if (prevC == '\\') {
+                Logger::lastInstance().trace() << "Found escaped comment symbol! Continuing parse" << std::endl;
+                newLine[newLine.length() - 1] = *c;
                 continue;
             }
+            Logger::lastInstance().trace()
+                << "Found unescaped comment symbol! Parsed line: " << repr(newLine) << std::endl;
+            ++count;
             break;
         }
-        cleanedConfig += newLine + '\n';
+        if (!newLine.empty())
+            cleanedConfig += newLine + '\n';
     }
+    Logger::lastInstance().debug() << "Removed " << count << " comments from config" << std::endl;
+    Logger::lastInstance().trace() << "Final config is (inside config tag):\n<config>" << cleanedConfig << "</config>"
+                                   << std::endl;
     return cleanedConfig;
 }
 
 static Token newToken(TokenType t, const string &s) { return Token(t, s); }
 
 static void updateTokenType(Tokens &tokens) {
+    if (tokens.back().first != TOK_UNKNOWN)
+        return; // already classified, no need to re-classify
+
     if (tokens.back().second == ";")
         tokens.back().first = TOK_SEMICOLON;
     else if (tokens.back().second == "{")
@@ -262,12 +291,16 @@ static void updateTokenType(Tokens &tokens) {
         tokens.back().first = TOK_EOF;
     else
         tokens.back().first = TOK_WORD;
+    Logger::lastInstance().trace() << "Identified new token " << repr(tokens.back().second) << " of type "
+                                   << repr(tokens.back().first) << std::endl;
 }
 
 static bool updateQuoted(bool &quoted, const string &stringSoFar) {
     bool isRealQuote = DirectiveValidation::evenNumberOfBackslashes(stringSoFar, stringSoFar.length() - 1);
     if (isRealQuote) {
         quoted = !quoted;
+        Logger::lastInstance().trace() << "Found unescaped double quote, toggling quoting context to " << repr(quoted)
+                                       << std::endl;
         return true;
     }
     return false;
@@ -280,7 +313,7 @@ static Tokens lexConfig(string rawConfig) {
     bool createNewToken = true;
     bool quoted = false;
 
-    rawConfig = removeComments(rawConfig);
+    Logger::lastInstance().debug() << "Lexing config" << std::endl;
     prevC = '\0';
     for (std::string::iterator it = rawConfig.begin(); it != rawConfig.end(); ++it) {
         c = *it;
@@ -304,6 +337,8 @@ static Tokens lexConfig(string rawConfig) {
             (void)updateQuoted(quoted, tokens.back().second);
         tokens.back().second += c;
     }
+    Logger::lastInstance().debug() << "Lexed " << tokens.size() << " tokens" << std::endl;
+    Logger::lastInstance().trace() << "Tokens from lexing are: " << repr(tokens) << std::endl;
     return tokens;
 }
 
@@ -323,17 +358,23 @@ static void updateDefaults(Config &config) {
 Config parseConfig(string rawConfig) {
     Tokens tokens = lexConfig(rawConfig);
 
+    Logger::lastInstance().debug() << "Parsing config from tokens" << std::endl;
     if (tokens.empty())
         throw runtime_error(Errors::Config::ZeroServers());
 
+    Logger::lastInstance().debug() << "Parsing http directives" << std::endl;
     Directives directives = parseDirectives(tokens);
+    Logger::lastInstance().debug() << "Parsing servers" << std::endl;
     ServerCtxs servers = parseServers(tokens);
     if (!tokens.empty())
         throw runtime_error(Errors::Config::ParseError(tokens));
     Config config = std::make_pair(directives, servers);
 
+    Logger::lastInstance().debug() << "Applying inheriting logic to config (http -> server, server -> location)"
+                                   << std::endl;
     updateDefaults(config);
 
+    Logger::lastInstance().debug() << "Validating semantics of all directives" << std::endl;
     DirectiveValidation::checkDirectives(config);
 
     if (config.second.empty())
@@ -415,10 +456,12 @@ let's keep it MVP) [ { "index": [ "index.html" ], "listen": [ "127.0.0.1:80" ],
 */
 
 string readConfig(string configPath) {
+    Logger::lastInstance().debug() << "Trying to read config with path " << repr(configPath) << std::endl;
     std::ifstream is(configPath.c_str());
     if (!is.good())
         throw runtime_error(Errors::Config::OpeningError(configPath));
     std::stringstream ss;
     ss << is.rdbuf();
+    Logger::lastInstance().debug() << "Successfully read config, size in bytes: " << ss.str().length() << std::endl;
     return ss.str();
 }

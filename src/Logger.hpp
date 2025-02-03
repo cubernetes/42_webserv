@@ -63,6 +63,9 @@ class Logger {
     static const string &infoPrefix;
     static const string &debugPrefix;
     static const string &tracePrefix;
+
+    static Logger fallbackInstance;
+    static Logger &lastInstance(Logger *instance = NULL);
 };
 
 void swap(Logger &a, Logger &b) /* noexcept */;

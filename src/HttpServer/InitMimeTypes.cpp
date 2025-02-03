@@ -23,6 +23,7 @@ string HttpServer::getMimeType(const string &path) {
 }
 
 void initMimeTypes(HttpServer::MimeTypes &mimeTypes) {
+    Logger::lastInstance().debug() << "Initializing extension to MIME type mapping" << std::endl;
 
     // Web content
     mimeTypes["html"] = "text/html";

@@ -14,6 +14,19 @@ Logger::Logger(std::ostream &_os, Level _logLevel)
         debug() << "Initialized Logger with logLevel: " << debug.prefix << std::endl;
     else if (logLevel == TRACE)
         debug() << "Initialized Logger with logLevel: " << trace.prefix << std::endl;
+    (void)lastInstance(this);
+}
+
+Logger Logger::fallbackInstance;
+
+Logger &Logger::lastInstance(Logger *instance) {
+    static Logger *last_instance = &fallbackInstance;
+
+    if (instance) {
+        last_instance = instance;
+    }
+
+    return *last_instance;
 }
 
 Logger::Logger()

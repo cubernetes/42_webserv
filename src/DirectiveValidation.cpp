@@ -18,6 +18,7 @@
 #include "Constants.hpp"
 #include "DirectiveValidation.hpp"
 #include "Errors.hpp"
+#include "Logger.hpp"
 #include "Utils.hpp"
 
 #define CHECKFN(ctx, checkFunction)                                                                                    \
@@ -546,15 +547,19 @@ static void ensureServerUniqueness(const Directives &directives, const ServerCtx
 }
 
 void DirectiveValidation::checkDirectives(Config &config) {
+    Logger::lastInstance().trace() << "Validating semantics of http directives" << std::endl;
     checkHttpDirectives(config.first);
     for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
+        Logger::lastInstance().trace() << "Validating semantics of server directives" << std::endl;
         checkServerDirectives(server->first);
         for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
+            Logger::lastInstance().trace() << "Validating semantics of location directives" << std::endl;
             checkLocationDirectives(location->second);
         }
     }
     // we have to do it in a separate loop, since in the first loop, all the listen directives must be validated first
     for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
+        Logger::lastInstance().trace() << "Ensuring that listen & server_name directives have no conflict" << std::endl;
         ensureServerUniqueness(server->first, config.second);
     }
 }

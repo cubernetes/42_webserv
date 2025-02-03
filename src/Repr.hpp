@@ -4,6 +4,7 @@
 // - CgiHandler.hpp
 
 #include <ctime>
+#include <deque>
 #include <iostream>
 #include <map>
 #include <netinet/in.h>
@@ -34,6 +35,7 @@
 
 using ansi::rgb;
 using ansi::rgbBg;
+using std::deque;
 using std::map;
 using std::multimap;
 using std::pair;
@@ -287,6 +289,34 @@ template <typename T> struct ReprWrapper<vector<T> > {
             oss << "[";
         else if (Constants::verboseLogs)
             oss << kwrd("std") + punct("::") + kwrd("vector") + punct("({");
+        else
+            oss << punct("[");
+        for (size_t i = 0; i < value.size(); ++i) {
+            if (i != 0) {
+                if (json)
+                    oss << ", ";
+                else
+                    oss << punct(", ");
+            }
+            oss << ReprWrapper<T>::repr(value[i], json);
+        }
+        if (json)
+            oss << "]";
+        else if (Constants::verboseLogs)
+            oss << punct("})");
+        else
+            oss << punct("]");
+        return oss.str();
+    }
+};
+
+template <typename T> struct ReprWrapper<deque<T> > {
+    static inline string repr(const deque<T> &value, bool json = false) {
+        std::ostringstream oss;
+        if (json)
+            oss << "[";
+        else if (Constants::verboseLogs)
+            oss << kwrd("std") + punct("::") + kwrd("deque") + punct("({");
         else
             oss << punct("[");
         for (size_t i = 0; i < value.size(); ++i) {
@@ -599,8 +629,46 @@ template <> struct ReprWrapper<HttpServer::FdState> {
     }
 };
 
+// for enum TokenType
+template <> struct ReprWrapper<TokenType> {
+    static inline string repr(const TokenType &value, bool json = false) {
+        std::ostringstream oss;
+        switch (value) {
+        case TOK_SEMICOLON:
+            oss << "TOK_SEMICOLON";
+            break;
+        case TOK_OPENING_BRACE:
+            oss << "TOK_OPENING_BRACE";
+            break;
+        case TOK_CLOSING_BRACE:
+            oss << "TOK_CLOSING_BRACE";
+            break;
+        case TOK_WORD:
+            oss << "TOK_WORD";
+            break;
+        case TOK_EOF:
+            oss << "TOK_EOF";
+            break;
+        case TOK_UNKNOWN:
+            oss << "TOK_UNKNOWN";
+            break;
+        default:
+            oss << "UNKNOWN_TOKEN";
+            break;
+        }
+        if (json)
+            return oss.str();
+        else
+            return num(oss.str());
+    }
+};
+
 // to print using `std::cout << ...'
 template <typename T> static inline std::ostream &operator<<(std::ostream &os, const vector<T> &val) {
+    return os << repr(val, Constants::jsonTrace);
+}
+
+template <typename T> static inline std::ostream &operator<<(std::ostream &os, const deque<T> &val) {
     return os << repr(val, Constants::jsonTrace);
 }
 
@@ -640,6 +708,7 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 #define TRACE_COPY_ASSIGN_OP                                                                                           \
     do {                                                                                                               \
         Logger::StreamWrapper oss = log.trace();                                                                       \
+        oss << "Changing object via copy assignment operator: ";                                                       \
         if (Constants::jsonTrace)                                                                                      \
             oss << "{\"event\":\"copy assignment operator\",\"other object\":" << ::repr(other) << "}\n";              \
         else                                                                                                           \
@@ -651,6 +720,7 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 #define TRACE_COPY_CTOR                                                                                                \
     do {                                                                                                               \
         Logger::StreamWrapper oss = log.trace();                                                                       \
+        oss << "Creating object via copy constructor: ";                                                               \
         if (Constants::jsonTrace)                                                                                      \
             oss << "{\"event\":\"copy constructor\",\"other object\":" << ::repr(other)                                \
                 << ",\"this object\":" << ::repr(*this) << "}\n";                                                      \
@@ -671,19 +741,20 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 #define TRACE_ARG_CTOR(...)                                                                                            \
     do {                                                                                                               \
         Logger::StreamWrapper oss = log.trace();                                                                       \
+        IF(IS_EMPTY(__VA_ARGS__))                                                                                      \
+        (oss << "Creating object via default constructor: ",                                                           \
+         oss << "Creating object via " << NARG(__VA_ARGS__) / 2 << "-ary constructor: ");                              \
         if (Constants::jsonTrace)                                                                                      \
             IF(IS_EMPTY(__VA_ARGS__))                                                                                  \
-        (oss << "{\"event\":\"default constructor\",\"this object\":" << ::repr(*this) << "}\n";                       \
-         , oss << "{\"event\":\"(" EXPAND(DEFER(GEN_NAMES_FIRST)(HEAD2(__VA_ARGS__)))                                  \
-                      FOR_EACH_PAIR(GEN_NAMES, TAIL2(__VA_ARGS__))                                                     \
-               << ") constructor\",\"this object\":" << ::repr(*this)                                                  \
-               << "}\n";) else IF(IS_EMPTY(__VA_ARGS__))(oss << kwrd(getClass(*this)) + punct("() -> ")                \
-                                                             << ::repr(*this) << '\n';                                 \
-                                                         , oss << kwrd(getClass(*this)) +                              \
-                                                                      punct("(") EXPAND(                               \
-                                                                          DEFER(GEN_REPRS_FIRST)(HEAD2(__VA_ARGS__)))  \
-                                                                          FOR_EACH_PAIR(GEN_REPRS, TAIL2(__VA_ARGS__)) \
-                                                               << punct(") -> ") << ::repr(*this) << '\n';)            \
+        (oss << "{\"event\":\"default constructor\",\"this object\":" << ::repr(*this) << "}\n",                       \
+         oss << "{\"event\":\"(" EXPAND(DEFER(GEN_NAMES_FIRST)(HEAD2(__VA_ARGS__)))                                    \
+                    FOR_EACH_PAIR(GEN_NAMES, TAIL2(__VA_ARGS__))                                                       \
+             << ") constructor\",\"this object\":" << ::repr(*this) << "}\n");                                         \
+        else IF(IS_EMPTY(__VA_ARGS__))(oss << kwrd(getClass(*this)) + punct("() -> ") << ::repr(*this) << '\n',        \
+                                       oss << kwrd(getClass(*this)) +                                                  \
+                                                  punct("(") EXPAND(DEFER(GEN_REPRS_FIRST)(HEAD2(__VA_ARGS__)))        \
+                                                      FOR_EACH_PAIR(GEN_REPRS, TAIL2(__VA_ARGS__))                     \
+                                           << punct(") -> ") << ::repr(*this) << '\n');                                \
     } while (false)
 
 #define TRACE_DEFAULT_CTOR TRACE_ARG_CTOR()
@@ -691,6 +762,7 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 #define TRACE_DTOR                                                                                                     \
     do {                                                                                                               \
         Logger::StreamWrapper oss = log.trace();                                                                       \
+        oss << "Destructing object: ";                                                                                 \
         if (Constants::jsonTrace)                                                                                      \
             oss << "{\"event\":\"destructor\",\"this object\":" << ::repr(*this) << "}\n";                             \
         else                                                                                                           \
@@ -700,6 +772,7 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 #define TRACE_SWAP_BEGIN                                                                                               \
     do {                                                                                                               \
         Logger::StreamWrapper oss = log.trace();                                                                       \
+        oss << "Starting swap operation: ";                                                                            \
         if (Constants::jsonTrace) {                                                                                    \
             oss << "{\"event\":\"object swap\",\"this object\":" << ::repr(*this)                                      \
                 << ",\"other object\":" << ::repr(other) << "}\n";                                                     \
@@ -714,6 +787,7 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 #define TRACE_SWAP_END                                                                                                 \
     do {                                                                                                               \
         Logger::StreamWrapper oss = log.trace();                                                                       \
+        oss << "Finalizing swap operation: ";                                                                          \
         if (!Constants::jsonTrace)                                                                                     \
             oss << cmt(std::string(getClass(*this)) + " swap done>") + '\n';                                           \
     } while (false)
