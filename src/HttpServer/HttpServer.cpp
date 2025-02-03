@@ -54,6 +54,23 @@ std::ostream &operator<<(std::ostream &os, const HttpServer &httpServer) {
     return os << static_cast<string>(httpServer);
 }
 
+HttpServer::Server::~Server() { TRACE_DTOR; }
+HttpServer::Server::Server(const Directives &_directives, const LocationCtxs &_locations, const Arguments &_serverNames,
+                           Logger &_log)
+    : ip(), port(), directives(_directives), locations(_locations), serverNames(_serverNames), log(_log) {
+    TRACE_ARG_CTOR(const Directives, _directives, const LocationCtxs, _locations, const Arguments, _serverNames);
+}
+HttpServer::Server::Server(const Server &other)
+    : ip(other.ip), port(other.port), directives(other.directives), locations(other.locations),
+      serverNames(other.serverNames), log(other.log) {
+    TRACE_COPY_CTOR;
+}
+HttpServer::Server &HttpServer::Server::operator=(const Server &other) {
+    TRACE_COPY_ASSIGN_OP;
+    (void)other;
+    return *this;
+}
+
 // clang-format off
 void HttpServer::run() {
     log.debug() << "Starting mainloop" << std::endl;

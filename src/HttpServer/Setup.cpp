@@ -108,7 +108,7 @@ void HttpServer::setupListeningSocket(const Server &server) {
 void HttpServer::setupServers(const Config &config) {
     log.debug() << "Setting up servers" << std::endl;
     for (ServerCtxs::const_iterator serverCtx = config.second.begin(); serverCtx != config.second.end(); ++serverCtx) {
-        Server server(serverCtx->first, serverCtx->second, getFirstDirective(serverCtx->first, "server_name"));
+        Server server(serverCtx->first, serverCtx->second, getFirstDirective(serverCtx->first, "server_name"), log);
 
         server.ip = getServerIp(*serverCtx);
         server.port = getServerPort(*serverCtx);

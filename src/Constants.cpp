@@ -31,7 +31,7 @@ namespace Constants {
     const string &defaultPort = "8000";
     const string &defaultAddress = "*";
     const string &defaultMimeType = "application/octet-stream";
-    const string &httpVersionString = "HTTP/1.1"; // TODO: @timo: can you make them all string& ???
+    const string &httpVersionString = "HTTP/1.1";
     const string &webservVersion = "0.1";
     const string &helpText = HELP_TEXT;
     enum MultPlexType defaultMultPlexType = POLL;

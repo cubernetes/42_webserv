@@ -707,7 +707,7 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 
 #define TRACE_COPY_ASSIGN_OP                                                                                           \
     do {                                                                                                               \
-        Logger::StreamWrapper oss = log.trace();                                                                       \
+        Logger::StreamWrapper &oss = log.trace();                                                                      \
         oss << "Changing object via copy assignment operator: ";                                                       \
         if (Constants::jsonTrace)                                                                                      \
             oss << "{\"event\":\"copy assignment operator\",\"other object\":" << ::repr(other) << "}\n";              \
@@ -719,7 +719,7 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 
 #define TRACE_COPY_CTOR                                                                                                \
     do {                                                                                                               \
-        Logger::StreamWrapper oss = log.trace();                                                                       \
+        Logger::StreamWrapper &oss = log.trace();                                                                      \
         oss << "Creating object via copy constructor: ";                                                               \
         if (Constants::jsonTrace)                                                                                      \
             oss << "{\"event\":\"copy constructor\",\"other object\":" << ::repr(other)                                \
@@ -740,7 +740,7 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 
 #define TRACE_ARG_CTOR(...)                                                                                            \
     do {                                                                                                               \
-        Logger::StreamWrapper oss = log.trace();                                                                       \
+        Logger::StreamWrapper &oss = log.trace();                                                                      \
         IF(IS_EMPTY(__VA_ARGS__))                                                                                      \
         (oss << "Creating object via default constructor: ",                                                           \
          oss << "Creating object via " << NARG(__VA_ARGS__) / 2 << "-ary constructor: ");                              \
@@ -761,7 +761,7 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 
 #define TRACE_DTOR                                                                                                     \
     do {                                                                                                               \
-        Logger::StreamWrapper oss = log.trace();                                                                       \
+        Logger::StreamWrapper &oss = log.trace();                                                                      \
         oss << "Destructing object: ";                                                                                 \
         if (Constants::jsonTrace)                                                                                      \
             oss << "{\"event\":\"destructor\",\"this object\":" << ::repr(*this) << "}\n";                             \
@@ -771,7 +771,7 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 
 #define TRACE_SWAP_BEGIN                                                                                               \
     do {                                                                                                               \
-        Logger::StreamWrapper oss = log.trace();                                                                       \
+        Logger::StreamWrapper &oss = log.trace();                                                                      \
         oss << "Starting swap operation: ";                                                                            \
         if (Constants::jsonTrace) {                                                                                    \
             oss << "{\"event\":\"object swap\",\"this object\":" << ::repr(*this)                                      \
@@ -786,7 +786,7 @@ static inline std::ostream &operator<<(std::ostream &os, const HttpServer::CgiPr
 
 #define TRACE_SWAP_END                                                                                                 \
     do {                                                                                                               \
-        Logger::StreamWrapper oss = log.trace();                                                                       \
+        Logger::StreamWrapper &oss = log.trace();                                                                      \
         oss << "Finalizing swap operation: ";                                                                          \
         if (!Constants::jsonTrace)                                                                                     \
             oss << cmt(std::string(getClass(*this)) + " swap done>") + '\n';                                           \

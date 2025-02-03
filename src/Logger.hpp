@@ -13,7 +13,7 @@ class Logger {
     std::ostream &os;
 
   public:
-    enum Level { FATAL, ERR, WARN, INFO, DEBUG, TRACE };
+    enum Level { FATAL, ERR, WARN, INFO, DEBUG, TRACE, TRACE2, TRACE3, TRACE4, TRACE5 };
     Level logLevel;
 
     class StreamWrapper {
@@ -49,13 +49,21 @@ class Logger {
     StreamWrapper info;
     StreamWrapper debug;
     StreamWrapper trace;
+    StreamWrapper trace2;
+    StreamWrapper trace3;
+    StreamWrapper trace4;
+    StreamWrapper trace5;
 
-    bool istrace() { return TRACE <= logLevel; }
-    bool isdebug() { return DEBUG <= logLevel; }
-    bool isinfo() { return INFO <= logLevel; }
-    bool iswarn() { return WARN <= logLevel; }
-    bool iserror() { return ERR <= logLevel; }
     bool isfatal() { return FATAL <= logLevel; }
+    bool iserror() { return ERR <= logLevel; }
+    bool iswarn() { return WARN <= logLevel; }
+    bool isinfo() { return INFO <= logLevel; }
+    bool isdebug() { return DEBUG <= logLevel; }
+    bool istrace() { return TRACE <= logLevel; }
+    bool istrace2() { return TRACE2 <= logLevel; }
+    bool istrace3() { return TRACE3 <= logLevel; }
+    bool istrace4() { return TRACE4 <= logLevel; }
+    bool istrace5() { return TRACE5 <= logLevel; }
 
     static const string &fatalPrefix;
     static const string &errorPrefix;
@@ -63,6 +71,10 @@ class Logger {
     static const string &infoPrefix;
     static const string &debugPrefix;
     static const string &tracePrefix;
+    static const string &trace2Prefix;
+    static const string &trace3Prefix;
+    static const string &trace4Prefix;
+    static const string &trace5Prefix;
 
     static Logger fallbackInstance;
     static Logger &lastInstance(Logger *instance = NULL);

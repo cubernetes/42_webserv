@@ -95,16 +95,13 @@ class HttpServer {
         const Directives &directives;
         const LocationCtxs &locations;
         const Arguments &serverNames;
+        Logger &log;
 
-        Server(const Directives &_directives, const LocationCtxs &_locations, const Arguments &_serverNames)
-            : ip(), port(), directives(_directives), locations(_locations), serverNames(_serverNames) {}
-        Server(const Server &other)
-            : ip(other.ip), port(other.port), directives(other.directives), locations(other.locations),
-              serverNames(other.serverNames) {}
-        Server &operator=(const Server &other) {
-            (void)other;
-            return *this;
-        }
+        ~Server();
+        Server(const Directives &_directives, const LocationCtxs &_locations, const Arguments &_serverNames,
+               Logger &_log);
+        Server(const Server &other);
+        Server &operator=(const Server &other);
     };
     struct AddrPortCompare {
         bool operator()(const AddrPort &a, const AddrPort &b) const {
