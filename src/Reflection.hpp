@@ -8,7 +8,7 @@ using std::string;
 
 class Reflection;
 
-typedef string (Reflection::*ReprClosure)(bool json) const;
+typedef string (Reflection::*ReprClosure)() const;
 typedef std::pair<ReprClosure, const void *> Member;
 typedef std::map<const char *, Member> Members;
 
@@ -30,7 +30,7 @@ class Reflection {
 
     // generate a string representation of the class from _members by iterating over
     // it and using _memberToString to serialize it member by member
-    string repr(bool json = false) const;
+    string repr() const;
 
   protected:
     // is implemented automatically in the derived class by the REFLECT macro from MacroMagic.h
@@ -46,9 +46,9 @@ class Reflection {
     void reflectMember(ReprClosure reprClosure, const char *memberId, const void *memberPtr);
 
     // return the string representation of a member
-    string _memberToStr(const Member &member, bool json = false) const;
+    string _memberToStr(const Member &member) const;
 
-    string reprStruct(string name, Members members, bool json = false) const;
+    string reprStruct(string name, Members members) const;
 };
 void swap(Reflection &a, Reflection &b) /* noexcept */;
 

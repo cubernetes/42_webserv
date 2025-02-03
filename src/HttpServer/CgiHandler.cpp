@@ -263,9 +263,8 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
         }
         char *args[] = {const_cast<char *>(argv0.c_str()), const_cast<char *>(argv1.empty() ? NULL : argv1.c_str()),
                         NULL};
-        log.debug() << "Child: Calling execve(" << repr(args[0]) << ", "
-                    << reprArr((char **)args, 2, Constants::jsonTrace) << ", "
-                    << reprArr(cgiEnviron, n + 1, Constants::jsonTrace) << ")" << std::endl;
+        log.debug() << "Child: Calling execve(" << repr(args[0]) << ", " << reprArr((char **)args, 2) << ", "
+                    << reprArr(cgiEnviron, n + 1) << ")" << std::endl;
         execve(args[0], args, cgiEnviron);
         log.warn() << "Child: execve failed" << std::endl;
         exit(1);

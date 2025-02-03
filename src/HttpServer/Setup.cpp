@@ -115,7 +115,8 @@ void HttpServer::setupServers(const Config &config) {
 
         setupListeningSocket(server);
         log.info() << cmt("Server with names ") << repr(server.serverNames) << cmt(" is listening on ")
-                   << num(getServerIpStr(*serverCtx)) << num(":") << repr(ntohs(server.port)) << '\n';
+                   << (log.istrace5() ? getServerIpStr(*serverCtx) + ":" : num(getServerIpStr(*serverCtx) + ":"))
+                   << repr(ntohs(server.port)) << '\n';
 
         _servers.push_back(server);
 
