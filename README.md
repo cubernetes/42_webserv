@@ -20,8 +20,17 @@ make # or make re for clean build
 
 ```sh
 make unit_tests # or reunit_tests for clean build
-# And for ccoverage reports
+# And for coverage reports
 make llvmcov # or rellvmcov for clean build
 make lcov # or relcov for clean build
 make gcovr # or regcovr for clean build
 ```
+
+## Config
+
+Almost a proper subset of the NGINX `http` context. Many directives missing of
+course.  For a list of full directives and their NGINX counterparts, see
+[default.conf](conf/default.conf). Notable outliers are the `cgi_ext` and
+`cgi_dir` directives, as NGINX doesn't support CGI, or the `upload_dir` directives,
+since NGINX also doesn't support simple uploading of files out of the box (sensibly
+so, the semantics of the `upload_dir` directives are explained here in the wiki).
