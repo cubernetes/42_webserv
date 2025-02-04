@@ -12,18 +12,19 @@
 #include "Constants.hpp"
 #include "HttpServer.hpp"
 #include "Logger.hpp"
+#include "Repr.hpp"
 #include "Utils.hpp"
 
 using Constants::EPOLL;
 using Constants::POLL;
 using Constants::SELECT;
-using Utils::STR;
 
 void HttpServer::addClientSocketToPollFds(MultPlexFds &monitorFds, int clientSocket) {
     struct pollfd pfd;
     pfd.fd = clientSocket;
     pfd.events = POLLIN | POLLOUT;
     pfd.revents = 0;
+    log.debug() << "Adding pollfd " << pfd << " to monitoring FDs" << std::endl;
     monitorFds.pollFds.push_back(pfd);
 }
 
@@ -47,18 +48,17 @@ void HttpServer::addNewClient(int listeningSocket) {
     struct sockaddr_in clientAddr;
     socklen_t clientLen = sizeof(clientAddr);
 
+    log.debug() << "Calling accept() on socket " << listeningSocket << std::endl;
     int clientSocket =
         accept(listeningSocket, (struct sockaddr *)&clientAddr, &clientLen);
+    log.debug() << "Got client socket FD back: " << clientSocket << std::endl;
     if (clientSocket < 0) {
-        log.error() << "accept failed: " << strerror(errno) << std::endl;
-        return; // don't add client on this kind of failure
-    }
-    if (::fcntl(clientSocket, F_SETFD, FD_CLOEXEC) <
-        0) { // TODO: @timo: use accept4 maybe
-        log.error() << "fcntl failed: " << strerror(errno) << std::endl;
+        log.error() << "accept() failed: " << strerror(errno) << std::endl;
         return; // don't add client on this kind of failure
     }
 
     addClientSocketToMonitorFds(_monitorFds, clientSocket);
-    log.debug() << "New client connected. FD: " << STR(clientSocket) << std::endl;
+    log.info() << "New client connected with FD " << repr(clientSocket)
+               << " and addr:port " << repr<struct sockaddr_in_wrapper>(clientAddr)
+               << std::endl;
 }

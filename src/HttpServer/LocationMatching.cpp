@@ -137,8 +137,8 @@ const LocationCtx &HttpServer::requestToLocation(int clientSocket,
     if (!(serverIdx = findMatchingServer(host, addr.sin_addr, addr.sin_port))) {
         sendError(clientSocket, 404, NULL); // TODO: @all: is 404 rlly correct?
         throw runtime_error(string("Couldn't find a server for hostname '") + host +
-                            "' and addr:port being " + STR(ntohl(addr.sin_addr.s_addr)) +
-                            ":" + STR(ntohs(addr.sin_port)));
+                            "' and addr:port being " +
+                            repr<struct sockaddr_in_wrapper>(addr));
     }
     const Server &server =
         _servers[serverIdx -

@@ -261,18 +261,6 @@ CHAR_REPR(signed char);
         }                                                                                \
     }
 
-struct pollevents_helper {
-    short events;
-    pollevents_helper(short e) : events(e) {}
-    pollevents_helper() : events() {}
-};
-
-struct in_port_t_helper {
-    in_port_t port;
-    in_port_t_helper(in_port_t p) : port(p) {}
-    in_port_t_helper() : port() {}
-};
-
 POST_REFLECT_MEMBER(struct pollfd, int, fd, struct pollevents_helper, events,
                     struct pollevents_helper, revents);
 
@@ -549,12 +537,16 @@ template <> struct ReprWrapper<struct in_addr> {
         oss << (int)addr.second << '.';
         oss << (int)addr.third << '.';
         oss << (int)addr.fourth;
-        oss_final << kwrd("struct in_addr") << punct("(");
+        if (Logger::lastInstance().istrace4())
+            oss_final << kwrd("struct in_addr") << punct("(");
         oss_final << num(oss.str());
-        oss_final << punct(")");
+        if (Logger::lastInstance().istrace4())
+            oss_final << punct(")");
         return oss_final.str();
     }
 };
+
+POST_REFLECT_MEMBER(struct sockaddr_in, struct in_addr, sin_addr, in_port_t, sin_port);
 
 // for struct in_port_t_helper
 template <> struct ReprWrapper<struct in_port_t_helper> {
@@ -565,6 +557,26 @@ template <> struct ReprWrapper<struct in_port_t_helper> {
             return oss.str();
         else
             return num(oss.str());
+    }
+};
+
+// for struct sockaddr_in_helper
+template <> struct ReprWrapper<struct sockaddr_in_wrapper> {
+    static inline string repr(const struct sockaddr_in_wrapper &value) {
+        std::ostringstream oss;
+        if (Logger::lastInstance().istrace5()) {
+            struct sockaddr_in saddr;
+            saddr.sin_addr = value.sin_addr;
+            saddr.sin_port = value.sin_port;
+            return ReprWrapper<struct sockaddr_in>::repr(saddr);
+        }
+        if (Logger::lastInstance().istrace4())
+            oss << kwrd("struct sockaddr_in") << punct("(");
+        oss << ReprWrapper<struct in_addr>::repr(value.sin_addr) << num(":")
+            << ReprWrapper<in_port_t_helper>::repr(in_port_t_helper(value.sin_port));
+        if (Logger::lastInstance().istrace4())
+            oss << punct(")");
+        return oss.str();
     }
 };
 
@@ -764,6 +776,10 @@ static inline std::ostream &operator<<(std::ostream &os, const set<T> &val) {
 }
 
 static inline std::ostream &operator<<(std::ostream &os, const struct pollfd &val) {
+    return os << repr(val);
+}
+
+static inline std::ostream &operator<<(std::ostream &os, const struct sockaddr_in &val) {
     return os << repr(val);
 }
 

@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <ios>
+#include <netinet/in.h>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -10,6 +11,28 @@
 
 using std::string;
 using std::vector;
+
+struct sockaddr_in_wrapper {
+    struct in_addr sin_addr;
+    in_port_t sin_port;
+    sockaddr_in_wrapper(sockaddr_in saddr)
+        : sin_addr(saddr.sin_addr), sin_port(saddr.sin_port) {}
+    sockaddr_in_wrapper(struct in_addr _sin_addr, in_port_t _sin_port)
+        : sin_addr(_sin_addr), sin_port(_sin_port) {}
+    sockaddr_in_wrapper() : sin_addr(), sin_port() {}
+};
+
+struct pollevents_helper {
+    short events;
+    pollevents_helper(short e) : events(e) {}
+    pollevents_helper() : events() {}
+};
+
+struct in_port_t_helper {
+    in_port_t port;
+    in_port_t_helper(in_port_t p) : port(p) {}
+    in_port_t_helper() : port() {}
+};
 
 namespace Utils {
     string parseArgs(int ac, char **av);

@@ -19,6 +19,7 @@
 #include "Config.hpp"
 #include "Constants.hpp"
 #include "Logger.hpp"
+#include "Utils.hpp"
 
 using Constants::MultPlexType;
 using std::map;
@@ -50,7 +51,7 @@ class HttpServer {
     enum RequestState { READING_HEADERS, READING_BODY, REQUEST_COMPLETE, REQUEST_ERROR };
 
     //// typedefs ////
-    typedef pair<struct in_addr, in_port_t> AddrPort;
+    typedef pair<struct in_addr, in_port_t_helper> AddrPort;
     typedef map<AddrPort, size_t, AddrPortCompare> DefaultServers;
     typedef vector<int> SelectFds;
     typedef vector<Server> Servers;
@@ -112,7 +113,7 @@ class HttpServer {
                 return true;
             if (memcmp(&a.first, &b.first, sizeof(a.first)) > 0)
                 return false;
-            return a.second < b.second;
+            return a.second.port < b.second.port;
         }
     };
     struct MultPlexFds {

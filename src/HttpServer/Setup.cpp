@@ -18,12 +18,6 @@
 
 using std::runtime_error;
 
-static string getServerIpStr(const ServerCtx &serverCtx) {
-    string listen = "listen";
-    const Arguments &hostPort = getFirstDirective(serverCtx.first, listen);
-    return hostPort[0];
-}
-
 static struct in_addr getServerIp(const ServerCtx &serverCtx) {
     Logger::lastInstance().debug()
         << "Trying to get server IP from listen directive" << std::endl;
@@ -60,7 +54,10 @@ static in_port_t getServerPort(const ServerCtx &serverCtx) {
 static int createTcpListenSocket() {
     Logger::lastInstance().debug()
         << "Creating AF_INET SOCK_STREAM socket (TCP)" << std::endl;
-    int listeningSocket = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    int listeningSocket = socket(AF_INET, SOCK_STREAM,
+                                 0); // TODO: @timo: close all fds from _monitorFds array
+                                     // // TODO: @timo: close all fds from _monitorFds and
+                                     // associated CGI read/write fds whenever forking.
     if (listeningSocket < 0)
         throw runtime_error("Failed to create socket");
     Logger::lastInstance().debug()
@@ -84,9 +81,8 @@ static void bindSocket(int listeningSocket, const HttpServer::Server &server) {
     address.sin_addr = server.ip;
 
     Logger::lastInstance().debug()
-        << "Binding socket " << repr(listeningSocket) << " to " << repr(server.ip)
-        << (Logger::lastInstance().istrace5() ? ":" : num(":"))
-        << repr(ntohs(server.port)) << std::endl;
+        << "Binding socket " << repr(listeningSocket) << " to "
+        << repr(sockaddr_in_wrapper(server.ip, server.port)) << std::endl;
     if (bind(listeningSocket, (struct sockaddr *)&address, sizeof(address)) < 0) {
         ::close(listeningSocket);
         throw runtime_error(string("bind error: ") + strerror(errno));
@@ -112,9 +108,9 @@ static bool alreadyListening(const HttpServer::Server &server,
             (::memcmp(&otherAddr, &server.ip, sizeof(otherAddr)) == 0 ||
              otherAddr.s_addr == INADDR_ANY)) {
             Logger::lastInstance().debug()
-                << "Already listening on addr:port: " << repr(otherAddr)
-                << (Logger::lastInstance().istrace5() ? ":" : num(":"))
-                << repr(ntohs(otherPort)) << ", skipping" << std::endl;
+                << "Already listening on addr:port: "
+                << repr(sockaddr_in_wrapper(otherAddr, otherPort)) << ", skipping"
+                << std::endl;
             return true;
         }
     }
@@ -153,18 +149,16 @@ void HttpServer::setupServers(const Config &config) {
         setupListeningSocket(server);
         log.info() << "Server with names " << repr(server.serverNames)
                    << " is listening on "
-                   << (log.istrace5() ? getServerIpStr(*serverCtx) + ":"
-                                      : num(getServerIpStr(*serverCtx) + ":"))
-                   << repr(ntohs(server.port)) << '\n';
+                   << repr(sockaddr_in_wrapper(server.ip, server.port)) << '\n';
 
         _servers.push_back(server);
 
         AddrPort addr(server.ip, server.port);
         if (_defaultServers.find(addr) == _defaultServers.end()) {
             Logger::lastInstance().debug()
-                << "Setting up the default server for addr:port " << repr(server.ip)
-                << (Logger::lastInstance().istrace5() ? ":" : num(":"))
-                << repr(ntohs(server.port)) << " to the server with server names "
+                << "Setting up the default server for addr:port "
+                << repr(sockaddr_in_wrapper(server.ip, server.port))
+                << " to the server with server names "
                 << repr(getFirstDirective(_servers.back().directives, "server_name"))
                 << std::endl;
             _defaultServers[addr] = _servers.size() - 1;

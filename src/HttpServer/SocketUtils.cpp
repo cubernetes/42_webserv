@@ -13,8 +13,13 @@ using Constants::POLL;
 using Constants::SELECT;
 
 bool HttpServer::isListeningSocket(int fd) {
-    return std::find(_listeningSockets.begin(), _listeningSockets.end(), fd) !=
-           _listeningSockets.end();
+    bool isListening = std::find(_listeningSockets.begin(), _listeningSockets.end(),
+                                 fd) != _listeningSockets.end();
+    log.trace() << "Checking if " << repr(fd) << " is a listening socket "
+                << repr(isListening)
+                << std::endl; // TODO: @timo: overload << s.t. you don't have to do
+                              // repr(intVar) all the time
+    return isListening;
 }
 
 int HttpServer::multPlexFdToRawFd(const MultPlexFds &readyFds, size_t i) {
