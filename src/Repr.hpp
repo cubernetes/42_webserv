@@ -638,7 +638,7 @@ template <> struct ReprWrapper<struct epoll_event> {
         std::ostringstream oss;
         oss << "epoll_event(...)";
         if (Logger::lastInstance().istrace5())
-            return oss.str();
+            return Utils::jsonEscape(oss.str());
         else
             return kwrd(oss.str());
     }
@@ -663,7 +663,7 @@ template <> struct ReprWrapper<MultPlexType> {
             break;
         }
         if (Logger::lastInstance().istrace5())
-            return oss.str();
+            return Utils::jsonEscape(oss.str());
         else
             return num(oss.str());
     }
@@ -691,7 +691,7 @@ template <> struct ReprWrapper<HttpServer::RequestState> {
             break;
         }
         if (Logger::lastInstance().istrace5())
-            return oss.str();
+            return Utils::jsonEscape(oss.str());
         else
             return num(oss.str());
     }
@@ -716,7 +716,7 @@ template <> struct ReprWrapper<HttpServer::FdState> {
             break;
         }
         if (Logger::lastInstance().istrace5())
-            return oss.str();
+            return Utils::jsonEscape(oss.str());
         else
             return num(oss.str());
     }
@@ -750,7 +750,7 @@ template <> struct ReprWrapper<TokenType> {
             break;
         }
         if (Logger::lastInstance().istrace5())
-            return oss.str();
+            return Utils::jsonEscape(oss.str());
         else
             return num(oss.str());
     }

@@ -24,7 +24,7 @@ void swap(Reflection &a, Reflection &b) { a.swap(b); }
 string Reflection::reprStruct(string name, Members members) const {
     std::stringstream out;
     if (Logger::lastInstance().istrace5()) {
-        out << "{\"class\":\"" << Utils::jsonEscape(name) << "\"";
+        out << "{\"class\":" << Utils::jsonEscape(name);
         for (Members::const_iterator it = members.begin(); it != members.end(); ++it)
             out << ",\"" << it->first << "\":" << (this->*it->second.first)();
         out << "}";

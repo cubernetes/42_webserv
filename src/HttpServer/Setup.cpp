@@ -158,12 +158,13 @@ void HttpServer::setupServers(const Config &config) {
 
         AddrPort addr(server.ip, server.port);
         if (_defaultServers.find(addr) == _defaultServers.end()) {
+            string server_name = "server_name";
+            const Arguments &args =
+                getFirstDirective(_servers.back().directives, server_name);
             Logger::lastInstance().debug()
                 << "Setting up the default server for addr:port "
                 << repr(sockaddr_in_wrapper(server.ip, server.port))
-                << " to the server with server names "
-                << repr(getFirstDirective(_servers.back().directives, "server_name"))
-                << std::endl;
+                << " to the server with server names " << repr(args) << std::endl;
             _defaultServers[addr] = _servers.size() - 1;
         }
         ++serverId;
