@@ -158,7 +158,7 @@ string Utils::ellipsisize(const string &str, size_t maxLen) {
 string Utils::strToLower(const string &str) {
     string newStr = str;
     std::transform(newStr.begin(), newStr.end(), newStr.begin(),
-                   std::ptr_fun<int, int>(std::tolower));
+                   static_cast<int (*)(int)>(std::tolower));
     return newStr;
 }
 
@@ -166,7 +166,7 @@ string Utils::strToLower(const string &str) {
 string Utils::strToUpper(const string &str) {
     string newStr = str;
     std::transform(newStr.begin(), newStr.end(), newStr.begin(),
-                   std::ptr_fun<int, int>(std::toupper));
+                   static_cast<int (*)(int)>(std::toupper));
     return newStr;
 }
 

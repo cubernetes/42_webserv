@@ -29,8 +29,14 @@ void HttpServer::queueWrite(int clientSocket, const string &data) {
 
 void HttpServer::terminatePendingCloses(int clientSocket) {
     if (_pendingCloses.find(clientSocket) != _pendingCloses.end()) {
+        log.debug() << "Removing client " << repr(clientSocket) << " from pendingCloses"
+                    << std::endl;
         _pendingCloses.erase(clientSocket);
         removeClient(clientSocket);
+    } else {
+        log.debug() << "Client " << repr(clientSocket)
+                    << " is not in pendingCloses, not doing anything with it"
+                    << std::endl;
     }
 }
 
@@ -42,16 +48,35 @@ bool HttpServer::maybeTerminateConnection(PendingWriteMap::iterator it,
                 .end()) { // STOP, make sure CGI doesn't want to write data to this client
             if (_cgiToClient.count(clientSocket) ==
                 0) { // STOP, make sure clientSocket is not a writeFd to the CGI process
+                log.debug() << "Client " << repr(clientSocket)
+                            << " is a proper remote client, there are no pending writes "
+                               "for this client and no CGI process wants to write data "
+                               "to it. Closing connection to it."
+                            << std::endl;
                 // No pending writes, for POLL: remove POLLOUT from events
                 // TODO: @timo: is this really needed? aren't we removing the client
                 // anyways?
                 stopMonitoringForWriteEvents(_monitorFds, clientSocket);
                 // Also if this client's connection is pending to be closed, close it
                 terminatePendingCloses(clientSocket);
+            } else {
+                log.debug() << "There are no pending writes to FD " << repr(clientSocket)
+                            << " anymore, but don't terminate"
+                               " connection, since FD refers to the stdin of a CGI "
+                               "process and will be cleaned up elsewhere"
+                            << std::endl;
             }
-        }
+        } else
+            log.debug()
+                << "There are no pending writes to FD " << repr(clientSocket)
+                << " anymore, but don't terminate "
+                   "connection yet, since the following CGI process still wants to write "
+                   "data to the client: "
+                << repr(_clientToCgi.at(clientSocket)) << std::endl;
         return true;
     }
+    log.debug() << "There are still pending writes, not terminating connection to client "
+                << repr(clientSocket) << std::endl;
     return false;
 }
 
@@ -62,15 +87,23 @@ void HttpServer::terminateIfNoPendingDataAndNoCgi(PendingWriteMap::iterator &it,
     // Check whether we've sent everything and that there are no CGI processes
     if (_clientToCgi.find(clientSocket) == _clientToCgi.end() &&
         (pw.length() == 0 || bytesSent == 0)) {
+        log.debug() << "Removing client " << repr(clientSocket) << " from pendingWrites"
+                    << std::endl;
         _pendingWrites.erase(it);
         // TODO: @all: what about removing pendingCloses?
         // for POLL: remove POLLOUT from events since we're done writing
         stopMonitoringForWriteEvents(_monitorFds, clientSocket);
         // TODO: @all: yeah actually we really have to close the connection here somehow,
         // removeCLient or smth
-        removeClient(clientSocket);         // REALLY NOT SURE ABOUT THIS ONE
+        removeClient(clientSocket); // REALLY NOT SURE ABOUT THIS ONE
+        log.debug() << "Removing client " << repr(clientSocket) << " from pendingCloses"
+                    << std::endl;
         _pendingCloses.erase(clientSocket); // also not 100% sure about this one
-        _cgiToClient.erase(clientSocket);
+        if (_cgiToClient.count(clientSocket) != 0) {
+            log.debug() << "Removing CGI pipe FD " << repr(clientSocket)
+                        << " (write end, stdin of CGI) from cgiToClient map" << std::endl;
+            _cgiToClient.erase(clientSocket);
+        }
     }
 }
 
@@ -103,14 +136,20 @@ void HttpServer::writeToClient(int clientSocket) {
     if (bytesSent < 0) {
         // TODO: @all: remove pending closes? clear pending writes?
         removeClient(clientSocket);
+        log.debug() << "Removing client " << repr(clientSocket) << " from pendingWrites"
+                    << std::endl;
         _pendingWrites.erase(clientSocket);
+        log.debug() << "Removing client " << repr(clientSocket) << " from pendingCloses"
+                    << std::endl;
         _pendingCloses.erase(clientSocket);
         if (_cgiToClient.count(clientSocket) > 0) {
             int client = _cgiToClient[clientSocket];
+            log.debug() << "Client " << repr(client) << " had data to send but pipe broke"
+                        << std::endl;
             log.debug() << "Notifying remote client " << repr(client) << " with a "
                         << repr(500) << ", since CGI process died/closed stdin"
                         << std::endl;
-            sendError(client, 500, NULL);
+            sendError(client, 502, NULL);
         }
         return;
     }
@@ -171,7 +210,7 @@ bool HttpServer::sendFileContent(int clientSocket, const string &filePath,
 }
 
 string HttpServer::wrapInHtmlBody(const string &text) {
-    log.trace() << "Wrapping text " << repr(text) << " in some html and body tags"
+    log.trace() << "Wrapping text in some html and body tags: " << repr(text)
                 << std::endl;
     return "<html>\r\n\t<body>\r\n\t\t" + text + "\r\n\t</body>\r\n</html>\r\n";
 }

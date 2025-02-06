@@ -87,10 +87,9 @@ HttpServer::MultPlexFds HttpServer::getReadyFds(MultPlexFds &monitorFds) {
     log.debug() << "Trying to get ready FDs with multiplexing method "
                 << repr(monitorFds.multPlexType) << std::endl;
     log.trace() << "These are the monitoring FDs: " << repr(monitorFds) << std::endl;
-    log.debug() << "Remote clients: "
-                << repr(determineRemoteClients(monitorFds, _listeningSockets,
-                                               _cgiToClient))
-                << std::endl;
+    MultPlexFds remotes =
+        determineRemoteClients(monitorFds, _listeningSockets, _cgiToClient);
+    log.debug() << "Remote clients: " << repr(remotes) << std::endl;
     switch (monitorFds.multPlexType) {
     case SELECT:
         throw std::logic_error("Getting ready FDs from select not implemented yet");

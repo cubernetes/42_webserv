@@ -301,7 +301,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
         ::exit(1);
     }
 #if PP_DEBUG
-    sleep(10);
+    sleep(3);
     // log.debug() << "Parent: Waiting for CGI process to finish" << std::endl;
     //(void)::waitid(P_PID, (__id_t)pid, NULL, WNOWAIT);
 #endif
