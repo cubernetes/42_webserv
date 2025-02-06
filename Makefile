@@ -12,16 +12,18 @@ CATCH2 := Catch2
 TOOLS := script
 
 # tools
-# Not using CXX since it defaults to g++, invalidating the logic needed
+# Not using CXX since it defaults to g++, thus making it impossible to use another default while also using ?= assignment
 _CXX ?= c++
 #_CXX := clang++ # TODO: @all: make sure it compiles with this
 #_CXX := g++     # TODO: @all: make sure it compiles with this
-CXX := $(notdir $(shell ls -l $$(which $(_CXX)) | awk '{print $$NF}'))
 RM := /bin/rm -f
 MKDIR := /bin/mkdir -p
 
+# Don't touch below, always configure via _CXX
+# WILL break on non-POSIX systems, so hm sucks I guess
+CXX := $(notdir $(shell ls -l $$(which $(_CXX)) | awk '{print $$NF}'))
+
 # flags
-# CFLAGS := # Don't reset, as some helper scripts in this repo need to adjust CFLAGS
 CFLAGS += -O3
 CFLAGS += -Wall
 CFLAGS += -Wextra
@@ -40,12 +42,12 @@ else ifeq ($(strip $(CXX)),g++)
 CFLAGS += -fmax-errors=1
 endif
 
-CXXFLAGS := -Weffc++
+CXXFLAGS += -Weffc++
 
-CPPFLAGS := -Isrc -Isrc/HttpServer
+CPPFLAGS += -Isrc
+CPPFLAGS += -Isrc/HttpServer
 
-# LDFLAGS := # Don't reset, as some helper scripts in this repo need to adjust LDFLAGS
-# LDLIBS :=
+# LDLIBS +=
 
 # additional Catch2 flags
 C2_CFLAGS := -std=c++14 -I$(HOME)/.local/include -ICatch2/src -ICatch2/build/generated-includes -Wno-effc++
@@ -53,7 +55,7 @@ C2_LDFLAGS := -L$(HOME)/.local/lib -LCatch2/build/src -lCatch2Main -lCatch2
 
 # DEBUG=1 make re # include debugging information in the binary
 ifeq ($(DEBUG), 1)
-	CFLAGS += -ggdb3 -O0
+	CFLAGS += -ggdb3 -O0 -DPP_DEBUG=true
 	LDFLAGS += -ggdb3 -O0
 endif
 
@@ -155,7 +157,7 @@ $(OBJDIR_C2):
 
 $(CATCH2):
 	1>/dev/null 2>&1 command -v cmake || { printf '\033[31m%s\033[m\n' 'Cannot build Catch2 without cmake, please install it or remove "$$(CATCH2)" as a dependency of "all_c2" (in the Makefile) if you have Catch2 installed globally (adjust CFLAGS accordingly).'; exit 1; }
-	git clone https://github.com/catchorg/Catch2 && \
+	git clone --depth 1 https://github.com/catchorg/Catch2 && \
 		cd Catch2 && \
 		cmake --install-prefix="$(HOME)/.local" -Bbuild -H. -DBUILD_TESTING=OFF && \
 		cmake --build build/ --target Catch2WithMain
@@ -178,6 +180,11 @@ fclean: clean
 	$(RM) $(NAME)
 	$(RM) $(TEST)
 
+## Remove intermediate files, build artefacts, Catch2, and untracked files (interactively)
+pristine: fclean
+	$(RM) -r $(CATCH2)
+	git clean -dfi
+
 ## Rebuild project
 re: fclean
 	$(MAKE) all
@@ -185,8 +192,8 @@ re: fclean
 ## Build project, then run
 run: all
 	@printf '\n'
-	# This allows $(NAME) to be run using either an absolute, relative or no path.
-	# You can pass arguments like this: make run ARGS="hello ' to this world ! ' ."
+	@# This allows $(NAME) to be run using either an absolute, relative or no path.
+	@# You can pass arguments like this: make run ARGS="hello ' to this world ! ' ."
 	@PATH=".$${PATH:+:$${PATH}}" && $(NAME) $(ARGS)
 
 ## Build project, then run using valgrind memcheck

@@ -19,15 +19,24 @@ static Logger::Level convertStringToLogLevel(const char *str) {
         return Logger::INFO;
     else if (s == "DEBUG" || s == "5")
         return Logger::DEBUG;
-    else if (s == "TRACE" || s == "6")
+    else if (s == "TRACE" || s == "TRACE1" || s == "6")
         return Logger::TRACE;
+    else if (s == "TRACE2" || s == "7")
+        return Logger::TRACE2;
+    else if (s == "TRACE3" || s == "8")
+        return Logger::TRACE3;
+    else if (s == "TRACE4" || s == "9")
+        return Logger::TRACE4;
+    else if (s == "TRACE5" || s == "10")
+        return Logger::TRACE5;
     else
-        throw std::runtime_error(
-            "Option parsing error: Invalid logLevel argument to `-l' option. Run with -h for more information.");
+        throw std::runtime_error("Option parsing error: Invalid logLevel argument to "
+                                 "`-l' option. Run with -h for more information.");
 }
 
 Options::Options(int ac, char **av)
-    : printVersion(), onlyCheckConfig(), configPath(Constants::defaultConfPath), logLevel(Logger::INFO) {
+    : printHelp(), printVersion(), onlyCheckConfig(),
+      configPath(Constants::defaultConfPath), logLevel(Logger::INFO) {
     (void)ac;
     bool configPathSpecified = false;
     ++av;
@@ -46,7 +55,8 @@ Options::Options(int ac, char **av)
                 logLevel = convertStringToLogLevel(av[1]);
                 ++av;
             } else {
-                throw std::runtime_error("Option parsing error: Excpected loglevel argument to `-l' option. Run with "
+                throw std::runtime_error("Option parsing error: Excpected loglevel "
+                                         "argument to `-l' option. Run with "
                                          "-h for more information.");
             }
         } else if (arg == "-c") {
@@ -55,15 +65,17 @@ Options::Options(int ac, char **av)
                 configPathSpecified = true;
                 ++av;
             } else {
-                throw std::runtime_error("Option parsing error: Excpected path argument to `-c' option. Run with -h "
+                throw std::runtime_error("Option parsing error: Excpected path argument "
+                                         "to `-c' option. Run with -h "
                                          "for more information.");
             }
         } else if (arg[0] == '-') {
             throw std::runtime_error("Option parsing error: Unknown option: " + arg);
         } else {
             if (configPathSpecified)
-                throw std::runtime_error("Option parsing error: Config path was already specified as: '" + configPath +
-                                         "'");
+                throw std::runtime_error(
+                    "Option parsing error: Config path was already specified as: '" +
+                    configPath + "'");
             configPath = string(*av);
             configPathSpecified = true;
         }

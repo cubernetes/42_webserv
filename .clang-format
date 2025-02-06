@@ -2,5 +2,5 @@ Standard: Cpp03
 BasedOnStyle: LLVM
 SortIncludes: true
 NamespaceIndentation: All
-ColumnLimit: 120
+ColumnLimit: 90
 IndentWidth: 4

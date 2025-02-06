@@ -21,18 +21,22 @@ void finish(int signal) {
 }
 
 void HttpServer::initSignals() {
-    ::signal(SIGPIPE, SIG_IGN); // writing to dead cgi -> sigpipe -> don't care just continue
+    log.debug() << "Ignoring SIGPIPE signal (in case CGI process strikes)" << std::endl;
+    ::signal(SIGPIPE,
+             SIG_IGN); // writing to dead cgi -> sigpipe -> don't care just continue
+    log.debug() << "Handling SIGINT to finish gracefully" << std::endl;
     ::signal(SIGINT, &finish);
+    log.debug() << "Handling SIGTERM to finish gracefully" << std::endl;
     ::signal(SIGTERM, &finish);
 }
 
 bool HttpServer::_running = true;
 HttpServer::HttpServer(const string &configPath, Logger &_log, size_t onlyCheckConfig)
-    : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(),
-      _pollFds(_monitorFds.pollFds), _httpVersionString(Constants::httpVersionString),
-      _rawConfig(readConfig(configPath)), _config(parseConfig(_rawConfig)), _mimeTypes(), _statusTexts(),
-      _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), defaultLogger(),
-      log(_log) {
+    : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(),
+      _listeningSockets(), _httpVersionString(Constants::httpVersionString),
+      _rawConfig(removeComments(readConfig(configPath))),
+      _config(parseConfig(_rawConfig)), _mimeTypes(), _statusTexts(), _pendingWrites(),
+      _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), log(_log) {
     TRACE_ARG_CTOR(const string &, configPath);
     if (onlyCheckConfig > 0) {
         if (onlyCheckConfig > 1)
@@ -52,6 +56,26 @@ std::ostream &operator<<(std::ostream &os, const HttpServer &httpServer) {
     return os << static_cast<string>(httpServer);
 }
 
+HttpServer::Server::~Server() { TRACE_DTOR; }
+HttpServer::Server::Server(const Directives &_directives, const LocationCtxs &_locations,
+                           const Arguments &_serverNames, Logger &_log, size_t _id)
+    : ip(), port(), directives(_directives), locations(_locations),
+      serverNames(_serverNames), log(_log), id(_id) {
+    TRACE_ARG_CTOR(const Directives, _directives, const LocationCtxs, _locations,
+                   const Arguments, _serverNames);
+}
+HttpServer::Server::Server(const Server &other)
+    : ip(other.ip), port(other.port), directives(other.directives),
+      locations(other.locations), serverNames(other.serverNames), log(other.log),
+      id(other.id) {
+    TRACE_COPY_CTOR;
+}
+HttpServer::Server &HttpServer::Server::operator=(const Server &other) {
+    TRACE_COPY_ASSIGN_OP;
+    (void)other;
+    return *this;
+}
+
 // clang-format off
 void HttpServer::run() {
     log.debug() << "Starting mainloop" << std::endl;
@@ -64,7 +88,8 @@ void HttpServer::run() {
 								  // 2) write pending data for Constants::chunkSize bytes (and remove this disposition if done writing)
 								  // 3) read data for Constants::chunkSize bytes (or remove client if appropriate)
 								  // 4) do nothing
-		checkForInactiveClients();
+		checkForInactiveClients(); // reset connection for timed out CGI's
+		log.debug() << "Finished one mainloop iteration" << std::endl;
 	}
   log.warn() << "Shutting server down" << std::endl;
 }

@@ -1,5 +1,6 @@
 #pragma once /* DirectoryIndexer.hpp */
 
+#include <cstddef>
 #include <string>
 #include <utility>
 #include <vector>
@@ -8,7 +9,7 @@
 
 using std::string;
 
-typedef std::vector<std::pair<std::string, std::pair<long, long long> > > Entries;
+typedef std::vector<std::pair<std::string, std::pair<long, size_t> > > Entries;
 
 class DirectoryIndexer {
   public:
@@ -18,8 +19,8 @@ class DirectoryIndexer {
     string indexDirectory(string location, string path);
 
   private:
-    void iterateOverDirEntries(Entries &entries, struct dirent *&entry, const string &path);
-    std::string formatSizeReadable(long long size);
+    void iterateOverDirEntries(Entries &entries, struct dirent *&entry,
+                               const string &path);
 
     Logger &log;
 };

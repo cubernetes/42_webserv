@@ -34,7 +34,7 @@
 
 ## 6. setup routes with one or multiple of the following rules/configuration (routes won't be using regexp)
 
-    - location == route in nginx-speak
+    - location == route in NGINX-speak
     - server.location
     - default: none
     - multiple: yes
@@ -51,7 +51,7 @@
 
     - location.return
     - default: none
-    - multiple: no // although nginx allows for multiple
+    - multiple: no // although NGINX allows for multiple
     - https://nginx.org/en/docs/http/ngx_http_rewrite_module.html#return
 
 ### 6.3 define a directory or a file from where the file should be searched
