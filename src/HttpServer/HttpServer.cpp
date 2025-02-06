@@ -33,8 +33,7 @@ void HttpServer::initSignals() {
 bool HttpServer::_running = true;
 HttpServer::HttpServer(const string &configPath, Logger &_log, size_t onlyCheckConfig)
     : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(),
-      _listeningSockets(), _pollFds(_monitorFds.pollFds),
-      _httpVersionString(Constants::httpVersionString),
+      _listeningSockets(), _httpVersionString(Constants::httpVersionString),
       _rawConfig(removeComments(readConfig(configPath))),
       _config(parseConfig(_rawConfig)), _mimeTypes(), _statusTexts(), _pendingWrites(),
       _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), log(_log) {
@@ -89,7 +88,8 @@ void HttpServer::run() {
 								  // 2) write pending data for Constants::chunkSize bytes (and remove this disposition if done writing)
 								  // 3) read data for Constants::chunkSize bytes (or remove client if appropriate)
 								  // 4) do nothing
-		checkForInactiveClients();
+		checkForInactiveClients(); // reset connection for timed out CGI's
+		log.debug() << "Finished one mainloop iteration" << std::endl;
 	}
   log.warn() << "Shutting server down" << std::endl;
 }

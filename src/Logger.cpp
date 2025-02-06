@@ -1,4 +1,16 @@
+#include <bits/types/struct_timeval.h>
+#include <cmath>
+#include <cstdio>
+#include <ctime>
+#include <iostream>
+#include <ostream>
+#include <unistd.h>
+
+#include "Ansi.hpp"
+#include "Constants.hpp"
 #include "Logger.hpp"
+#include "Repr.hpp"
+#include "Utils.hpp"
 
 // clang-format off
 const string &Logger::fatalPrefix = "[ " + ansi::redBg("FATAL") + "  ] ";
@@ -99,9 +111,15 @@ Logger::StreamWrapper::StreamWrapper(std::ostream &_os, Level _thisLevel,
     }
 }
 
+#if STRICT_EVAL
+static string formattedPid() { return "[ " + cmt(" N/A PID ") + "] " }
+#else
+static string formattedPid() { return "[" + cmt(" ") + repr(getpid()) + cmt(" ") + "] "; }
+#endif
+
 Logger::StreamWrapper &Logger::StreamWrapper::operator()(bool printPrefix) {
     if (printPrefix)
-        return *this << prefix;
+        return *this << prefix << Utils::formattedTimestamp(0, true) << formattedPid();
     else
         return *this;
 }

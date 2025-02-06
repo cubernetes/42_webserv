@@ -1,26 +1,34 @@
-#include <algorithm>
 #include <cctype>
 #include <cstddef>
+#include <ostream>
 
 #include "Constants.hpp"
 #include "HttpServer.hpp"
+#include "Logger.hpp"
+#include "Repr.hpp"
+#include "Utils.hpp"
 
 string HttpServer::getMimeType(const string &path) {
     size_t dotPos = path.find_last_of('.');
-    if (dotPos == string::npos)
+    log.trace() << "Doing a MIME type lookup for path: " << repr(path) << std::endl;
+    if (dotPos == string::npos) {
+        log.debug() << "Path " << repr(path)
+                    << " doesn't have an extension, returning default MIME type "
+                    << repr(Constants::defaultMimeType) << std::endl;
         return Constants::defaultMimeType; // file without an extension
+    }
 
-    string ext = path.substr(dotPos + 1);
-    std::transform(
-        ext.begin(), ext.end(), ext.begin(),
-        static_cast<int (*)(int)>(
-            ::tolower)); // a malicious MIME type could contain negative chars, leading to
-                         // undefined behaviour with
-                         // ::tolower, see
-                         // https://stackoverflow.com/questions/5270780/what-does-the-mean-in-tolower
+    string ext = Utils::strToLower(path.substr(dotPos + 1));
     MimeTypes::const_iterator it = _mimeTypes.find(ext);
-    if (it != _mimeTypes.end())
-        return it->second;             // MIME type found
+    if (it != _mimeTypes.end()) {
+        log.debug() << "Path " << repr(path) << " has registered extension " << repr(ext)
+                    << ", returning MIME type " << repr(it->second) << std::endl;
+        return it->second; // MIME type found
+    }
+    log.debug() << "Path " << repr(path) << " has extension " << repr(ext)
+                << " which does not have an associated MIME type, returning default "
+                   "MIME type "
+                << repr(Constants::defaultMimeType) << std::endl;
     return Constants::defaultMimeType; // MIME type not found
 }
 

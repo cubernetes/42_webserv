@@ -145,10 +145,20 @@ template <> struct ReprWrapper<bool> {
 template <> struct ReprWrapper<string> {
     static inline string repr(const string &value) {
         if (Logger::lastInstance().istrace5())
-            return "\"" + Utils::jsonEscape(value) + "\"";
-        else
-            return str("\"" + Utils::jsonEscape(value) + "\"") +
-                   (Logger::lastInstance().istrace4() ? punct("s") : "");
+            return Utils::jsonEscape(value);
+        else {
+            if (Logger::lastInstance().istrace4())
+                return str(Utils::escapeExceptNlAndTab(value)) +
+                       (Logger::lastInstance().istrace4() ? punct("s") : "");
+            else if (Logger::lastInstance().istrace2())
+                return str(Utils::jsonEscape(value)) +
+                       (Logger::lastInstance().istrace4() ? punct("s") : "");
+            else // for trace1, debug, info, warn, err, fatal -> we don't want to see the
+                 // whole (possibly huge) string
+                return str(Utils::jsonEscape(
+                           Utils::ellipsisize(value, Constants::loggingMaxStringLen))) +
+                       (Logger::lastInstance().istrace4() ? punct("s") : "");
+        }
     }
 };
 
@@ -171,13 +181,20 @@ template <> struct ReprWrapper<char *> {
     static inline string repr(const char *const &value) {
         if (Logger::lastInstance().istrace5()) {
             if (value)
-                return "\"" + Utils::jsonEscape(value) + "\"";
+                return Utils::jsonEscape(value);
             else
                 return ReprWrapper<const void *>::repr(value);
         } else {
-            if (value)
-                return str("\"" + Utils::jsonEscape(value) + "\"");
-            else
+            if (value) {
+                if (Logger::lastInstance().istrace4())
+                    return str(Utils::escapeExceptNlAndTab(value));
+                else if (Logger::lastInstance().istrace2())
+                    return str(Utils::jsonEscape(value));
+                else // for trace1, debug, info, warn, err, fatal -> we don't want to see
+                     // the whole (possibly huge) string
+                    return str(Utils::jsonEscape(
+                        Utils::ellipsisize(value, Constants::loggingMaxStringLen)));
+            } else
                 return ReprWrapper<const void *>::repr(value);
         }
     }
@@ -273,8 +290,8 @@ POST_REFLECT_MEMBER(HttpServer::CgiProcess, pid_t, pid, int, readFd, int, writeF
                     const LocationCtx *, location, bool, headersSent, std::time_t,
                     lastActive);
 POST_REFLECT_MEMBER(HttpServer::HttpRequest, string, method, string, path, string,
-                    httpVersion, HttpServer::Headers, headers, string, body,
-                    HttpServer::RequestState, state, size_t, contentLength, bool,
+                    rawQuery, string, httpVersion, HttpServer::Headers, headers, string,
+                    body, HttpServer::RequestState, state, size_t, contentLength, bool,
                     chunkedTransfer, size_t, bytesRead, string, temporaryBuffer, bool,
                     pathParsed);
 POST_REFLECT_MEMBER(HttpServer::MultPlexFds, MultPlexType, multPlexType,
@@ -283,10 +300,9 @@ POST_REFLECT_MEMBER(HttpServer::MultPlexFds, MultPlexType, multPlexType,
 POST_REFLECT_GETTER(
     HttpServer, HttpServer::MultPlexFds, _monitorFds, HttpServer::ClientFdToCgiMap,
     _clientToCgi, HttpServer::CgiFdToClientMap, _cgiToClient, vector<int>,
-    _listeningSockets, HttpServer::PollFds, _pollFds, string, _httpVersionString,
-    HttpServer::PendingWriteMap, _pendingWrites, HttpServer::PendingCloses,
-    _pendingCloses, HttpServer::DefaultServers, _defaultServers,
-    HttpServer::PendingRequests,
+    _listeningSockets, string, _httpVersionString, HttpServer::PendingWriteMap,
+    _pendingWrites, HttpServer::PendingCloses, _pendingCloses, HttpServer::DefaultServers,
+    _defaultServers, HttpServer::PendingRequests,
     _pendingRequests); /*, HttpServer::StatusTexts, _statusTexts, HttpServer::MimeTypes,
                           _mimeTypes, Config, _config, HttpServer::Servers, _servers,
                           string, _rawConfig); */

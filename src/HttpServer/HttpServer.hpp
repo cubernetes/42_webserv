@@ -6,7 +6,6 @@
 #include <map>
 #include <netinet/in.h>
 #include <set>
-#include <sstream>
 #include <string>
 #include <sys/epoll.h>
 #include <sys/poll.h>
@@ -72,6 +71,7 @@ class HttpServer {
     struct HttpRequest {
         string method;
         string path;
+        string rawQuery;
         string httpVersion;
         Headers headers;
         string body;
@@ -83,7 +83,7 @@ class HttpServer {
         bool pathParsed;
 
         HttpRequest()
-            : method(), path("/"), httpVersion(), headers(), body(),
+            : method(), path("/"), rawQuery(), httpVersion(), headers(), body(),
               state(READING_HEADERS), contentLength(0), chunkedTransfer(false),
               bytesRead(0), temporaryBuffer(), pathParsed(false) {}
     };
@@ -109,9 +109,9 @@ class HttpServer {
     };
     struct AddrPortCompare {
         bool operator()(const AddrPort &a, const AddrPort &b) const {
-            if (memcmp(&a.first, &b.first, sizeof(a.first)) < 0)
+            if (std::memcmp(&a.first, &b.first, sizeof(a.first)) < 0)
                 return true;
-            if (memcmp(&a.first, &b.first, sizeof(a.first)) > 0)
+            if (std::memcmp(&a.first, &b.first, sizeof(a.first)) > 0)
                 return false;
             return a.second.port < b.second.port;
         }
@@ -143,7 +143,7 @@ class HttpServer {
         int readFd;
         int writeFd;
         string response;
-        unsigned long totalSize;
+        size_t totalSize;
         int clientSocket;
         const LocationCtx *location;
         bool headersSent;
@@ -167,7 +167,6 @@ class HttpServer {
     };
 
     const vector<int> &get_listeningSockets() const { return _listeningSockets; }
-    const PollFds &get_pollFds() const { return _pollFds; }
     const string &get_httpVersionString() const { return _httpVersionString; }
     const string &get_rawConfig() const { return _rawConfig; }
     const Config &get_config() const { return _config; }
@@ -190,7 +189,6 @@ class HttpServer {
   private:
     //// private members ////
     vector<int> _listeningSockets;
-    PollFds &_pollFds;
     const string _httpVersionString;
     const string _rawConfig;
     const Config _config;
@@ -207,18 +205,16 @@ class HttpServer {
     // HttpServer must always be constructed with a config
     HttpServer()
         : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(),
-          _listeningSockets(), _pollFds(_monitorFds.pollFds), _httpVersionString(),
-          _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(),
-          _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(),
-          log(Logger::lastInstance()){};
+          _listeningSockets(), _httpVersionString(), _rawConfig(), _config(),
+          _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(),
+          _defaultServers(), _pendingRequests(), log(Logger::lastInstance()){};
     // Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a
     // server and its config
     HttpServer(const HttpServer &)
         : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(),
-          _listeningSockets(), _pollFds(_monitorFds.pollFds), _httpVersionString(),
-          _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(),
-          _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(),
-          log(Logger::lastInstance()){};
+          _listeningSockets(), _httpVersionString(), _rawConfig(), _config(),
+          _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(),
+          _defaultServers(), _pendingRequests(), log(Logger::lastInstance()){};
     // HttpServer cannot be assigned to
     HttpServer &operator=(const HttpServer &) { return *this; };
 
@@ -234,12 +230,8 @@ class HttpServer {
 
     // Reading from a client
     void readFromClient(int clientSocket);
-    ssize_t recvToBuffer(int clientSocket, char *buffer, size_t bufSiz);
 
     // request parsing
-    HttpRequest parseHttpRequest(const char *buffer);
-    void parseHeaders(std::istringstream &requestStream, string &line,
-                      HttpRequest &request);
     size_t findMatchingServer(const string &host, const struct in_addr &addr,
                               in_port_t port) const;
     size_t findMatchingLocation(const Server &serverConfig, const string &path) const;
@@ -257,7 +249,8 @@ class HttpServer {
                        const LocationCtx &location);
     void handleRequestInternally(int clientSocket, const HttpRequest &request,
                                  const LocationCtx &location);
-    bool methodAllowed(const HttpRequest &request, const LocationCtx &location);
+    bool methodAllowed(int clientSocket, const HttpRequest &request,
+                       const LocationCtx &location);
     void handleDelete(int clientSocket, const HttpRequest &request,
                       const LocationCtx &location);
     void rewriteRequest(int clientSocket, int statusCode, const string &urlOrText,
@@ -270,12 +263,12 @@ class HttpServer {
     void serveStaticContent(int clientSocket, const HttpRequest &request,
                             const LocationCtx &location);
     string determineDiskPath(const HttpRequest &request, const LocationCtx &location);
-    bool handleUriWithoutSlash(int clientSocket, const string &diskPath,
-                               const HttpRequest &request, const LocationCtx &location,
-                               bool sendErrorMsg = true);
-    void handleUriWithSlash(int clientSocket, const string &diskPath,
-                            const HttpRequest &request, const LocationCtx &location,
-                            bool sendErrorMsg = true);
+    bool handlePathWithoutSlash(int clientSocket, const string &diskPath,
+                                const HttpRequest &request, const LocationCtx &location,
+                                bool sendErrorMsg = true);
+    void handlePathWithSlash(int clientSocket, const string &diskPath,
+                             const HttpRequest &request, const LocationCtx &location,
+                             bool sendErrorMsg = true);
     bool handleIndexes(int clientSocket, const string &diskPath,
                        const HttpRequest &request, const LocationCtx &location);
     bool handleDirectoryRedirect(int clientSocket, const string &uri);
@@ -344,7 +337,7 @@ class HttpServer {
     bool needsMoreData(const HttpRequest &request) const;
     void processContentLength(HttpRequest &request);
     bool validateRequest(const HttpRequest &request, int clientSocket);
-    bool parseRequestLine(const string &line, HttpRequest &request);
+    bool parseRequestLine(int clientSocket, const string &line, HttpRequest &request);
     bool parseHeader(const string &line, HttpRequest &request);
     size_t getRequestSizeLimit(int clientSocket, const HttpRequest &request);
 
@@ -356,8 +349,9 @@ class HttpServer {
                             size_t bytesRead);
     void finalizeRequest(int clientSocket, HttpRequest &request);
     void removeClientAndRequest(int clientSocket);
-    bool checkRequestSize(int clientSocket, const HttpRequest &request,
-                          size_t currentSize);
+    bool checkRequestBodySize(int clientSocket, const HttpRequest &request,
+                              size_t currentSize);
+    bool checkRequestSizeWithoutBody(int clientSocket, size_t currentSize);
 };
 
 std::ostream &operator<<(std::ostream &, const HttpServer &);

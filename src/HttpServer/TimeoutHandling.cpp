@@ -32,7 +32,7 @@ void HttpServer::checkForInactiveClients() {
             deleteFromCgiToClient.push_back(it->second.readFd);
             // closeAndRemoveMultPlexFd(_monitorFds, it->first);
             // _pendingWrites.erase(it->first);
-        } else if (waitpid(process.pid, NULL, WNOHANG) > 0) {
+        } else if (::waitpid(process.pid, NULL, WNOHANG) > 0) {
             log.debug() << "Reaped CGI process: " << repr(process) << std::endl;
             closeAndRemoveMultPlexFd(_monitorFds, it->second.readFd);
             deleteFromCgiToClient.push_back(it->second.readFd);

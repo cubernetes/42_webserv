@@ -1,13 +1,25 @@
 #include <algorithm>
+#include <bits/types/struct_timeval.h>
 #include <cctype>
+#include <cmath>
 #include <cstddef>
+#include <cstdio>
 #include <cstdlib>
+#include <ctime>
+#include <functional>
+#include <iomanip>
+#include <ios>
+#include <ostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <sys/time.h>
 #include <utility>
 
 #include "Constants.hpp"
 #include "Errors.hpp"
+#include "Logger.hpp"
+#include "Repr.hpp"
 #include "Utils.hpp"
 
 using std::string;
@@ -32,16 +44,9 @@ bool Utils::isPrefix(string prefix, string longerString) {
     return false;
 }
 
-string Utils::strToLower(const string &str) {
-    string newStr = str;
-    std::transform(newStr.begin(), newStr.end(), newStr.begin(),
-                   static_cast<int (*)(int)>(std::tolower));
-    return newStr;
-}
-
 char Utils::decodeTwoHexChars(const char _c1, const char _c2) {
-    const char c1 = static_cast<char>(::tolower(_c1));
-    const char c2 = static_cast<char>(::tolower(_c2));
+    const char c1 = static_cast<char>(std::tolower(_c1));
+    const char c2 = static_cast<char>(std::tolower(_c2));
     char v1, v2;
     if ('0' <= c1 && c1 <= '9')
         v1 = c1 - '0';
@@ -72,17 +77,23 @@ string Utils::replaceAll(string s, const string &search, const string &replace) 
 }
 
 string Utils::jsonEscape(const string &s) {
-    return Utils::replaceAll(Utils::replaceAll(s, "\\", "\\\\"), "\"", "\\\"");
-}
-
-string Utils::escape(const string &s) {
     string replaced = s;
     replaced = Utils::replaceAll(s, "\\", "\\\\");
     replaced = Utils::replaceAll(replaced, "\"", "\\\"");
-    replaced = Utils::replaceAll(replaced, "\a", "\\a");
     replaced = Utils::replaceAll(replaced, "\b", "\\b");
     replaced = Utils::replaceAll(replaced, "\t", "\\t");
     replaced = Utils::replaceAll(replaced, "\n", "\\n");
+    replaced = Utils::replaceAll(replaced, "\v", "\\v");
+    replaced = Utils::replaceAll(replaced, "\f", "\\f");
+    replaced = Utils::replaceAll(replaced, "\r", "\\r");
+    return "\"" + replaced + "\"";
+}
+
+string Utils::escapeExceptNlAndTab(const string &s) {
+    string replaced = s;
+    replaced = Utils::replaceAll(s, "\\", "\\\\");
+    replaced = Utils::replaceAll(replaced, "\"", "\\\"");
+    replaced = Utils::replaceAll(replaced, "\b", "\\b");
     replaced = Utils::replaceAll(replaced, "\v", "\\v");
     replaced = Utils::replaceAll(replaced, "\f", "\\f");
     replaced = Utils::replaceAll(replaced, "\r", "\\r");
@@ -127,4 +138,102 @@ size_t Utils::convertSizeToBytes(const string &sizeStr) {
     }
 
     return size;
+}
+
+string Utils::ellipsisize(const string &str, size_t maxLen) {
+    if (str.length() <= maxLen)
+        return str;
+    else if (maxLen == 2)
+        return "..";
+    else if (maxLen == 1)
+        return ".";
+    else if (maxLen == 0)
+        return "";
+    size_t prefixLen = (maxLen - 2) / 2;
+    size_t suffixLen = (maxLen - 3) / 2;
+    return str.substr(0, prefixLen + 1) + "..." + str.substr(str.length() - suffixLen);
+}
+
+// std::tolower could lead to UB when the string contains negative chars
+string Utils::strToLower(const string &str) {
+    string newStr = str;
+    std::transform(newStr.begin(), newStr.end(), newStr.begin(),
+                   std::ptr_fun<int, int>(std::tolower));
+    return newStr;
+}
+
+// std::tolower could lead to UB when the string contains negative chars
+string Utils::strToUpper(const string &str) {
+    string newStr = str;
+    std::transform(newStr.begin(), newStr.end(), newStr.begin(),
+                   std::ptr_fun<int, int>(std::toupper));
+    return newStr;
+}
+
+#if STRICT_EVAL
+string Utils::millisecondRemainderSinceEpoch() { return "000"; }
+#else
+string Utils::millisecondRemainderSinceEpoch() {
+    int millisec;
+    struct timeval tv;
+
+    // TODO: use clock_gettime() instead
+    ::gettimeofday(&tv, NULL);
+
+    millisec = static_cast<int>(std::floor(static_cast<double>(tv.tv_usec) / 1000 +
+                                           .5)); // Round to nearest millisec
+    if (millisec >= 1000) { // Allow for rounding up to nearest second
+        millisec -= 1000;
+        tv.tv_sec++;
+    }
+
+    // ignore tv.tv_sec
+    std::ostringstream oss;
+    oss << std::setfill('0') << std::setw(3) << millisec;
+    return oss.str();
+}
+#endif
+
+string Utils::formattedTimestamp(std::time_t _t, bool forLogger) {
+    std::time_t t;
+    char ts[BUFSIZ];
+
+    if (_t == 0)
+        t = std::time(NULL);
+    else
+        t = _t;
+    if (forLogger) {
+        if (std::strftime(ts, sizeof(ts),
+                          (cmt(" %Y-%m-%d ") + kwrd("%H:%M:%S.") +
+                           kwrd(millisecondRemainderSinceEpoch() + " "))
+                              .c_str(),
+                          std::localtime(&t)))
+            return string("[") + ts + "] ";
+        return "[" + cmt(" N/A date, N/A time ") + "] ";
+    } else {
+        if (std::strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", std::localtime(&t)))
+            return ts;
+        return "1970-01-01 00:00:00";
+    }
+}
+
+string Utils::formatSI(size_t size) {
+    std::ostringstream oss;
+
+    if (size < 1024) {
+        oss << size << " B";
+    } else if (size < 1024 * 1024) {
+        oss << std::fixed << std::setprecision(2) << (double)size / (1024.0) << " KiB";
+    } else if (size < 1024 * 1024 * 1024) {
+        oss << std::fixed << std::setprecision(2) << (double)size / (1024.0 * 1024.0)
+            << " MiB";
+    } else {
+        oss << std::fixed << std::setprecision(2)
+            << (double)size / (1024.0 * 1024.0 * 1024.0) << " GiB";
+    }
+
+    Logger::lastInstance().debug()
+        << "Converting number " << repr(size) << " to readable SI Units "
+        << repr(oss.str()) << std::endl;
+    return oss.str();
 }

@@ -1,8 +1,10 @@
+#include <ostream>
 #include <stdexcept>
 #include <unistd.h>
 
 #include "Constants.hpp"
 #include "HttpServer.hpp"
+#include "Repr.hpp"
 
 using Constants::EPOLL;
 using Constants::POLL;
@@ -65,5 +67,7 @@ void HttpServer::closeAndRemoveAllMultPlexFd(MultPlexFds &monitorFds) {
 void HttpServer::removeClient(int clientSocket) {
     // TODO: @all: this function should actually be the one that removes all
     // PendingWrites, PendingCloses, PendingRequests, cgi stuff
+    log.debug() << "Closing FD " << repr(clientSocket)
+                << " and removing it from monitored FDs" << std::endl;
     closeAndRemoveMultPlexFd(_monitorFds, clientSocket);
 }

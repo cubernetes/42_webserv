@@ -1,7 +1,6 @@
 #include <cerrno>
 
 #include <cstring>
-#include <fcntl.h>
 #include <netinet/in.h>
 #include <ostream>
 #include <stdexcept>
@@ -48,12 +47,14 @@ void HttpServer::addNewClient(int listeningSocket) {
     struct sockaddr_in clientAddr;
     socklen_t clientLen = sizeof(clientAddr);
 
-    log.debug() << "Calling accept() on socket " << listeningSocket << std::endl;
+    log.debug() << "Calling " << func("accept") << punct("()") << " on socket "
+                << repr(listeningSocket) << std::endl;
     int clientSocket =
-        accept(listeningSocket, (struct sockaddr *)&clientAddr, &clientLen);
-    log.debug() << "Got client socket FD back: " << clientSocket << std::endl;
+        ::accept(listeningSocket, (struct sockaddr *)&clientAddr, &clientLen);
+    log.debug() << "Got client socket FD back: " << repr(clientSocket) << std::endl;
     if (clientSocket < 0) {
-        log.error() << "accept() failed: " << strerror(errno) << std::endl;
+        log.error() << "Error calling " << func("accept") << punct("()") << ": "
+                    << ::strerror(errno) << std::endl;
         return; // don't add client on this kind of failure
     }
 

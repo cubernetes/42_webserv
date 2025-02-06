@@ -19,14 +19,14 @@ int main(int ac, char **av) {
                       << std::endl;
             return EXIT_SUCCESS;
         }
-        Logger log(std::cout, options.logLevel);
+        Logger log(std::cerr, options.logLevel);
         HttpServer server(options.configPath, log, options.onlyCheckConfig);
         server.run();
         return EXIT_SUCCESS;
     } catch (const OnlyCheckConfigException &exception) {
         return EXIT_SUCCESS;
     } catch (const std::exception &exception) {
-        std::cout << Logger::fatalPrefix << exception.what() << std::endl;
+        Logger::lastInstance().fatal() << ansi::red(exception.what()) << std::endl;
         return EXIT_FAILURE;
     }
 }

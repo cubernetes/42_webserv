@@ -1,6 +1,7 @@
 #pragma once /* Utils.hpp */
 
 #include <cstddef>
+#include <ctime>
 #include <ios>
 #include <netinet/in.h>
 #include <sstream>
@@ -38,13 +39,19 @@ namespace Utils {
     string parseArgs(int ac, char **av);
     bool isPrefix(string prefix, string longerString);
     string strToLower(const string &str);
+    string strToUpper(const string &str);
     char decodeTwoHexChars(const char _c1, const char _c2);
     bool isHexDigitNoCase(const char c);
     size_t convertSizeToBytes(const string &sizeStr);
     string replaceAll(string s, const string &search, const string &replace);
     string jsonEscape(const string &s);
+    string escapeExceptNlAndTab(const string &s);
     string escape(const string &s);
     bool allUppercase(const string &str);
+    string ellipsisize(const string &str, size_t maxLen);
+    string formattedTimestamp(std::time_t _t = 0, bool forLogger = false);
+    string millisecondRemainderSinceEpoch();
+    string formatSI(size_t size);
 
     template <typename T> static inline vector<T> &getTmpVec() {
         static vector<T> _;

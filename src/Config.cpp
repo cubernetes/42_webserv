@@ -46,16 +46,30 @@ static inline void addVecs(Directives &directives, const string &directive,
 
 bool directiveExists(const Directives &directives, const string &directive) {
     Directives::const_iterator result_itr = directives.find(directive);
-    if (result_itr == directives.end())
+    Logger::lastInstance().trace4()
+        << "Doing existence check of directive " << repr(directive) << " on directives "
+        << repr(directives) << std::endl;
+    if (result_itr == directives.end()) {
+        Logger::lastInstance().trace4()
+            << "Directive " << repr(directive) << " does not exist" << std::endl;
         return false;
+    }
+    Logger::lastInstance().trace4()
+        << "Directive " << repr(directive) << " exists" << std::endl;
     return true;
 }
 
 const Arguments &getFirstDirective(const Directives &directives,
                                    const string &directive) {
     Directives::const_iterator result_itr = directives.find(directive);
+    Logger::lastInstance().trace4()
+        << "Trying to get first value of directive " << repr(directive)
+        << " from directives " << repr(directives) << std::endl;
     if (result_itr == directives.end())
         throw runtime_error(Errors::MultimapIndex(directive));
+    Logger::lastInstance().trace4()
+        << "Returning first result for directive " << repr(directive) << ": "
+        << repr(result_itr->second) << std::endl;
     return result_itr->second;
 }
 
@@ -64,10 +78,16 @@ ArgResults getAllDirectives(const Directives &directives, const string &directiv
         directives.equal_range(directive);
     ArgResults allArgs;
 
+    Logger::lastInstance().trace4()
+        << "Trying to get all values of directive " << repr(directive)
+        << " from directives " << repr(directives) << std::endl;
     for (Directives::const_iterator it = result_itr.first; it != result_itr.second;
          ++it) {
         allArgs.push_back(it->second);
     }
+    Logger::lastInstance().trace4()
+        << "Returning all results for directive " << repr(directive) << ": "
+        << repr(allArgs) << std::endl;
     return allArgs;
 }
 

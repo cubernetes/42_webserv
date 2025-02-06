@@ -8,7 +8,7 @@ string HttpServer::statusTextFromCode(int statusCode) {
         statusText = "Unknown Status Code";
     else
         statusText = _statusTexts[statusCode];
-    Logger::lastInstance().debug() << "Mapping status code " << repr(statusCode)
+    Logger::lastInstance().trace() << "Mapping status code " << repr(statusCode)
                                    << " to status text " << repr(statusText) << std::endl;
     return statusText;
 }
