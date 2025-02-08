@@ -325,6 +325,9 @@ class HttpServer {
     struct pollfd *multPlexFdsToPollFds(const MultPlexFds &fds);
     nfds_t getNumberOfPollFds(const MultPlexFds &fds);
     int multPlexFdToRawFd(const MultPlexFds &readyFds, size_t i);
+    vector<int> multPlexFdsToRawFds(const MultPlexFds &readyFds);
+    MultPlexFds determineRemoteClients(const MultPlexFds &m, vector<int> ls,
+                                       const CgiFdToClientMap &cgiToClient);
 
     // helpers
     string getMimeType(const string &path);

@@ -23,13 +23,31 @@ bool HttpServer::isListeningSocket(int fd) {
     return isListening;
 }
 
+vector<int> HttpServer::multPlexFdsToRawFds(const MultPlexFds &readyFds) {
+    vector<int> rawFds;
+    switch (readyFds.multPlexType) {
+    case SELECT:
+        throw std::logic_error("Converting select fd type to raw fd not implemented");
+    case POLL:
+        log.trace() << "Converting pollfds " << repr(readyFds.pollFds) << " to plain FDs"
+                    << std::endl;
+        for (size_t i = 0; i < readyFds.pollFds.size(); ++i)
+            rawFds.push_back(readyFds.pollFds[i].fd);
+        return rawFds;
+    case EPOLL:
+        throw std::logic_error("Converting epoll fd type to raw fd not implemented");
+    default:
+        throw std::logic_error("Converting unknown fd type to raw fd not implemented");
+    }
+}
+
 int HttpServer::multPlexFdToRawFd(const MultPlexFds &readyFds, size_t i) {
     switch (readyFds.multPlexType) {
     case SELECT:
         throw std::logic_error("Converting select fd type to raw fd not implemented");
     case POLL:
-        log.trace() << "Converting pollfd " << readyFds.pollFds[i] << " to plain FD "
-                    << repr(readyFds.pollFds[i].fd) << std::endl;
+        log.trace() << "Converting pollfd " << repr(readyFds.pollFds[i])
+                    << " to plain FD " << repr(readyFds.pollFds[i].fd) << std::endl;
         return readyFds.pollFds[i].fd;
     case EPOLL:
         throw std::logic_error("Converting epoll fd type to raw fd not implemented");

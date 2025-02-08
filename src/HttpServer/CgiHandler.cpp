@@ -245,6 +245,12 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
     }
 
     if (pid == 0) { // we are in child
+#if PP_DEBUG
+        sleep(1);
+        log.warn() << "DEBUG: Child: Slept for 1 seconds, please remove this and related "
+                      "code before release"
+                   << std::endl;
+#endif
         log.debug() << "Child: Entered, about to close FDs" << std::endl;
         (void)::close(toCgi[PIPE_WRITE]);  // doesn't need to write to itself
         (void)::close(fromCgi[PIPE_READ]); // doesn't need to read from itself
@@ -301,6 +307,9 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
         ::exit(1);
     }
 #if PP_DEBUG
+    log.warn() << "DEBUG: Parent: Sleeping for 3 seconds, please remove this and related "
+                  "code before release"
+               << std::endl;
     sleep(3);
     // log.debug() << "Parent: Waiting for CGI process to finish" << std::endl;
     //(void)::waitid(P_PID, (__id_t)pid, NULL, WNOWAIT);

@@ -716,8 +716,9 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request,
 
     // Process Content-Length and chunked transfer headers
     processContentLength(request);
-    log.debug() << "Content length (" << repr(0)
-                << " can also mean header not present): " << repr(request.contentLength)
+    log.debug() << "Content length: " << repr(request.contentLength) << " (if it is "
+                << repr(0)
+                << ", it can also mean the header not present, like with GET request)"
                 << std::endl;
     log.debug() << "Chunked transfer: " << repr(request.chunkedTransfer) << std::endl;
 

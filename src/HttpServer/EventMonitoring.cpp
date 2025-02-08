@@ -52,10 +52,10 @@ HttpServer::MultPlexFds HttpServer::doPoll(MultPlexFds &monitorFds) {
     return getReadyPollFds(monitorFds, nReady, pollFds, nPollFds);
 }
 
-static HttpServer::MultPlexFds
-determineRemoteClients(const HttpServer::MultPlexFds &m, vector<int> ls,
-                       const HttpServer::CgiFdToClientMap &cgiToClient) {
-    HttpServer::MultPlexFds remaining;
+HttpServer::MultPlexFds
+HttpServer::determineRemoteClients(const MultPlexFds &m, vector<int> ls,
+                                   const CgiFdToClientMap &cgiToClient) {
+    MultPlexFds remaining;
     switch (m.multPlexType) {
     case SELECT:
         throw std::logic_error(
@@ -64,7 +64,7 @@ determineRemoteClients(const HttpServer::MultPlexFds &m, vector<int> ls,
     case POLL:
         for (size_t i = 0; i < m.pollFds.size(); ++i) {
             int fd = m.pollFds[i].fd;
-            if (find(ls.begin(), ls.end(), fd) == ls.end() &&
+            if (std::find(ls.begin(), ls.end(), fd) == ls.end() &&
                 cgiToClient.count(fd) == 0) {
                 remaining.pollFds.push_back(m.pollFds[i]);
                 if (i < m.fdStates.size())

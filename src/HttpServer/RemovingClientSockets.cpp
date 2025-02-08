@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <ostream>
 #include <stdexcept>
 #include <unistd.h>
@@ -33,6 +34,22 @@ void HttpServer::closeAndRemoveAllPollFd(MultPlexFds &monitorFds) {
 }
 
 void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds &monitorFds, int fd) {
+    vector<int> rawClientFds = multPlexFdsToRawFds(
+        determineRemoteClients(_monitorFds, _listeningSockets, _cgiToClient));
+    bool isClientSocket =
+        std::find(rawClientFds.begin(), rawClientFds.end(), fd) != rawClientFds.end();
+    log.trace() << "Is FD " << repr(fd)
+                << " a remote client FD?: " << repr(isClientSocket) << std::endl;
+    log.debug();
+    if (!ansi::noColor() && isClientSocket)
+        log.debug << ANSI_RED_BG;
+    Constants::forceNoColor = true;
+    log.debug << "Calling close() on FD " << repr(fd);
+    Constants::forceNoColor = false;
+    if (!ansi::noColor() && isClientSocket)
+        log.debug << ANSI_RST;
+    log.debug << std::endl;
+    ::close(fd); // TODO: @timo: guard every syscall
     log.debug() << "Removing FD " << repr(fd) << " from monitoring FDs" << std::endl;
     switch (monitorFds.multPlexType) {
     case SELECT:
@@ -47,16 +64,6 @@ void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds &monitorFds, int fd) {
     default:
         throw std::logic_error("Removing unknown type of fd not implemented");
     }
-    log.debug();
-    if (!ansi::noColor())
-        log.debug << ANSI_RED_BG;
-    Constants::forceNoColor = true;
-    log.debug << "Calling close() on FD " << repr(fd);
-    Constants::forceNoColor = false;
-    if (!ansi::noColor())
-        log.debug << ANSI_RST;
-    log.debug << std::endl;
-    ::close(fd); // TODO: @timo: guard every syscall
 }
 
 void HttpServer::closeAndRemoveAllMultPlexFd(MultPlexFds &monitorFds) {

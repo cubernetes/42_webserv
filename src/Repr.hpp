@@ -317,7 +317,7 @@ template <typename T> struct ReprWrapper<vector<T> > {
         if (Logger::lastInstance().istrace5())
             oss << "[";
         else if (Logger::lastInstance().istrace4())
-            oss << kwrd("std") + punct("::") + kwrd("vector") + punct("({");
+            oss << kwrd("std") + punct("::") + kwrd("vector") + punct("{");
         else
             oss << punct("[");
         for (size_t i = 0; i < value.size(); ++i) {
@@ -332,7 +332,7 @@ template <typename T> struct ReprWrapper<vector<T> > {
         if (Logger::lastInstance().istrace5())
             oss << "]";
         else if (Logger::lastInstance().istrace4())
-            oss << punct("})");
+            oss << punct("}");
         else
             oss << punct("]");
         return oss.str();
@@ -345,7 +345,7 @@ template <typename T> struct ReprWrapper<deque<T> > {
         if (Logger::lastInstance().istrace5())
             oss << "[";
         else if (Logger::lastInstance().istrace4())
-            oss << kwrd("std") + punct("::") + kwrd("deque") + punct("({");
+            oss << kwrd("std") + punct("::") + kwrd("deque") + punct("{");
         else
             oss << punct("[");
         for (size_t i = 0; i < value.size(); ++i) {
@@ -360,7 +360,7 @@ template <typename T> struct ReprWrapper<deque<T> > {
         if (Logger::lastInstance().istrace5())
             oss << "]";
         else if (Logger::lastInstance().istrace4())
-            oss << punct("})");
+            oss << punct("}");
         else
             oss << punct("]");
         return oss.str();
@@ -374,7 +374,7 @@ template <typename K, typename V> struct ReprWrapper<map<K, V> > {
         if (Logger::lastInstance().istrace5())
             oss << "{";
         else if (Logger::lastInstance().istrace4())
-            oss << kwrd("std") + punct("::") + kwrd("map") + punct("({");
+            oss << kwrd("std") + punct("::") + kwrd("map") + punct("{");
         else
             oss << punct("{");
         int i = 0;
@@ -397,7 +397,7 @@ template <typename K, typename V> struct ReprWrapper<map<K, V> > {
         if (Logger::lastInstance().istrace5())
             oss << "}";
         else if (Logger::lastInstance().istrace4())
-            oss << punct("})");
+            oss << punct("}");
         else
             oss << punct("}");
         return oss.str();
@@ -411,7 +411,7 @@ template <typename K, typename V, typename C> struct ReprWrapper<map<K, V, C> > 
         if (Logger::lastInstance().istrace5())
             oss << "{";
         else if (Logger::lastInstance().istrace4())
-            oss << kwrd("std") + punct("::") + kwrd("map") + punct("({");
+            oss << kwrd("std") + punct("::") + kwrd("map") + punct("{");
         else
             oss << punct("{");
         int i = 0;
@@ -434,7 +434,7 @@ template <typename K, typename V, typename C> struct ReprWrapper<map<K, V, C> > 
         if (Logger::lastInstance().istrace5())
             oss << "}";
         else if (Logger::lastInstance().istrace4())
-            oss << punct("})");
+            oss << punct("}");
         else
             oss << punct("}");
         return oss.str();
@@ -448,7 +448,7 @@ template <typename K, typename V> struct ReprWrapper<multimap<K, V> > {
         if (Logger::lastInstance().istrace5())
             oss << "{";
         else if (Logger::lastInstance().istrace4())
-            oss << kwrd("std") + punct("::") + kwrd("multimap") + punct("({");
+            oss << kwrd("std") + punct("::") + kwrd("multimap") + punct("{");
         else
             oss << punct("{");
         int i = 0;
@@ -471,7 +471,7 @@ template <typename K, typename V> struct ReprWrapper<multimap<K, V> > {
         if (Logger::lastInstance().istrace5())
             oss << "}";
         else if (Logger::lastInstance().istrace4())
-            oss << punct("})");
+            oss << punct("}");
         else
             oss << punct("}");
         return oss.str();
@@ -506,7 +506,7 @@ template <typename T> struct ReprWrapper<set<T> > {
         if (Logger::lastInstance().istrace5())
             oss << "[";
         else if (Logger::lastInstance().istrace4())
-            oss << kwrd("std") + punct("::") + kwrd("set") + punct("({");
+            oss << kwrd("std") + punct("::") + kwrd("set") + punct("{");
         else
             oss << punct("{");
         int i = -1;
@@ -523,7 +523,7 @@ template <typename T> struct ReprWrapper<set<T> > {
         if (Logger::lastInstance().istrace5())
             oss << "]";
         else if (Logger::lastInstance().istrace4())
-            oss << punct("})");
+            oss << punct("}");
         else
             oss << punct("}");
         return oss.str();

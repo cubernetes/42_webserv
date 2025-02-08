@@ -15,6 +15,12 @@ HttpServer::~HttpServer() {
     closeAndRemoveAllMultPlexFd(_monitorFds);
 }
 
+void cgiDied(int signal) {
+    (void)signal;
+    Logger::lastInstance().debug() << "Some CGI process died right now" << std::endl;
+    ;
+}
+
 void finish(int signal) {
     (void)signal;
     HttpServer::_running = false;
@@ -28,6 +34,7 @@ void HttpServer::initSignals() {
     ::signal(SIGINT, &finish);
     log.debug() << "Handling SIGTERM to finish gracefully" << std::endl;
     ::signal(SIGTERM, &finish);
+    ::signal(SIGCHLD, &cgiDied);
 }
 
 bool HttpServer::_running = true;
