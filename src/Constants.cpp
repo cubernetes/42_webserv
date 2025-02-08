@@ -22,6 +22,7 @@
 using std::string;
 
 namespace Constants {
+    bool forceNoColor = false;
     const size_t loggingMaxStringLen = 50;
     const size_t clientMaxRequestLineSize = 8196;
     const size_t clientMaxRequestSizeWithoutBody = 16384;

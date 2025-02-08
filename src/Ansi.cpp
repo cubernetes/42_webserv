@@ -6,6 +6,7 @@
 #include <string>
 
 #include "Ansi.hpp"
+#include "Constants.hpp"
 
 using std::string;
 
@@ -16,6 +17,8 @@ static inline string itoa(int n) {
 }
 
 bool ansi::noColor() {
+    if (Constants::forceNoColor)
+        return true;
     const char *noColor = std::getenv("NO_COLOR");
     if (noColor == NULL)
         return false;
@@ -87,13 +90,13 @@ string ansi::redBg(string s) {
 string ansi::greenBg(string s) {
     if (noColor())
         return s;
-    return ANSI_GREEN_BG + s + ANSI_RST;
+    return ANSI_BLACK ANSI_GREEN_BG + s + ANSI_RST;
 }
 
 string ansi::yellowBg(string s) {
     if (noColor())
         return s;
-    return ANSI_YELLOW_BG + s + ANSI_RST;
+    return ANSI_BLACK ANSI_YELLOW_BG + s + ANSI_RST;
 }
 
 string ansi::blueBg(string s) {
@@ -111,13 +114,13 @@ string ansi::magentaBg(string s) {
 string ansi::cyanBg(string s) {
     if (noColor())
         return s;
-    return ANSI_CYAN_BG + s + ANSI_RST;
+    return ANSI_BLACK ANSI_CYAN_BG + s + ANSI_RST;
 }
 
 string ansi::whiteBg(string s) {
     if (noColor())
         return s;
-    return ANSI_WHITE_BG + s + ANSI_RST;
+    return ANSI_BLACK ANSI_WHITE_BG + s + ANSI_RST;
 }
 
 string ansi::rgbP(string s, int r, int g, int b) {

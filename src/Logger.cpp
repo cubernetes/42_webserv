@@ -114,7 +114,7 @@ Logger::StreamWrapper::StreamWrapper(std::ostream &_os, Level _thisLevel,
 #if STRICT_EVAL
 static string formattedPid() { return "[" + cmt(" N/A PID ") + "] "; }
 #else
-static string formattedPid() { return "[" + cmt(" ") + num(getpid()) + cmt(" ") + "] "; }
+static string formattedPid() { return "[" + cmt(" ") + repr(getpid()) + cmt(" ") + "] "; }
 #endif
 
 Logger::StreamWrapper &Logger::StreamWrapper::operator()(bool printPrefix) {

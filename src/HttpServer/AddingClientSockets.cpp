@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "Ansi.hpp"
 #include "Constants.hpp"
 #include "HttpServer.hpp"
 #include "Logger.hpp"
@@ -59,7 +60,14 @@ void HttpServer::addNewClient(int listeningSocket) {
     }
 
     addClientSocketToMonitorFds(_monitorFds, clientSocket);
-    log.info() << "New client connected with FD " << repr(clientSocket)
-               << " and addr:port " << repr<struct sockaddr_in_wrapper>(clientAddr)
-               << std::endl;
+    log.info();
+    if (!ansi::noColor())
+        log.info << ANSI_BLACK ANSI_GREEN_BG;
+    Constants::forceNoColor = true;
+    log.info << "New client connected on FD " << repr(clientSocket) << " and addr:port "
+             << repr<struct sockaddr_in_wrapper>(clientAddr);
+    Constants::forceNoColor = false;
+    if (!ansi::noColor())
+        log.info << ANSI_RST;
+    log.info << std::endl;
 }

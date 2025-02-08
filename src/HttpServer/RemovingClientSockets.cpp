@@ -2,6 +2,7 @@
 #include <stdexcept>
 #include <unistd.h>
 
+#include "Ansi.hpp"
 #include "Constants.hpp"
 #include "HttpServer.hpp"
 #include "Repr.hpp"
@@ -32,7 +33,7 @@ void HttpServer::closeAndRemoveAllPollFd(MultPlexFds &monitorFds) {
 }
 
 void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds &monitorFds, int fd) {
-    ::close(fd); // TODO: @timo: guard every syscall
+    log.debug() << "Removing FD " << repr(fd) << " from monitoring FDs" << std::endl;
     switch (monitorFds.multPlexType) {
     case SELECT:
         throw std::logic_error("Removing select type FDs not implemented yet");
@@ -46,6 +47,16 @@ void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds &monitorFds, int fd) {
     default:
         throw std::logic_error("Removing unknown type of fd not implemented");
     }
+    log.debug();
+    if (!ansi::noColor())
+        log.debug << ANSI_RED_BG;
+    Constants::forceNoColor = true;
+    log.debug << "Calling close() on FD " << repr(fd);
+    Constants::forceNoColor = false;
+    if (!ansi::noColor())
+        log.debug << ANSI_RST;
+    log.debug << std::endl;
+    ::close(fd); // TODO: @timo: guard every syscall
 }
 
 void HttpServer::closeAndRemoveAllMultPlexFd(MultPlexFds &monitorFds) {
@@ -67,7 +78,5 @@ void HttpServer::closeAndRemoveAllMultPlexFd(MultPlexFds &monitorFds) {
 void HttpServer::removeClient(int clientSocket) {
     // TODO: @all: this function should actually be the one that removes all
     // PendingWrites, PendingCloses, PendingRequests, cgi stuff
-    log.debug() << "Closing FD " << repr(clientSocket)
-                << " and removing it from monitored FDs" << std::endl;
     closeAndRemoveMultPlexFd(_monitorFds, clientSocket);
 }
