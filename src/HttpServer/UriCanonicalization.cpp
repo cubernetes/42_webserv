@@ -19,8 +19,7 @@ string HttpServer::percentDecode(const string &str) {
             oss << str[i];
             continue;
         }
-        if (!Utils::isHexDigitNoCase(str[i + 1]) ||
-            !Utils::isHexDigitNoCase(str[i + 2])) {
+        if (!Utils::isHexDigitNoCase(str[i + 1]) || !Utils::isHexDigitNoCase(str[i + 2])) {
             oss << str[i];
             continue;
         }
@@ -28,8 +27,7 @@ string HttpServer::percentDecode(const string &str) {
             oss << str[i];
             continue;
         }
-        log.trace2() << "Found a valid percent token for decoding: "
-                     << num(string("%") + str[i + 1] + str[i + 2]) << std::endl;
+        log.trace2() << "Found a valid percent token for decoding: " << num(string("%") + str[i + 1] + str[i + 2]) << std::endl;
         oss << Utils::decodeTwoHexChars(str[i + 1], str[i + 2]);
         i += 2;
     }
@@ -38,8 +36,7 @@ string HttpServer::percentDecode(const string &str) {
 }
 
 string HttpServer::resolveDots(const string &str) {
-    log.trace() << "Resolving dots, double dots, and slashes in path: " << repr(str)
-                << std::endl;
+    log.trace() << "Resolving dots, double dots, and slashes in path: " << repr(str) << std::endl;
     std::stringstream ss(str);
     string part;
     vector<string> parts;
@@ -58,8 +55,7 @@ string HttpServer::resolveDots(const string &str) {
             if (!parts.empty()) {
                 parts.pop_back();
             } else {
-                log.trace2() << "No previous path segment (at root), not going up"
-                             << std::endl;
+                log.trace2() << "No previous path segment (at root), not going up" << std::endl;
             }
         } else {
             log.trace2() << "Adding regular path segment: " << repr(part) << std::endl;
@@ -71,9 +67,7 @@ string HttpServer::resolveDots(const string &str) {
         parts.push_back(part);
     }
     std::ostringstream oss;
-    log.trace2() << "Concatenating path segments " << repr(parts)
-                 << " back to a single string (leading empty segment is implicit)"
-                 << std::endl;
+    log.trace2() << "Concatenating path segments " << repr(parts) << " back to a single string (leading empty segment is implicit)" << std::endl;
     for (size_t i = 0; i < parts.size(); ++i) {
         oss << "/" << parts[i];
     }

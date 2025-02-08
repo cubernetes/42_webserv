@@ -16,10 +16,8 @@ using std::vector;
 struct sockaddr_in_wrapper {
     struct in_addr sin_addr;
     in_port_t sin_port;
-    sockaddr_in_wrapper(sockaddr_in saddr)
-        : sin_addr(saddr.sin_addr), sin_port(saddr.sin_port) {}
-    sockaddr_in_wrapper(struct in_addr _sin_addr, in_port_t _sin_port)
-        : sin_addr(_sin_addr), sin_port(_sin_port) {}
+    sockaddr_in_wrapper(sockaddr_in saddr) : sin_addr(saddr.sin_addr), sin_port(saddr.sin_port) {}
+    sockaddr_in_wrapper(struct in_addr _sin_addr, in_port_t _sin_port) : sin_addr(_sin_addr), sin_port(_sin_port) {}
     sockaddr_in_wrapper() : sin_addr(), sin_port() {}
 };
 
@@ -70,6 +68,4 @@ namespace Utils {
 
 // Helper macro to create inplace vectors (i.e. passing as an argument), very useful
 // sometimes
-#define VEC(type, ...)                                                                   \
-    (Utils::getTmpVec<type>().clear(),                                                   \
-     FOR_EACH_ONE(TMP_VEC_PUSH_BACK, type, __VA_ARGS__) Utils::getTmpVec<type>())
+#define VEC(type, ...) (Utils::getTmpVec<type>().clear(), FOR_EACH_ONE(TMP_VEC_PUSH_BACK, type, __VA_ARGS__) Utils::getTmpVec<type>())

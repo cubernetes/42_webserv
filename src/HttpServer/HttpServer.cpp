@@ -39,11 +39,9 @@ void HttpServer::initSignals() {
 
 bool HttpServer::_running = true;
 HttpServer::HttpServer(const string &configPath, Logger &_log, size_t onlyCheckConfig)
-    : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(),
-      _listeningSockets(), _httpVersionString(Constants::httpVersionString),
-      _rawConfig(removeComments(readConfig(configPath))),
-      _config(parseConfig(_rawConfig)), _mimeTypes(), _statusTexts(), _pendingWrites(),
-      _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), log(_log) {
+    : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _httpVersionString(Constants::httpVersionString),
+      _rawConfig(removeComments(readConfig(configPath))), _config(parseConfig(_rawConfig)), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(),
+      _pendingRequests(), log(_log) {
     TRACE_ARG_CTOR(const string &, configPath);
     if (onlyCheckConfig > 0) {
         if (onlyCheckConfig > 1)
@@ -59,22 +57,15 @@ HttpServer::HttpServer(const string &configPath, Logger &_log, size_t onlyCheckC
 
 HttpServer::operator string() const { return ::repr(*this); }
 
-std::ostream &operator<<(std::ostream &os, const HttpServer &httpServer) {
-    return os << static_cast<string>(httpServer);
-}
+std::ostream &operator<<(std::ostream &os, const HttpServer &httpServer) { return os << static_cast<string>(httpServer); }
 
 HttpServer::Server::~Server() { TRACE_DTOR; }
-HttpServer::Server::Server(const Directives &_directives, const LocationCtxs &_locations,
-                           const Arguments &_serverNames, Logger &_log, size_t _id)
-    : ip(), port(), directives(_directives), locations(_locations),
-      serverNames(_serverNames), log(_log), id(_id) {
-    TRACE_ARG_CTOR(const Directives, _directives, const LocationCtxs, _locations,
-                   const Arguments, _serverNames);
+HttpServer::Server::Server(const Directives &_directives, const LocationCtxs &_locations, const Arguments &_serverNames, Logger &_log, size_t _id)
+    : ip(), port(), directives(_directives), locations(_locations), serverNames(_serverNames), log(_log), id(_id) {
+    TRACE_ARG_CTOR(const Directives, _directives, const LocationCtxs, _locations, const Arguments, _serverNames);
 }
 HttpServer::Server::Server(const Server &other)
-    : ip(other.ip), port(other.port), directives(other.directives),
-      locations(other.locations), serverNames(other.serverNames), log(other.log),
-      id(other.id) {
+    : ip(other.ip), port(other.port), directives(other.directives), locations(other.locations), serverNames(other.serverNames), log(other.log), id(other.id) {
     TRACE_COPY_CTOR;
 }
 HttpServer::Server &HttpServer::Server::operator=(const Server &other) {

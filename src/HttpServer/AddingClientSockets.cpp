@@ -48,14 +48,11 @@ void HttpServer::addNewClient(int listeningSocket) {
     struct sockaddr_in clientAddr;
     socklen_t clientLen = sizeof(clientAddr);
 
-    log.debug() << "Calling " << func("accept") << punct("()") << " on socket "
-                << repr(listeningSocket) << std::endl;
-    int clientSocket =
-        ::accept(listeningSocket, (struct sockaddr *)&clientAddr, &clientLen);
+    log.debug() << "Calling " << func("accept") << punct("()") << " on socket " << repr(listeningSocket) << std::endl;
+    int clientSocket = ::accept(listeningSocket, (struct sockaddr *)&clientAddr, &clientLen);
     log.debug() << "Got client socket FD back: " << repr(clientSocket) << std::endl;
     if (clientSocket < 0) {
-        log.error() << "Error calling " << func("accept") << punct("()") << ": "
-                    << ::strerror(errno) << std::endl;
+        log.error() << "Error calling " << func("accept") << punct("()") << ": " << ::strerror(errno) << std::endl;
         return; // don't add client on this kind of failure
     }
 
@@ -64,8 +61,7 @@ void HttpServer::addNewClient(int listeningSocket) {
     if (!ansi::noColor())
         log.info << ANSI_BLACK ANSI_GREEN_BG;
     Constants::forceNoColor = true;
-    log.info << "New client connected on FD " << repr(clientSocket) << " and addr:port "
-             << repr<struct sockaddr_in_wrapper>(clientAddr);
+    log.info << "New client connected on FD " << repr(clientSocket) << " and addr:port " << repr<struct sockaddr_in_wrapper>(clientAddr);
     Constants::forceNoColor = false;
     if (!ansi::noColor())
         log.info << ANSI_RST;

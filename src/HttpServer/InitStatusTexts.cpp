@@ -8,14 +8,12 @@ string HttpServer::statusTextFromCode(int statusCode) {
         statusText = "Unknown Status Code";
     else
         statusText = _statusTexts[statusCode];
-    Logger::lastInstance().trace() << "Mapping status code " << repr(statusCode)
-                                   << " to status text " << repr(statusText) << std::endl;
+    Logger::lastInstance().trace() << "Mapping status code " << repr(statusCode) << " to status text " << repr(statusText) << std::endl;
     return statusText;
 }
 
 void initStatusTexts(HttpServer::StatusTexts &statusTexts) {
-    Logger::lastInstance().debug()
-        << "Initializing status code to status text mapping" << std::endl;
+    Logger::lastInstance().debug() << "Initializing status code to status text mapping" << std::endl;
     statusTexts[100] = "Continue";
     statusTexts[101] = "Switching Protocols";
     statusTexts[102] = "Processing";

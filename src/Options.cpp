@@ -34,9 +34,7 @@ static Logger::Level convertStringToLogLevel(const char *str) {
                                  "`-l' option. Run with -h for more information.");
 }
 
-Options::Options(int ac, char **av)
-    : printHelp(), printVersion(), onlyCheckConfig(),
-      configPath(Constants::defaultConfPath), logLevel(Logger::INFO) {
+Options::Options(int ac, char **av) : printHelp(), printVersion(), onlyCheckConfig(), configPath(Constants::defaultConfPath), logLevel(Logger::INFO) {
     (void)ac;
     bool configPathSpecified = false;
     ++av;
@@ -73,9 +71,7 @@ Options::Options(int ac, char **av)
             throw std::runtime_error("Option parsing error: Unknown option: " + arg);
         } else {
             if (configPathSpecified)
-                throw std::runtime_error(
-                    "Option parsing error: Config path was already specified as: '" +
-                    configPath + "'");
+                throw std::runtime_error("Option parsing error: Config path was already specified as: '" + configPath + "'");
             configPath = string(*av);
             configPathSpecified = true;
         }

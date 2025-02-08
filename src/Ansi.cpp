@@ -126,8 +126,7 @@ string ansi::whiteBg(string s) {
 string ansi::rgbP(string s, int r, int g, int b) {
     if (noColor())
         return s;
-    return ANSI_CSI ANSI_RGB ";" + itoa(r) + ";" + itoa(g) + ";" + itoa(b) + "m" + s +
-           ANSI_RST;
+    return ANSI_CSI ANSI_RGB ";" + itoa(r) + ";" + itoa(g) + ";" + itoa(b) + "m" + s + ANSI_RST;
 }
 
 string ansi::rgb(string s, const string &rgbSemicolon) {
@@ -139,8 +138,7 @@ string ansi::rgb(string s, const string &rgbSemicolon) {
 string ansi::rgbBgP(string s, int r, int g, int b) {
     if (noColor())
         return s;
-    return ANSI_CSI ANSI_RGB_BG ";" + itoa(r) + ";" + itoa(g) + ";" + itoa(b) + "m" + s +
-           ANSI_RST;
+    return ANSI_CSI ANSI_RGB_BG ";" + itoa(r) + ";" + itoa(g) + ";" + itoa(b) + "m" + s + ANSI_RST;
 }
 
 string ansi::rgbBg(string s, const string &rgbSemicolon) {

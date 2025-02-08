@@ -19,8 +19,7 @@ class DirectoryIndexer {
     string indexDirectory(string location, string path);
 
   private:
-    void iterateOverDirEntries(Entries &entries, struct dirent *&entry,
-                               const string &path);
+    void iterateOverDirEntries(Entries &entries, struct dirent *&entry, const string &path);
 
     Logger &log;
 };

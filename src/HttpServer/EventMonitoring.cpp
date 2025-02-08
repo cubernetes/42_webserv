@@ -15,9 +15,7 @@ using Constants::POLL;
 using Constants::SELECT;
 using std::runtime_error;
 
-HttpServer::MultPlexFds HttpServer::getReadyPollFds(MultPlexFds &monitorFds, int nReady,
-                                                    struct pollfd *pollFds,
-                                                    nfds_t nPollFds) {
+HttpServer::MultPlexFds HttpServer::getReadyPollFds(MultPlexFds &monitorFds, int nReady, struct pollfd *pollFds, nfds_t nPollFds) {
     MultPlexFds readyFds(POLL);
 
     (void)nReady;
@@ -45,27 +43,22 @@ HttpServer::MultPlexFds HttpServer::doPoll(MultPlexFds &monitorFds) {
         if (errno == EINTR) // TODO: @all: why is EINTR okay? What about the other codes?
                             // What about EAGAIN?
             return MultPlexFds(POLL);
-        throw runtime_error(string("poll failed: ") +
-                            ::strerror(errno)); // TODO: @timo: make Errors::...
+        throw runtime_error(string("poll failed: ") + ::strerror(errno)); // TODO: @timo: make Errors::...
     }
 
     return getReadyPollFds(monitorFds, nReady, pollFds, nPollFds);
 }
 
-HttpServer::MultPlexFds
-HttpServer::determineRemoteClients(const MultPlexFds &m, vector<int> ls,
-                                   const CgiFdToClientMap &cgiToClient) {
+HttpServer::MultPlexFds HttpServer::determineRemoteClients(const MultPlexFds &m, vector<int> ls, const CgiFdToClientMap &cgiToClient) {
     MultPlexFds remaining;
     switch (m.multPlexType) {
     case SELECT:
-        throw std::logic_error(
-            "Filtering remote clients with select multiplex FDs is not implemented yet");
+        throw std::logic_error("Filtering remote clients with select multiplex FDs is not implemented yet");
         break;
     case POLL:
         for (size_t i = 0; i < m.pollFds.size(); ++i) {
             int fd = m.pollFds[i].fd;
-            if (std::find(ls.begin(), ls.end(), fd) == ls.end() &&
-                cgiToClient.count(fd) == 0) {
+            if (std::find(ls.begin(), ls.end(), fd) == ls.end() && cgiToClient.count(fd) == 0) {
                 remaining.pollFds.push_back(m.pollFds[i]);
                 if (i < m.fdStates.size())
                     remaining.fdStates.push_back(m.fdStates[i]);
@@ -73,22 +66,18 @@ HttpServer::determineRemoteClients(const MultPlexFds &m, vector<int> ls,
         }
         break;
     case EPOLL:
-        throw std::logic_error(
-            "Filtering remote clients with epoll multiplex FDs is not implemented yet");
+        throw std::logic_error("Filtering remote clients with epoll multiplex FDs is not implemented yet");
         break;
     default:
-        throw std::logic_error(
-            "Filtering remote clients from unknown multiplex FDs is not implemented");
+        throw std::logic_error("Filtering remote clients from unknown multiplex FDs is not implemented");
     }
     return remaining;
 }
 
 HttpServer::MultPlexFds HttpServer::getReadyFds(MultPlexFds &monitorFds) {
-    log.debug() << "Trying to get ready FDs with multiplexing method "
-                << repr(monitorFds.multPlexType) << std::endl;
+    log.debug() << "Trying to get ready FDs with multiplexing method " << repr(monitorFds.multPlexType) << std::endl;
     log.trace() << "These are the monitoring FDs: " << repr(monitorFds) << std::endl;
-    MultPlexFds remotes =
-        determineRemoteClients(monitorFds, _listeningSockets, _cgiToClient);
+    MultPlexFds remotes = determineRemoteClients(monitorFds, _listeningSockets, _cgiToClient);
     log.debug() << "Remote clients: " << repr(remotes) << std::endl;
     switch (monitorFds.multPlexType) {
     case SELECT:

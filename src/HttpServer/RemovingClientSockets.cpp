@@ -13,8 +13,7 @@ using Constants::POLL;
 using Constants::SELECT;
 
 void HttpServer::removePollFd(MultPlexFds &monitorFds, int fd) {
-    for (PollFds::iterator pollFd = monitorFds.pollFds.begin();
-         pollFd != monitorFds.pollFds.end(); ++pollFd) {
+    for (PollFds::iterator pollFd = monitorFds.pollFds.begin(); pollFd != monitorFds.pollFds.end(); ++pollFd) {
         if (pollFd->fd == fd) {
             monitorFds.pollFds.erase(pollFd);
             break;
@@ -23,8 +22,7 @@ void HttpServer::removePollFd(MultPlexFds &monitorFds, int fd) {
 }
 
 void HttpServer::closeAndRemoveAllPollFd(MultPlexFds &monitorFds) {
-    for (PollFds::iterator pollFd = monitorFds.pollFds.begin();
-         pollFd != monitorFds.pollFds.end(); ++pollFd) {
+    for (PollFds::iterator pollFd = monitorFds.pollFds.begin(); pollFd != monitorFds.pollFds.end(); ++pollFd) {
         if (pollFd->fd >= 0) {
             ::close(pollFd->fd);
             pollFd->fd = -1;
@@ -34,12 +32,9 @@ void HttpServer::closeAndRemoveAllPollFd(MultPlexFds &monitorFds) {
 }
 
 void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds &monitorFds, int fd) {
-    vector<int> rawClientFds = multPlexFdsToRawFds(
-        determineRemoteClients(_monitorFds, _listeningSockets, _cgiToClient));
-    bool isClientSocket =
-        std::find(rawClientFds.begin(), rawClientFds.end(), fd) != rawClientFds.end();
-    log.trace() << "Is FD " << repr(fd)
-                << " a remote client FD?: " << repr(isClientSocket) << std::endl;
+    vector<int> rawClientFds = multPlexFdsToRawFds(determineRemoteClients(_monitorFds, _listeningSockets, _cgiToClient));
+    bool isClientSocket = std::find(rawClientFds.begin(), rawClientFds.end(), fd) != rawClientFds.end();
+    log.trace() << "Is FD " << repr(fd) << " a remote client FD?: " << repr(isClientSocket) << std::endl;
     log.debug();
     if (!ansi::noColor() && isClientSocket)
         log.debug << ANSI_RED_BG;

@@ -37,8 +37,7 @@ string Utils::parseArgs(int ac, char **av) {
 
 // https://stackoverflow.com/a/7913978
 bool Utils::isPrefix(string prefix, string longerString) {
-    std::pair<string::const_iterator, string::const_iterator> matcher =
-        std::mismatch(prefix.begin(), prefix.end(), longerString.begin());
+    std::pair<string::const_iterator, string::const_iterator> matcher = std::mismatch(prefix.begin(), prefix.end(), longerString.begin());
     if (matcher.first == prefix.end())
         return true;
     return false;
@@ -60,9 +59,7 @@ char Utils::decodeTwoHexChars(const char _c1, const char _c2) {
 }
 
 bool Utils::isHexDigitNoCase(const char c) {
-    if (('0' <= c && c <= '9') || c == 'a' || c == 'A' || c == 'b' || c == 'B' ||
-        c == 'c' || c == 'C' || c == 'd' || c == 'D' || c == 'e' || c == 'E' ||
-        c == 'f' || c == 'F')
+    if (('0' <= c && c <= '9') || c == 'a' || c == 'A' || c == 'b' || c == 'B' || c == 'c' || c == 'C' || c == 'd' || c == 'D' || c == 'e' || c == 'E' || c == 'f' || c == 'F')
         return true;
     return false;
 }
@@ -157,16 +154,14 @@ string Utils::ellipsisize(const string &str, size_t maxLen) {
 // std::tolower could lead to UB when the string contains negative chars
 string Utils::strToLower(const string &str) {
     string newStr = str;
-    std::transform(newStr.begin(), newStr.end(), newStr.begin(),
-                   static_cast<int (*)(int)>(std::tolower));
+    std::transform(newStr.begin(), newStr.end(), newStr.begin(), static_cast<int (*)(int)>(std::tolower));
     return newStr;
 }
 
 // std::tolower could lead to UB when the string contains negative chars
 string Utils::strToUpper(const string &str) {
     string newStr = str;
-    std::transform(newStr.begin(), newStr.end(), newStr.begin(),
-                   static_cast<int (*)(int)>(std::toupper));
+    std::transform(newStr.begin(), newStr.end(), newStr.begin(), static_cast<int (*)(int)>(std::toupper));
     return newStr;
 }
 
@@ -180,9 +175,8 @@ string Utils::millisecondRemainderSinceEpoch() {
     // TODO: use clock_gettime() instead
     ::gettimeofday(&tv, NULL);
 
-    millisec = static_cast<int>(std::floor(static_cast<double>(tv.tv_usec) / 1000 +
-                                           .5)); // Round to nearest millisec
-    if (millisec >= 1000) { // Allow for rounding up to nearest second
+    millisec = static_cast<int>(std::floor(static_cast<double>(tv.tv_usec) / 1000 + .5)); // Round to nearest millisec
+    if (millisec >= 1000) {                                                               // Allow for rounding up to nearest second
         millisec -= 1000;
         tv.tv_sec++;
     }
@@ -203,11 +197,7 @@ string Utils::formattedTimestamp(std::time_t _t, bool forLogger) {
     else
         t = _t;
     if (forLogger) {
-        if (std::strftime(ts, sizeof(ts),
-                          (cmt(" %Y-%m-%d ") + kwrd("%H:%M:%S.") +
-                           kwrd(millisecondRemainderSinceEpoch() + " "))
-                              .c_str(),
-                          std::localtime(&t)))
+        if (std::strftime(ts, sizeof(ts), (cmt(" %Y-%m-%d ") + kwrd("%H:%M:%S.") + kwrd(millisecondRemainderSinceEpoch() + " ")).c_str(), std::localtime(&t)))
             return string("[") + ts + "] ";
         return "[" + cmt(" N/A date, N/A time ") + "] ";
     } else {
@@ -225,15 +215,11 @@ string Utils::formatSI(size_t size) {
     } else if (size < 1024 * 1024) {
         oss << std::fixed << std::setprecision(2) << (double)size / (1024.0) << " KiB";
     } else if (size < 1024 * 1024 * 1024) {
-        oss << std::fixed << std::setprecision(2) << (double)size / (1024.0 * 1024.0)
-            << " MiB";
+        oss << std::fixed << std::setprecision(2) << (double)size / (1024.0 * 1024.0) << " MiB";
     } else {
-        oss << std::fixed << std::setprecision(2)
-            << (double)size / (1024.0 * 1024.0 * 1024.0) << " GiB";
+        oss << std::fixed << std::setprecision(2) << (double)size / (1024.0 * 1024.0 * 1024.0) << " GiB";
     }
 
-    Logger::lastInstance().debug()
-        << "Converting number " << repr(size) << " to readable SI Units "
-        << repr(oss.str()) << std::endl;
+    Logger::lastInstance().debug() << "Converting number " << repr(size) << " to readable SI Units " << repr(oss.str()) << std::endl;
     return oss.str();
 }
