@@ -6,6 +6,7 @@
 #include "Ansi.hpp"
 #include "Constants.hpp"
 #include "HttpServer.hpp"
+#include "Logger.hpp"
 #include "Repr.hpp"
 
 using Constants::EPOLL;
@@ -36,28 +37,21 @@ void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds &monitorFds, int fd) {
     bool isClientSocket = std::find(rawClientFds.begin(), rawClientFds.end(), fd) != rawClientFds.end();
     log.trace() << "Is FD " << repr(fd) << " a remote client FD?: " << repr(isClientSocket) << std::endl;
 
-    if (isClientSocket)
-        log.info();
-    else
-        log.debug();
+    Logger::StreamWrapper &out = isClientSocket ? log.info : log.debug;
+
+    out();
 
     if (!ansi::noColor() && isClientSocket)
-        log.debug << ANSI_RED_BG;
+        out << ANSI_RED_BG;
     Constants::forceNoColor = true;
 
-    if (isClientSocket)
-        log.info << "Calling close() on FD " << repr(fd);
-    else
-        log.debug << "Calling close() on FD " << repr(fd);
+    out << "Calling close() on FD " << repr(fd);
 
     Constants::forceNoColor = false;
     if (!ansi::noColor() && isClientSocket)
-        log.debug << ANSI_RST;
+        out << ANSI_RST;
 
-    if (isClientSocket)
-        log.info << std::endl;
-    else
-        log.debug << std::endl;
+    out << std::endl;
 
     ::close(fd); // TODO: @timo: guard every syscall
     log.debug() << "Removing FD " << repr(fd) << " from monitoring FDs" << std::endl;

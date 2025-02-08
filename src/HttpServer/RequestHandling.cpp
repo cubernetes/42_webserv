@@ -420,7 +420,7 @@ void HttpServer::rewriteRequest(int clientSocket, int statusCode, const string &
 
 // MAYBE: refactor
 void HttpServer::handleRequest(int clientSocket, const HttpRequest &request, const LocationCtx &location) {
-    log.info() << "Handling request path: " << repr(request.path) << " to matched location " << repr(location.first) << std::endl;
+    log.info() << "Handling request to path: " << repr(request.path) << " to matched location " << repr(location.first) << std::endl;
     log.trace() << "Request: " << repr(request) << std::endl;
     log.trace() << "Location: " << repr(location) << std::endl;
     if (!methodAllowed(clientSocket, request, location))
