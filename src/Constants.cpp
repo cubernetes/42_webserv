@@ -28,7 +28,7 @@ namespace Constants {
     const size_t clientMaxRequestSizeWithoutBody = 16384;
     const size_t cgiMaxResponseSizeWithoutBody = 8196;
     const size_t cgiMaxResponseBodySize = 1L * 10 * 1024 * 1024 * 1024;
-    const int cgiTimeout = 100000;     // TODO: @all: make 20 for eval
+    const int cgiTimeout = 5;          // TODO: @all: make 20 for eval
     const int multiplexTimeout = 1000; // in milliseconds
     const size_t chunkSize = CONSTANTS_CHUNK_SIZE;
     const char commentSymbol = '#';
