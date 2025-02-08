@@ -138,12 +138,15 @@ class HttpServer {
         const LocationCtx *location;
         bool headersSent;
         std::time_t lastActive;
+        bool dead;
+        bool noRecentReadEvent;
 
         CgiProcess(pid_t _pid, int _readFd, int _writeFd, int _clientSocket, const LocationCtx *_location)
-            : pid(_pid), readFd(_readFd), writeFd(_writeFd), response(), totalSize(0), clientSocket(_clientSocket), location(_location), headersSent(false), lastActive(std::time(NULL)) {}
+            : pid(_pid), readFd(_readFd), writeFd(_writeFd), response(), totalSize(0), clientSocket(_clientSocket), location(_location), headersSent(false), lastActive(std::time(NULL)), dead(false),
+              noRecentReadEvent(true) {}
         CgiProcess(const CgiProcess &other)
             : pid(other.pid), readFd(other.readFd), writeFd(other.writeFd), response(other.response), totalSize(other.totalSize), clientSocket(other.clientSocket), location(other.location),
-              headersSent(other.headersSent), lastActive(other.lastActive) {}
+              headersSent(other.headersSent), lastActive(other.lastActive), dead(other.dead), noRecentReadEvent(other.noRecentReadEvent) {}
         CgiProcess &operator=(const CgiProcess &) {
             return *this;
         } // forgot the reason why we have define a copy constructor and copy assignment

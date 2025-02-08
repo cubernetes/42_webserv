@@ -59,16 +59,19 @@ void HttpServer::handleCgiRead(int cgiFd) {
         log.error() << "Error in invalidation of cgiToClient map, CGI process "
                        "doesn't exist anymore"
                     << std::endl;
+        _cgiToClient.erase(cgiFd);
         sendError(cgiFd, 502, NULL);
         return;
     }
     CgiProcess &process = it->second;
+    process.noRecentReadEvent = false;
     log.debug() << "CGI process PID: " << repr(process.pid) << std::endl;
     log.debug() << "Pipe FD for the stdin of the CGI process: " << repr(process.writeFd) << std::endl;
 
     if (_cgiToClient.count(process.writeFd) > 0 && _cgiToClient[process.writeFd] == clientSocket) {
         log.debug() << "Client still has data to send, let's handle the read only when "
-                       "all data has been sent (half-duplex)";
+                       "all data has been sent (half-duplex)"
+                    << std::endl;
         return; // there's still pending writes (from client POST) to this CGI process
     }
 
@@ -261,8 +264,8 @@ bool HttpServer::parseHeader(const string &line, HttpRequest &request) {
 
 void HttpServer::handleDelete(int clientSocket, const HttpRequest &request, const LocationCtx &location) {
     log.debug() << "Trying to handle delete for location " << repr(location) << std::endl;
-    if (!directiveExists(location.second, "upload_dir")) {
-        log.debug() << "upload_dir directive doesn't exist, therefore file deletion is "
+    if (getFirstDirective(location.second, "upload_dir")[0].empty()) {
+        log.debug() << "upload_dir directive is empty, therefore file deletion is "
                        "forbidden on this location, sending 405 Method Not Allowed"
                     << std::endl;
         sendError(clientSocket, 405, NULL);
@@ -277,19 +280,19 @@ void HttpServer::handleDelete(int clientSocket, const HttpRequest &request, cons
         sendError(clientSocket, 404, &location);
     } else if (S_ISDIR(fileStat.st_mode)) {
         log.debug() << "File " << repr(diskPath) << " is a directory and directory deletion is not supported" << std::endl;
-        sendString(clientSocket, "Directory deletion is turned off", 403);
+        sendString(clientSocket, "Directory deletion is turned off\n", 403);
     } else if (S_ISREG(fileStat.st_mode)) {
         log.debug() << "File " << repr(diskPath) << " is a regular file, deleting it" << std::endl;
         if (::remove(diskPath.c_str()) < 0) {
             log.warn() << "File " << repr(diskPath) << " could not be deleted" << std::endl;
-            sendString(clientSocket, "Failed to delete resource " + request.path, 500);
+            sendString(clientSocket, "Failed to delete resource " + request.path + "\n", 500);
         } else {
             log.debug() << "File " << repr(diskPath) << " was successfully deleted" << std::endl;
             sendString(clientSocket, "Successfully deleted " + request.path + "\n");
         }
     } else {
         log.debug() << "File " << repr(diskPath) << " is neither a directory nor a regular file, sending 403 Forbidden" << std::endl;
-        sendString(clientSocket, "You may only delete regular files", 403);
+        sendString(clientSocket, "You may only delete regular files\n", 403);
     }
 }
 
@@ -306,8 +309,8 @@ static string getFileName(const string &path) {
 
 void HttpServer::handleUpload(int clientSocket, const HttpRequest &request, const LocationCtx &location, bool overwrite) {
     log.debug() << "Trying to handle file upload for location " << repr(location) << std::endl;
-    if (!directiveExists(location.second, "upload_dir")) {
-        log.debug() << "upload_dir directive doesn't exist, therefore file upload is "
+    if (getFirstDirective(location.second, "upload_dir")[0].empty()) {
+        log.debug() << "upload_dir directive is empty, therefore file upload is "
                        "forbidden on this location, sending 405 Method Not Allowed"
                     << std::endl;
         sendError(clientSocket, 405, NULL);
@@ -355,7 +358,7 @@ void HttpServer::handleRequestInternally(int clientSocket, const HttpRequest &re
         handleDelete(clientSocket, request, location);
     else if (request.method == "FTFT") {
         log.fatal() << "Easter egg method was requested" << std::endl;
-        sendString(clientSocket, repr(*this) + '\n');
+        sendString(clientSocket, repr(*this) + "\n");
     } else {
         log.fatal() << "Method " << repr(request.method) << " is not implemented, sending 405 Method Not Allowed" << std::endl;
         sendError(clientSocket, 405, &location);
@@ -484,14 +487,15 @@ bool HttpServer::validateRequest(const HttpRequest &request, int clientSocket) {
     }
     log.debug() << "Headers are complete" << std::endl;
 
-    log.debug() << "Checking if HTTP method is allowed" << std::endl;
-    // Check HTTP method
-    if (!methodIsImplemented(request.method)) { // TODO: @timo: make more stuff static
-        log.debug() << "Invalid request: Unsupported method: " << repr(request.method) << std::endl;
-        sendError(clientSocket, 405, NULL);
-        return false;
-    }
-    log.debug() << "Method " << repr(request.method) << " is allowed" << std::endl;
+    // Not doing that here
+    // log.debug() << "Checking if HTTP method is allowed" << std::endl;
+    // // Check HTTP method
+    // if (!methodIsImplemented(request.method)) { // TODO: @timo: make more stuff static
+    //     log.debug() << "Invalid request: Unsupported method: " << repr(request.method) << std::endl;
+    //     sendError(clientSocket, 405, NULL);
+    //     return false;
+    // }
+    // log.debug() << "Method " << repr(request.method) << " is allowed" << std::endl;
 
     log.debug() << "Checking if HTTP version is allowed" << std::endl;
     // Check HTTP version
@@ -738,6 +742,7 @@ void HttpServer::readFromClient(int clientSocket) {
     if (bytesRead <= 0) {
         log.debug() << "Removing client since only " << repr(bytesRead) << " bytes were read" << std::endl;
         removeClientAndRequest(clientSocket);
+        _clientToCgi.erase(clientSocket);
         return;
     }
 

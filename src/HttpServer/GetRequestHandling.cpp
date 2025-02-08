@@ -102,6 +102,10 @@ bool HttpServer::handlePathWithoutSlash(int clientSocket, const string &diskPath
         return false;
     } else if (S_ISDIR(fileStat.st_mode)) {
         log.debug() << "File " << repr(diskPath) << " is a directory" << std::endl;
+        if (diskPath[diskPath.length() - 1] != '/' && request.path[request.path.length() - 1] == '/') {
+            handlePathWithSlash(clientSocket, diskPath + "/", request, location, sendErrorMsg);
+            return true;
+        }
         if (!handleDirectoryRedirect(clientSocket, request.path)) {
             log.debug() << "Failed to handle directory redirect, sending 404 Not Found" << std::endl;
             if (sendErrorMsg)

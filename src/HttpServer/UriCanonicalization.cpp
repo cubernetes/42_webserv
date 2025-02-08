@@ -71,6 +71,10 @@ string HttpServer::resolveDots(const string &str) {
     for (size_t i = 0; i < parts.size(); ++i) {
         oss << "/" << parts[i];
     }
+    if (parts.empty()) {
+        log.trace2() << "There were no parts, making it a slash" << std::endl;
+        oss << "/";
+    }
     log.trace() << "Resolved path is: " << repr(oss.str()) << std::endl;
     return oss.str();
 }

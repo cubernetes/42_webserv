@@ -111,6 +111,7 @@ void HttpServer::setupListeningSocket(const Server &server) {
     struct pollfd pfd;
     pfd.fd = listeningSocket;
     pfd.events = POLLIN;
+    pfd.revents = 0;
     _monitorFds.pollFds.push_back(pfd);
 
     _listeningSockets.push_back(listeningSocket);

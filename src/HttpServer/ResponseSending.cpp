@@ -125,7 +125,7 @@ void HttpServer::writeToClient(int clientSocket) {
         if (_cgiToClient.count(clientSocket) > 0) {
             int client = _cgiToClient[clientSocket];
             log.debug() << "Client " << repr(client) << " had data to send but pipe broke" << std::endl;
-            log.debug() << "Notifying remote client " << repr(client) << " with a " << repr(500) << ", since CGI process died/closed stdin" << std::endl;
+            log.debug() << "NOT notifying remote client " << repr(client) << " with a " << repr(500) << ", (CGI process died/closed stdin), we don't care" << std::endl;
             sendError(client, 502, NULL);
         }
         return;
@@ -138,6 +138,11 @@ void HttpServer::writeToClient(int clientSocket) {
 // note, be careful sending errors from this function, as it could lead to infinite
 // recursion! (the error sending function uses this function)
 bool HttpServer::sendFileContent(int clientSocket, const string &filePath, const LocationCtx &location, int statusCode, const string &contentType, bool onlyHeaders) {
+    if (_pendingCloses.count(clientSocket) > 0) {
+        log.debug() << "NOT sending file " << repr(filePath) << " with status code " << repr(statusCode) << " since for client " << repr(clientSocket) << " there's already a pendingClose scheduled"
+                    << std::endl;
+        return true;
+    }
     log.debug() << "Trying to send file content of file " << repr(filePath) << std::endl;
     std::ifstream file(filePath.c_str(), std::ifstream::binary);
     if (!file) {
@@ -227,6 +232,11 @@ void HttpServer::sendError(int clientSocket, int statusCode, const LocationCtx *
 }
 
 void HttpServer::sendString(int clientSocket, const string &payload, int statusCode, const string &contentType, bool onlyHeaders) {
+    if (_pendingCloses.count(clientSocket) > 0) {
+        log.debug() << "NOT sending string " << repr(payload) << " with status code " << repr(statusCode) << " since for client " << repr(clientSocket) << " there's already a pendingClose scheduled"
+                    << std::endl;
+        return;
+    }
     log.debug() << "Preparing to send string response with status code: " << repr(statusCode) << std::endl;
     log.trace() << "The payload is " << repr(payload) << std::endl;
     std::ostringstream response;
