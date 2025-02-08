@@ -12,17 +12,14 @@ string HttpServer::getMimeType(const string &path) {
     size_t dotPos = path.find_last_of('.');
     log.trace() << "Doing a MIME type lookup for path: " << repr(path) << std::endl;
     if (dotPos == string::npos) {
-        log.debug() << "Path " << repr(path)
-                    << " doesn't have an extension, returning default MIME type "
-                    << repr(Constants::defaultMimeType) << std::endl;
+        log.debug() << "Path " << repr(path) << " doesn't have an extension, returning default MIME type " << repr(Constants::defaultMimeType) << std::endl;
         return Constants::defaultMimeType; // file without an extension
     }
 
     string ext = Utils::strToLower(path.substr(dotPos + 1));
     MimeTypes::const_iterator it = _mimeTypes.find(ext);
     if (it != _mimeTypes.end()) {
-        log.debug() << "Path " << repr(path) << " has registered extension " << repr(ext)
-                    << ", returning MIME type " << repr(it->second) << std::endl;
+        log.debug() << "Path " << repr(path) << " has registered extension " << repr(ext) << ", returning MIME type " << repr(it->second) << std::endl;
         return it->second; // MIME type found
     }
     log.debug() << "Path " << repr(path) << " has extension " << repr(ext)
@@ -33,8 +30,7 @@ string HttpServer::getMimeType(const string &path) {
 }
 
 void initMimeTypes(HttpServer::MimeTypes &mimeTypes) {
-    Logger::lastInstance().debug()
-        << "Initializing extension to MIME type mapping" << std::endl;
+    Logger::lastInstance().debug() << "Initializing extension to MIME type mapping" << std::endl;
 
     // Web content
     mimeTypes["html"] = "text/html";

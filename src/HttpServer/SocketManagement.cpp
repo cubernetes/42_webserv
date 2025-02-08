@@ -12,18 +12,14 @@ using Constants::EPOLL;
 using Constants::POLL;
 using Constants::SELECT;
 
-void HttpServer::updatePollEvents(MultPlexFds &monitorFds, int clientSocket, short events,
-                                  bool add) {
+void HttpServer::updatePollEvents(MultPlexFds &monitorFds, int clientSocket, short events, bool add) {
     for (size_t i = 0; i < monitorFds.pollFds.size(); ++i) {
         if (monitorFds.pollFds[i].fd == clientSocket) {
             if (add) {
-                log.trace() << "Adding events " << repr(pollevents_helper(events))
-                            << " to pollfd " << repr(monitorFds.pollFds[i]) << std::endl;
+                log.trace() << "Adding events " << repr(pollevents_helper(events)) << " to pollfd " << repr(monitorFds.pollFds[i]) << std::endl;
                 monitorFds.pollFds[i].events |= events;
             } else {
-                log.trace() << "Removing events " << repr(pollevents_helper(events))
-                            << " from pollfd " << repr(monitorFds.pollFds[i])
-                            << std::endl;
+                log.trace() << "Removing events " << repr(pollevents_helper(events)) << " from pollfd " << repr(monitorFds.pollFds[i]) << std::endl;
                 monitorFds.pollFds[i].events &= ~events;
             }
             break;
@@ -31,8 +27,7 @@ void HttpServer::updatePollEvents(MultPlexFds &monitorFds, int clientSocket, sho
     }
 }
 
-void HttpServer::startMonitoringForWriteEvents(MultPlexFds &monitorFds,
-                                               int clientSocket) {
+void HttpServer::startMonitoringForWriteEvents(MultPlexFds &monitorFds, int clientSocket) {
     log.debug() << "Starting monitoring for FD " << repr(clientSocket) << std::endl;
     switch (monitorFds.multPlexType) {
     case SELECT:

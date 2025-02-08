@@ -83,18 +83,15 @@ class HttpServer {
         bool pathParsed;
 
         HttpRequest()
-            : method(), path("/"), rawQuery(), httpVersion(), headers(), body(),
-              state(READING_HEADERS), contentLength(0), chunkedTransfer(false),
-              bytesRead(0), temporaryBuffer(), pathParsed(false) {}
+            : method(), path("/"), rawQuery(), httpVersion(), headers(), body(), state(READING_HEADERS), contentLength(0), chunkedTransfer(false), bytesRead(0), temporaryBuffer(), pathParsed(false) {}
     };
 
-    struct Server { // Basically just a thin wrapper around ServerCtx, but with some
-                    // fields transformed for ease of use and efficiency
-        struct in_addr
-            ip; // network byte order // Should multiple listen directive be possible in
-                // the future, then this, along with port, would become a vector of pairs,
-                // but for MVP's sake, let's keep it at one
-        in_port_t port; // network byte order
+    struct Server {        // Basically just a thin wrapper around ServerCtx, but with some
+                           // fields transformed for ease of use and efficiency
+        struct in_addr ip; // network byte order // Should multiple listen directive be possible in
+                           // the future, then this, along with port, would become a vector of pairs,
+                           // but for MVP's sake, let's keep it at one
+        in_port_t port;    // network byte order
         const Directives &directives;
         const LocationCtxs &locations;
         const Arguments &serverNames;
@@ -102,8 +99,7 @@ class HttpServer {
         size_t id;
 
         ~Server();
-        Server(const Directives &_directives, const LocationCtxs &_locations,
-               const Arguments &_serverNames, Logger &_log, size_t _id);
+        Server(const Directives &_directives, const LocationCtxs &_locations, const Arguments &_serverNames, Logger &_log, size_t _id);
         Server(const Server &other);
         Server &operator=(const Server &other);
     };
@@ -128,15 +124,9 @@ class HttpServer {
 
         FdStates fdStates;
 
-        MultPlexFds(MultPlexType initMultPlexType)
-            : multPlexType(initMultPlexType), selectFdSet(), selectFds(), pollFds(),
-              epollFds(), fdStates() {
-            FD_ZERO(&selectFdSet);
-        }
+        MultPlexFds(MultPlexType initMultPlexType) : multPlexType(initMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() { FD_ZERO(&selectFdSet); }
         // private: //should be private, but can't because of Repr.hpp
-        MultPlexFds()
-            : multPlexType(Constants::defaultMultPlexType), selectFdSet(), selectFds(),
-              pollFds(), epollFds(), fdStates() {}
+        MultPlexFds() : multPlexType(Constants::defaultMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() {}
     };
     struct CgiProcess {
         pid_t pid;
@@ -148,17 +138,15 @@ class HttpServer {
         const LocationCtx *location;
         bool headersSent;
         std::time_t lastActive;
+        bool dead;
+        bool noRecentReadEvent;
 
-        CgiProcess(pid_t _pid, int _readFd, int _writeFd, int _clientSocket,
-                   const LocationCtx *_location)
-            : pid(_pid), readFd(_readFd), writeFd(_writeFd), response(), totalSize(0),
-              clientSocket(_clientSocket), location(_location), headersSent(false),
-              lastActive(std::time(NULL)) {}
+        CgiProcess(pid_t _pid, int _readFd, int _writeFd, int _clientSocket, const LocationCtx *_location)
+            : pid(_pid), readFd(_readFd), writeFd(_writeFd), response(), totalSize(0), clientSocket(_clientSocket), location(_location), headersSent(false), lastActive(std::time(NULL)), dead(false),
+              noRecentReadEvent(true) {}
         CgiProcess(const CgiProcess &other)
-            : pid(other.pid), readFd(other.readFd), writeFd(other.writeFd),
-              response(other.response), totalSize(other.totalSize),
-              clientSocket(other.clientSocket), location(other.location),
-              headersSent(other.headersSent), lastActive(other.lastActive) {}
+            : pid(other.pid), readFd(other.readFd), writeFd(other.writeFd), response(other.response), totalSize(other.totalSize), clientSocket(other.clientSocket), location(other.location),
+              headersSent(other.headersSent), lastActive(other.lastActive), dead(other.dead), noRecentReadEvent(other.noRecentReadEvent) {}
         CgiProcess &operator=(const CgiProcess &) {
             return *this;
         } // forgot the reason why we have define a copy constructor and copy assignment
@@ -204,17 +192,13 @@ class HttpServer {
     //// private methods ////
     // HttpServer must always be constructed with a config
     HttpServer()
-        : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(),
-          _listeningSockets(), _httpVersionString(), _rawConfig(), _config(),
-          _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(),
-          _defaultServers(), _pendingRequests(), log(Logger::lastInstance()){};
+        : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(),
+          _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), log(Logger::lastInstance()){};
     // Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a
     // server and its config
     HttpServer(const HttpServer &)
-        : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(),
-          _listeningSockets(), _httpVersionString(), _rawConfig(), _config(),
-          _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(),
-          _defaultServers(), _pendingRequests(), log(Logger::lastInstance()){};
+        : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(),
+          _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), log(Logger::lastInstance()){};
     // HttpServer cannot be assigned to
     HttpServer &operator=(const HttpServer &) { return *this; };
 
@@ -232,11 +216,9 @@ class HttpServer {
     void readFromClient(int clientSocket);
 
     // request parsing
-    size_t findMatchingServer(const string &host, const struct in_addr &addr,
-                              in_port_t port) const;
+    size_t findMatchingServer(const string &host, const struct in_addr &addr, in_port_t port) const;
     size_t findMatchingLocation(const Server &serverConfig, const string &path) const;
-    size_t getIndexOfServerByHost(const string &requestedHost, const struct in_addr &addr,
-                                  in_port_t port) const;
+    size_t getIndexOfServerByHost(const string &requestedHost, const struct in_addr &addr, in_port_t port) const;
     size_t getIndexOfDefaultServer(const struct in_addr &addr, in_port_t port) const;
     const LocationCtx &requestToLocation(int clientSocket, const HttpRequest &request);
     struct sockaddr_in getSockaddrIn(int clientSocket);
@@ -245,32 +227,20 @@ class HttpServer {
     string resolveDots(const string &str);
 
     // request handling
-    void handleRequest(int clientSocket, const HttpRequest &request,
-                       const LocationCtx &location);
-    void handleRequestInternally(int clientSocket, const HttpRequest &request,
-                                 const LocationCtx &location);
-    bool methodAllowed(int clientSocket, const HttpRequest &request,
-                       const LocationCtx &location);
-    void handleDelete(int clientSocket, const HttpRequest &request,
-                      const LocationCtx &location);
-    void rewriteRequest(int clientSocket, int statusCode, const string &urlOrText,
-                        const LocationCtx &location);
+    void handleRequest(int clientSocket, const HttpRequest &request, const LocationCtx &location);
+    void handleRequestInternally(int clientSocket, const HttpRequest &request, const LocationCtx &location);
+    bool methodAllowed(int clientSocket, const HttpRequest &request, const LocationCtx &location);
+    void handleDelete(int clientSocket, const HttpRequest &request, const LocationCtx &location);
+    void rewriteRequest(int clientSocket, int statusCode, const string &urlOrText, const LocationCtx &location);
     void redirectClient(int clientSocket, const string &newUri, int statusCode = 301);
-    void handleUpload(int clientSocket, const HttpRequest &request,
-                      const LocationCtx &location, bool overwrite);
+    void handleUpload(int clientSocket, const HttpRequest &request, const LocationCtx &location, bool overwrite);
 
     // static file serving
-    void serveStaticContent(int clientSocket, const HttpRequest &request,
-                            const LocationCtx &location);
+    void serveStaticContent(int clientSocket, const HttpRequest &request, const LocationCtx &location);
     string determineDiskPath(const HttpRequest &request, const LocationCtx &location);
-    bool handlePathWithoutSlash(int clientSocket, const string &diskPath,
-                                const HttpRequest &request, const LocationCtx &location,
-                                bool sendErrorMsg = true);
-    void handlePathWithSlash(int clientSocket, const string &diskPath,
-                             const HttpRequest &request, const LocationCtx &location,
-                             bool sendErrorMsg = true);
-    bool handleIndexes(int clientSocket, const string &diskPath,
-                       const HttpRequest &request, const LocationCtx &location);
+    bool handlePathWithoutSlash(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location, bool sendErrorMsg = true);
+    void handlePathWithSlash(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location, bool sendErrorMsg = true);
+    bool handleIndexes(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location);
     bool handleDirectoryRedirect(int clientSocket, const string &uri);
 
     // CGI
@@ -282,8 +252,7 @@ class HttpServer {
 
     // Writing to a client
     void writeToClient(int clientSocket);
-    void sendString(int clientSocket, const string &payload, int statusCode = 200,
-                    const string &contentType = "text/html", bool onlyHeaders = false);
+    void sendString(int clientSocket, const string &payload, int statusCode = 200, const string &contentType = "text/html", bool onlyHeaders = false);
 
   public:
     void sendError(int clientSocket, int statusCode, const LocationCtx *const location);
@@ -291,9 +260,7 @@ class HttpServer {
 
   private:
     bool sendErrorPage(int clientSocket, int statusCode, const LocationCtx &location);
-    bool sendFileContent(int clientSocket, const string &filePath,
-                         const LocationCtx &location, int statusCode = 200,
-                         const string &contentType = "", bool onlyHeaders = false);
+    bool sendFileContent(int clientSocket, const string &filePath, const LocationCtx &location, int statusCode = 200, const string &contentType = "", bool onlyHeaders = false);
     PendingWrite &updatePendingWrite(PendingWrite &pw);
 
     // Removing a client
@@ -303,28 +270,27 @@ class HttpServer {
     void closeAndRemoveAllMultPlexFd(MultPlexFds &monitorFds);
     void closeAndRemoveAllPollFd(MultPlexFds &monitorFds);
     bool maybeTerminateConnection(PendingWriteMap::iterator it, int clientSocket);
-    void terminateIfNoPendingDataAndNoCgi(PendingWriteMap::iterator &it, int clientSocket,
-                                          ssize_t bytesSent);
+    void terminateIfNoPendingDataAndNoCgi(PendingWriteMap::iterator &it, int clientSocket, ssize_t bytesSent);
     void terminatePendingCloses(int clientSocket);
 
     // Monitor sockets (the blocking part)
     MultPlexFds getReadyFds(MultPlexFds &monitorFds);
     MultPlexFds doPoll(MultPlexFds &monitorFds);
-    MultPlexFds getReadyPollFds(MultPlexFds &monitorFds, int nReady,
-                                struct pollfd *pollFds, nfds_t nPollFds);
+    MultPlexFds getReadyPollFds(MultPlexFds &monitorFds, int nReady, struct pollfd *pollFds, nfds_t nPollFds);
 
     // Handle monitoring state for socket (i.e. for POLL, add/remove the POLLOUT event,
     // etc.)
     void stopMonitoringForWriteEvents(MultPlexFds &monitorFds, int clientSocket);
     void startMonitoringForWriteEvents(MultPlexFds &monitorFds, int clientSocket);
-    void updatePollEvents(MultPlexFds &monitorFds, int clientSocket, short events,
-                          bool add);
+    void updatePollEvents(MultPlexFds &monitorFds, int clientSocket, short events, bool add);
 
     // Multiplex I/O file descriptor helpers
     void handleReadyFds(const MultPlexFds &readyFds);
     struct pollfd *multPlexFdsToPollFds(const MultPlexFds &fds);
     nfds_t getNumberOfPollFds(const MultPlexFds &fds);
     int multPlexFdToRawFd(const MultPlexFds &readyFds, size_t i);
+    vector<int> multPlexFdsToRawFds(const MultPlexFds &readyFds);
+    MultPlexFds determineRemoteClients(const MultPlexFds &m, vector<int> ls, const CgiFdToClientMap &cgiToClient);
 
     // helpers
     string getMimeType(const string &path);
@@ -343,14 +309,11 @@ class HttpServer {
 
     // Request processing stages
     void handleIncomingData(int clientSocket, const char *buffer, ssize_t bytesRead);
-    bool processRequestHeaders(int clientSocket, HttpRequest &request,
-                               const string &rawData);
-    bool processRequestBody(int clientSocket, HttpRequest &request, const char *buffer,
-                            size_t bytesRead);
+    bool processRequestHeaders(int clientSocket, HttpRequest &request, const string &rawData);
+    bool processRequestBody(int clientSocket, HttpRequest &request, const char *buffer, size_t bytesRead);
     void finalizeRequest(int clientSocket, HttpRequest &request);
     void removeClientAndRequest(int clientSocket);
-    bool checkRequestBodySize(int clientSocket, const HttpRequest &request,
-                              size_t currentSize);
+    bool checkRequestBodySize(int clientSocket, const HttpRequest &request, size_t currentSize);
     bool checkRequestSizeWithoutBody(int clientSocket, size_t currentSize);
 };
 

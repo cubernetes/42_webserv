@@ -16,6 +16,7 @@
 using std::string;
 
 namespace Constants {
+    extern bool forceNoColor;
     extern const size_t loggingMaxStringLen;
     extern const size_t clientMaxRequestLineSize;
     extern const size_t clientMaxRequestSizeWithoutBody;

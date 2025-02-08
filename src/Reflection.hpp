@@ -46,8 +46,7 @@ class Reflection {
     // closure, in a way) in the derived class will call those closures which call
     // reflectMember(), which in turn adds the repr closures to the internal map of
     // member.
-    void reflectMember(ReprClosure reprClosure, const char *memberId,
-                       const void *memberPtr);
+    void reflectMember(ReprClosure reprClosure, const char *memberId, const void *memberPtr);
 
     // return the string representation of a member
     string _memberToStr(const Member &member) const;
