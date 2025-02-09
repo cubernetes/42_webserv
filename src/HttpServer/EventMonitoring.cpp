@@ -9,6 +9,7 @@
 #include "Constants.hpp"
 #include "HttpServer.hpp"
 #include "Repr.hpp"
+#include "Utils.hpp"
 
 using Constants::EPOLL;
 using Constants::POLL;
@@ -21,12 +22,15 @@ HttpServer::MultPlexFds HttpServer::getReadyPollFds(MultPlexFds &monitorFds, int
     (void)nReady;
     for (int i = 0; i < static_cast<int>(nPollFds); ++i) {
         if (pollFds[i].revents & POLLIN) {
+            log.trace() << "Poll revents contains POLLIN: " << repr(pollFds[i]) << std::endl;
             readyFds.pollFds.push_back(pollFds[i]);
             readyFds.fdStates.push_back(FD_READABLE);
         } else if (pollFds[i].revents & POLLOUT) {
+            log.trace() << "Poll revents contains POLLOUT: " << repr(pollFds[i]) << std::endl;
             readyFds.pollFds.push_back(pollFds[i]);
             readyFds.fdStates.push_back(FD_WRITEABLE);
         } else if (pollFds[i].revents != 0) {
+            log.debug() << "Poll revents contains an event that is neither POLLIN nor POLLOUT: " << repr(pollFds[i]) << std::endl;
             closeAndRemoveMultPlexFd(monitorFds, pollFds[i].fd);
         }
     }
@@ -51,6 +55,7 @@ HttpServer::MultPlexFds HttpServer::doPoll(MultPlexFds &monitorFds) {
 
 HttpServer::MultPlexFds HttpServer::determineRemoteClients(const MultPlexFds &m, vector<int> ls, const CgiFdToClientMap &cgiToClient) {
     MultPlexFds remaining;
+    log.trace() << "Determining remote clients" << std::endl;
     switch (m.multPlexType) {
     case SELECT:
         throw std::logic_error("Filtering remote clients with select multiplex FDs is not implemented yet");
@@ -71,6 +76,7 @@ HttpServer::MultPlexFds HttpServer::determineRemoteClients(const MultPlexFds &m,
     default:
         throw std::logic_error("Filtering remote clients from unknown multiplex FDs is not implemented");
     }
+    log.trace() << "Remove clients are " << repr(remaining) << std::endl;
     return remaining;
 }
 

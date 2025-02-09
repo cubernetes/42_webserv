@@ -220,7 +220,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
     }
 
     if (pid == 0) { // we are in child
-#if PP_DEBUG && false
+#if PP_DEBUG
         sleep(1);
         log.warn() << "DEBUG: Child: Slept for 1 seconds, please remove this and related "
                       "code before release"
@@ -277,7 +277,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
         log.error() << "Child: " << func("execve") << punct("()") << " failed" << std::endl;
         ::exit(1);
     }
-#if PP_DEBUG && false
+#if PP_DEBUG
     log.warn() << "DEBUG: Parent: Sleeping for 3 seconds, please remove this and related "
                   "code before release"
                << std::endl;

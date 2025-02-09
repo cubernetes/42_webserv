@@ -11,8 +11,8 @@ import os
 # curl -F "content_id=123" -F "vote=up" http://webserv/cgi-bin/vote.py
 
 def main():
-    print("Content-Type: application/json")
-    print()
+    print("Content-Type: application/json\r")
+    print("\r")
     
     form = cgi.FieldStorage()
     

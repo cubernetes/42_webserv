@@ -2,6 +2,7 @@
 #include <iostream>
 #include <ostream>
 #include <signal.h>
+#include <unistd.h>
 
 #include "Config.hpp"
 #include "Constants.hpp"
@@ -17,7 +18,8 @@ HttpServer::~HttpServer() {
 
 void cgiDied(int signal) {
     (void)signal;
-    Logger::lastInstance().debug() << "Some CGI process died right now" << std::endl;
+    if (Logger::lastInstance().isdebug())
+        write(1, "Some CGI process died\n", 22);
     ;
 }
 
@@ -87,7 +89,7 @@ void HttpServer::run() {
 								  // 3) read data for Constants::chunkSize bytes (or remove client if appropriate)
 								  // 4) do nothing
 		checkForInactiveClients(); // reset connection for timed out CGI's
-		log.debug() << "Finished one mainloop iteration" << std::endl;
+		log.debug() << "Finished one mainloop iteration, the following line is intentionally left blank\n" << std::endl;
 	}
   log.warn() << "Shutting server down" << std::endl;
 }

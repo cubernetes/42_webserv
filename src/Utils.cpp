@@ -6,7 +6,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <functional>
 #include <iomanip>
 #include <ios>
 #include <ostream>
