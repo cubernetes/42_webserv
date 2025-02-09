@@ -98,10 +98,15 @@ void HttpServer::handleCgiRead(int cgiFd) {
         log.debug() << "Read 0 bytes from the CGI pipe FD, which is odd since I/O "
                        "multiplexing said there's a read event, but whatever"
                     << std::endl;
-        int status;
-        // TODO: @all: we should install a signal handler that will reap the CGI process
-        log.debug() << "Calling " << func("waitpid") << punct("()") << " on pid " << repr(process.pid) << " with flags " << num("WNOHANG") << std::endl;
-        (void)::waitpid(process.pid, &status, WNOHANG);
+
+        // not sure, since checkForInactiveClients function already does everything for us
+        // {
+        //	process.dead = true;
+        //	log.debug() << "Calling " << func("waitpid") << punct("()") << " on pid " << repr(process.pid) << " with flags " << num("WNOHANG") << std::endl;
+        //	int status;
+        //	(void)::waitpid(process.pid, &status, WNOHANG);
+        // }
+        process.done = true;
 
         if (!process.headersSent) {
             log.warn() << "CGI process " << repr(process)
@@ -160,9 +165,8 @@ void HttpServer::handleCgiRead(int cgiFd) {
             fullResponse << "HTTP/1.1 200 OK\r\n";
 
             // Add Content-Type if not present
-            if (headers.find("Content-Type:") == string::npos) {
+            if (Utils::strToLower(headers).find("content-type:") == string::npos)
                 fullResponse << "Content-Type: text/html\r\n";
-            }
 
             fullResponse << headers << "\r\n\r\n" << body;
 
@@ -633,7 +637,7 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
     // If no body expected, mark as complete
     if (!request.chunkedTransfer && (request.contentLength == 0 || request.bytesRead >= request.contentLength)) {
         request.state = REQUEST_COMPLETE;
-        log.debug() << "No body expected, updating request parsing state to " << repr(request.state) << std::endl;
+        log.debug() << "No additional body data expected, updating request parsing state to " << repr(request.state) << std::endl;
     }
 
     return true;

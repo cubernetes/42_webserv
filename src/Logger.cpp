@@ -1,7 +1,5 @@
-#include <bits/types/struct_timeval.h>
 #include <cmath>
 #include <cstdio>
-#include <ctime>
 #include <iostream>
 #include <ostream>
 #include <unistd.h>

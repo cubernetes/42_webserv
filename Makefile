@@ -55,7 +55,7 @@ C2_LDFLAGS := -L$(HOME)/.local/lib -LCatch2/build/src -lCatch2Main -lCatch2
 
 # DEBUG=1 make re # include debugging information in the binary
 ifeq ($(DEBUG), 1)
-	CFLAGS += -ggdb3 -O0 -DPP_DEBUG=true
+	CFLAGS += -ggdb3 -O0
 	LDFLAGS += -ggdb3 -O0
 endif
 
