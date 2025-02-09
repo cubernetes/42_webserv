@@ -2,6 +2,7 @@
 #include <iostream>
 #include <ostream>
 #include <signal.h>
+#include <unistd.h>
 
 #include "Config.hpp"
 #include "Constants.hpp"
@@ -17,7 +18,8 @@ HttpServer::~HttpServer() {
 
 void cgiDied(int signal) {
     (void)signal;
-    Logger::lastInstance().debug() << "Some CGI process died right now" << std::endl;
+    if (Logger::lastInstance().isdebug())
+        write(1, "Some CGI process died\n", 22);
     ;
 }
 
