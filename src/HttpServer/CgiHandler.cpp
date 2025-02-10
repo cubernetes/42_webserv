@@ -230,9 +230,9 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
     if (pid == 0) { // we are in child
 #if PP_DEBUG
         sleep(1);
-        log.warn() << "DEBUG: Child: Slept for 1 seconds, please remove this and related "
-                      "code before release"
-                   << std::endl;
+        log.warning() << "DEBUG: Child: Slept for 1 seconds, please remove this and related "
+                         "code before release"
+                      << std::endl;
 #endif
         log.debug() << "Child: Entered, about to close FDs" << std::endl;
         (void)::close(toCgi[PIPE_WRITE]);  // doesn't need to write to itself

@@ -149,7 +149,7 @@ template <> struct ReprWrapper<string> {
                 return str(Utils::escapeExceptNlAndTab(value)) + (Logger::lastInstance().istrace4() ? punct("s") : "");
             else if (Logger::lastInstance().istrace2())
                 return str(Utils::jsonEscape(value)) + (Logger::lastInstance().istrace4() ? punct("s") : "");
-            else // for trace1, debug, info, warn, error, fatal -> we don't want to see the
+            else // for trace1, debug, info, warning, error, fatal -> we don't want to see the
                  // whole (possibly huge) string
                 return str(Utils::jsonEscape(Utils::ellipsisize(value, Constants::loggingMaxStringLen))) +
                        (Logger::lastInstance().istrace4() ? punct("s") : "");
@@ -185,7 +185,7 @@ template <> struct ReprWrapper<char *> {
                     return str(Utils::escapeExceptNlAndTab(value));
                 else if (Logger::lastInstance().istrace2())
                     return str(Utils::jsonEscape(value));
-                else // for trace1, debug, info, warn, error, fatal -> we don't want to see
+                else // for trace1, debug, info, warning, error, fatal -> we don't want to see
                      // the whole (possibly huge) string
                     return str(Utils::jsonEscape(Utils::ellipsisize(value, Constants::loggingMaxStringLen)));
             } else
