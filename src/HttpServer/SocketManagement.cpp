@@ -16,10 +16,12 @@ void HttpServer::updatePollEvents(MultPlexFds &monitorFds, int clientSocket, sho
     for (size_t i = 0; i < monitorFds.pollFds.size(); ++i) {
         if (monitorFds.pollFds[i].fd == clientSocket) {
             if (add) {
-                log.trace() << "Adding events " << repr(pollevents_helper(events)) << " to pollfd " << repr(monitorFds.pollFds[i]) << std::endl;
+                log.trace() << "Adding events " << repr(pollevents_helper(events)) << " to pollfd " << repr(monitorFds.pollFds[i])
+                            << std::endl;
                 monitorFds.pollFds[i].events |= events;
             } else {
-                log.trace() << "Removing events " << repr(pollevents_helper(events)) << " from pollfd " << repr(monitorFds.pollFds[i]) << std::endl;
+                log.trace() << "Removing events " << repr(pollevents_helper(events)) << " from pollfd " << repr(monitorFds.pollFds[i])
+                            << std::endl;
                 monitorFds.pollFds[i].events &= ~events;
             }
             break;

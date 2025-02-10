@@ -83,7 +83,8 @@ class HttpServer {
         bool pathParsed;
 
         HttpRequest()
-            : method(), path("/"), rawQuery(), httpVersion(), headers(), body(), state(READING_HEADERS), contentLength(0), chunkedTransfer(false), bytesRead(0), temporaryBuffer(), pathParsed(false) {}
+            : method(), path("/"), rawQuery(), httpVersion(), headers(), body(), state(READING_HEADERS), contentLength(0),
+              chunkedTransfer(false), bytesRead(0), temporaryBuffer(), pathParsed(false) {}
     };
 
     struct Server {        // Basically just a thin wrapper around ServerCtx, but with some
@@ -124,7 +125,10 @@ class HttpServer {
 
         FdStates fdStates;
 
-        MultPlexFds(MultPlexType initMultPlexType) : multPlexType(initMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() { FD_ZERO(&selectFdSet); }
+        MultPlexFds(MultPlexType initMultPlexType)
+            : multPlexType(initMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() {
+            FD_ZERO(&selectFdSet);
+        }
         // private: //should be private, but can't because of Repr.hpp
         MultPlexFds() : multPlexType(Constants::defaultMultPlexType), selectFdSet(), selectFds(), pollFds(), epollFds(), fdStates() {}
     };
@@ -143,11 +147,12 @@ class HttpServer {
         bool done;
 
         CgiProcess(pid_t _pid, int _readFd, int _writeFd, int _clientSocket, const LocationCtx *_location)
-            : pid(_pid), readFd(_readFd), writeFd(_writeFd), response(), totalSize(0), clientSocket(_clientSocket), location(_location), headersSent(false), lastActive(std::time(NULL)), dead(false),
-              noRecentReadEvent(true), done(false) {}
+            : pid(_pid), readFd(_readFd), writeFd(_writeFd), response(), totalSize(0), clientSocket(_clientSocket), location(_location),
+              headersSent(false), lastActive(std::time(NULL)), dead(false), noRecentReadEvent(true), done(false) {}
         CgiProcess(const CgiProcess &other)
-            : pid(other.pid), readFd(other.readFd), writeFd(other.writeFd), response(other.response), totalSize(other.totalSize), clientSocket(other.clientSocket), location(other.location),
-              headersSent(other.headersSent), lastActive(other.lastActive), dead(other.dead), noRecentReadEvent(other.noRecentReadEvent), done(other.done) {}
+            : pid(other.pid), readFd(other.readFd), writeFd(other.writeFd), response(other.response), totalSize(other.totalSize),
+              clientSocket(other.clientSocket), location(other.location), headersSent(other.headersSent), lastActive(other.lastActive),
+              dead(other.dead), noRecentReadEvent(other.noRecentReadEvent), done(other.done) {}
         CgiProcess &operator=(const CgiProcess &) {
             return *this;
         } // forgot the reason why we have define a copy constructor and copy assignment
@@ -193,13 +198,15 @@ class HttpServer {
     //// private methods ////
     // HttpServer must always be constructed with a config
     HttpServer()
-        : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(),
-          _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), log(Logger::lastInstance()){};
+        : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _httpVersionString(),
+          _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(),
+          _pendingRequests(), log(Logger::lastInstance()){};
     // Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a
     // server and its config
     HttpServer(const HttpServer &)
-        : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _httpVersionString(), _rawConfig(), _config(), _mimeTypes(), _statusTexts(),
-          _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(), _pendingRequests(), log(Logger::lastInstance()){};
+        : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _httpVersionString(),
+          _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(),
+          _pendingRequests(), log(Logger::lastInstance()){};
     // HttpServer cannot be assigned to
     HttpServer &operator=(const HttpServer &) { return *this; };
 
@@ -239,8 +246,10 @@ class HttpServer {
     // static file serving
     void serveStaticContent(int clientSocket, const HttpRequest &request, const LocationCtx &location);
     string determineDiskPath(const HttpRequest &request, const LocationCtx &location);
-    bool handlePathWithoutSlash(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location, bool sendErrorMsg = true);
-    void handlePathWithSlash(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location, bool sendErrorMsg = true);
+    bool handlePathWithoutSlash(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location,
+                                bool sendErrorMsg = true);
+    void handlePathWithSlash(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location,
+                             bool sendErrorMsg = true);
     bool handleIndexes(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location);
     bool handleDirectoryRedirect(int clientSocket, const string &uri);
 
@@ -253,7 +262,8 @@ class HttpServer {
 
     // Writing to a client
     void writeToClient(int clientSocket);
-    void sendString(int clientSocket, const string &payload, int statusCode = 200, const string &contentType = "text/html", bool onlyHeaders = false);
+    void sendString(int clientSocket, const string &payload, int statusCode = 200, const string &contentType = "text/html",
+                    bool onlyHeaders = false);
 
   public:
     void sendError(int clientSocket, int statusCode, const LocationCtx *const location);
@@ -261,7 +271,8 @@ class HttpServer {
 
   private:
     bool sendErrorPage(int clientSocket, int statusCode, const LocationCtx &location);
-    bool sendFileContent(int clientSocket, const string &filePath, const LocationCtx &location, int statusCode = 200, const string &contentType = "", bool onlyHeaders = false);
+    bool sendFileContent(int clientSocket, const string &filePath, const LocationCtx &location, int statusCode = 200,
+                         const string &contentType = "", bool onlyHeaders = false);
     PendingWrite &updatePendingWrite(PendingWrite &pw);
 
     // Removing a client

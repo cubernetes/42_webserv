@@ -22,8 +22,9 @@ size_t HttpServer::getIndexOfServerByHost(const string &requestedHost, const str
         const Server &server = _servers[i];
         if (server.port == port && (std::memcmp(&server.ip, &addr, sizeof(addr)) == 0 || server.ip.s_addr == INADDR_ANY)) {
             for (size_t j = 0; j < server.serverNames.size(); ++j) {
-                if (requestedHostLower == Utils::strToLower(server.serverNames[j])) { // see
-                                                                                      // https://datatracker.ietf.org/doc/html/rfc2616#section-3.2.3
+                if (requestedHostLower ==
+                    Utils::strToLower(server.serverNames[j])) { // see
+                                                                // https://datatracker.ietf.org/doc/html/rfc2616#section-3.2.3
                     return i + 1;
                 }
             }
@@ -57,7 +58,8 @@ size_t HttpServer::getIndexOfDefaultServer(const struct in_addr &addr, in_port_t
 }
 
 size_t HttpServer::findMatchingServer(const string &host, const struct in_addr &addr, in_port_t port) const {
-    log.debug() << "Trying to find matching server for host " << repr(host) << " and addr:port " << repr(sockaddr_in_wrapper(addr, port)) << std::endl;
+    log.debug() << "Trying to find matching server for host " << repr(host) << " and addr:port " << repr(sockaddr_in_wrapper(addr, port))
+                << std::endl;
     string requestedHost = host;
     size_t colonPos = requestedHost.rfind(':');
     if (colonPos != string::npos)
@@ -146,7 +148,8 @@ const LocationCtx &HttpServer::requestToLocation(int clientSocket, const HttpReq
     size_t serverIdx;
     if (!(serverIdx = findMatchingServer(host, addr.sin_addr, addr.sin_port))) {
         sendError(clientSocket, 404, NULL); // TODO: @all: is 404 rlly correct?
-        throw runtime_error("Couldn't find any server for hostname '" + repr(host) + "' and addr:port being " + repr<struct sockaddr_in_wrapper>(addr));
+        throw runtime_error("Couldn't find any server for hostname '" + repr(host) + "' and addr:port being " +
+                            repr<struct sockaddr_in_wrapper>(addr));
     }
     const Server &server = _servers[serverIdx - 1]; // serverIdx=0 indicates failure, so 1 is the first server
 
@@ -156,6 +159,7 @@ const LocationCtx &HttpServer::requestToLocation(int clientSocket, const HttpReq
         sendError(clientSocket, 404, NULL); // TODO: @all: is 404 rlly correct?
         throw runtime_error(string("Could not find a location for path ") + repr(request.path));
     }
-    log.debug() << "Request " << repr(request) << " was successfully translated to location " << repr(server.locations[locationIdx - 1]) << std::endl;
+    log.debug() << "Request " << repr(request) << " was successfully translated to location " << repr(server.locations[locationIdx - 1])
+                << std::endl;
     return server.locations[locationIdx - 1];
 }

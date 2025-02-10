@@ -35,11 +35,15 @@ typedef HttpServer::ClientFdToCgiMap CgiProcessMap; // not sure why `using' does
 // De- & Constructors
 CgiHandler::~CgiHandler() { TRACE_DTOR; }
 
-CgiHandler::CgiHandler(HttpServer &server, const string &extension, const string &program, Logger &_log) : _server(server), _extension(extension), _program(program), log(_log) {
+CgiHandler::CgiHandler(HttpServer &server, const string &extension, const string &program, Logger &_log)
+    : _server(server), _extension(extension), _program(program), log(_log) {
     TRACE_ARG_CTOR(string, extension, string, program);
 }
 
-CgiHandler::CgiHandler(const CgiHandler &other) : _server(other._server), _extension(other._extension), _program(other._program), log(other.log) { TRACE_COPY_CTOR; }
+CgiHandler::CgiHandler(const CgiHandler &other)
+    : _server(other._server), _extension(other._extension), _program(other._program), log(other.log) {
+    TRACE_COPY_CTOR;
+}
 
 // copy swap idiom
 CgiHandler &CgiHandler::operator=(CgiHandler other) /* noexcept */ {
@@ -66,7 +70,9 @@ void swap(CgiHandler &a, CgiHandler &b) /* noexcept */ { a.swap(b); }
 
 std::ostream &operator<<(std::ostream &os, const CgiHandler &other) { return os << static_cast<string>(other); }
 
-bool CgiHandler::canHandle(const string &path) const { return path.length() > _extension.length() && path.substr(path.length() - _extension.length()) == _extension; }
+bool CgiHandler::canHandle(const string &path) const {
+    return path.length() > _extension.length() && path.substr(path.length() - _extension.length()) == _extension;
+}
 
 string getHost(const HttpServer::HttpRequest &request);
 
@@ -83,7 +89,9 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
 
     // Find any path info after the script name
     size_t scriptEnd = request.path.find(extension);
-    env["PATH_INFO"] = (scriptEnd != string::npos && scriptEnd + extension.length() < request.path.length()) ? request.path.substr(scriptEnd + extension.length()) : "/";
+    env["PATH_INFO"] = (scriptEnd != string::npos && scriptEnd + extension.length() < request.path.length())
+                           ? request.path.substr(scriptEnd + extension.length())
+                           : "/";
 
     env["GATEWAY_INTERFACE"] = "CGI/1.1";
     env["SERVER_PROTOCOL"] = "HTTP/1.1";
@@ -272,8 +280,8 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
             argv1 = "";
         }
         char *args[] = {const_cast<char *>(argv0.c_str()), const_cast<char *>(argv1.empty() ? NULL : argv1.c_str()), NULL};
-        log.debug() << "Child: Calling " << func("execve") << punct("(") << repr(args[0]) << ", " << reprArr(const_cast<char **>(args), 2) << punct(", ") << reprArr(cgiEnviron, n + 1) << punct(")")
-                    << std::endl;
+        log.debug() << "Child: Calling " << func("execve") << punct("(") << repr(args[0]) << ", " << reprArr(const_cast<char **>(args), 2)
+                    << punct(", ") << reprArr(cgiEnviron, n + 1) << punct(")") << std::endl;
         (void)::execve(args[0], args, cgiEnviron);
         log.error() << "Child: " << func("execve") << punct("()") << " failed" << std::endl;
         ::exit(1);
@@ -294,8 +302,10 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
     int cgiReadFd = fromCgi[PIPE_READ];
 
     std::pair<CgiProcessMap::iterator, bool> result;
-    result = _server._clientToCgi.insert(std::make_pair(clientSocket, HttpServer::CgiProcess(pid, cgiReadFd, cgiWriteFd, clientSocket, &location)));
-    log.debug() << "Parent: Adding new clientSocket->CgiProcess mapping to clientToCgi map: " << repr(static_cast<std::pair<int, HttpServer::CgiProcess> >(*result.first)) << std::endl;
+    result = _server._clientToCgi.insert(
+        std::make_pair(clientSocket, HttpServer::CgiProcess(pid, cgiReadFd, cgiWriteFd, clientSocket, &location)));
+    log.debug() << "Parent: Adding new clientSocket->CgiProcess mapping to clientToCgi map: "
+                << repr(static_cast<std::pair<int, HttpServer::CgiProcess> >(*result.first)) << std::endl;
     (void)result;
 
     // from timo: commented out for now
@@ -316,10 +326,12 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
     struct pollfd pfd2;
     pfd2.fd = cgiWriteFd;
     pfd2.events = POLLOUT; // for the pendingWrite
-    log.debug() << "Parent: Add new mapping from cgiWriteFd to clientSocket: " << repr(cgiWriteFd) << "->" << repr(clientSocket) << std::endl;
+    log.debug() << "Parent: Add new mapping from cgiWriteFd to clientSocket: " << repr(cgiWriteFd) << "->" << repr(clientSocket)
+                << std::endl;
     _server._cgiToClient[cgiWriteFd] = clientSocket;
     _server._monitorFds.pollFds.push_back(pfd2);
 
-    log.debug() << "Parent: Queueing data to write to CGI process (write FD: " << repr(cgiWriteFd) << "): " << repr(request.body) << std::endl;
+    log.debug() << "Parent: Queueing data to write to CGI process (write FD: " << repr(cgiWriteFd) << "): " << repr(request.body)
+                << std::endl;
     _server.queueWrite(cgiWriteFd, request.body);
 }

@@ -106,11 +106,13 @@ void HttpServer::writeToClient(int clientSocket) {
 
     ssize_t bytesSent;
     if (_cgiToClient.count(clientSocket)) { // it's a writeFd for the CGI, can't use send
-        log.debug() << "Writing this data of " << repr(dataSize) << " bytes to socket " << repr(clientSocket) << ": " << repr(const_cast<char *>(data)) << std::endl;
+        log.debug() << "Writing this data of " << repr(dataSize) << " bytes to socket " << repr(clientSocket) << ": "
+                    << repr(const_cast<char *>(data)) << std::endl;
         bytesSent = ::write(clientSocket, data, dataSize);
         log.debug() << "Written " << repr(bytesSent) << " bytes to client " << repr(clientSocket) << std::endl;
     } else {
-        log.debug() << "Sending this data of " << repr(dataSize) << " bytes to socket " << repr(clientSocket) << ": " << repr(const_cast<char *>(data)) << std::endl;
+        log.debug() << "Sending this data of " << repr(dataSize) << " bytes to socket " << repr(clientSocket) << ": "
+                    << repr(const_cast<char *>(data)) << std::endl;
         bytesSent = ::send(clientSocket, data, dataSize, 0);
         log.debug() << "Sent " << repr(bytesSent) << " bytes to client " << repr(clientSocket) << std::endl;
     }
@@ -125,7 +127,8 @@ void HttpServer::writeToClient(int clientSocket) {
         if (_cgiToClient.count(clientSocket) > 0) {
             int client = _cgiToClient[clientSocket];
             log.debug() << "Client " << repr(client) << " had data to send but pipe broke" << std::endl;
-            log.debug() << "NOT notifying remote client " << repr(client) << " with a " << repr(500) << ", (CGI process died/closed stdin), we don't care" << std::endl;
+            log.debug() << "NOT notifying remote client " << repr(client) << " with a " << repr(500)
+                        << ", (CGI process died/closed stdin), we don't care" << std::endl;
             sendError(client, 502, NULL);
         }
         return;
@@ -137,10 +140,11 @@ void HttpServer::writeToClient(int clientSocket) {
 
 // note, be careful sending errors from this function, as it could lead to infinite
 // recursion! (the error sending function uses this function)
-bool HttpServer::sendFileContent(int clientSocket, const string &filePath, const LocationCtx &location, int statusCode, const string &contentType, bool onlyHeaders) {
+bool HttpServer::sendFileContent(int clientSocket, const string &filePath, const LocationCtx &location, int statusCode,
+                                 const string &contentType, bool onlyHeaders) {
     if (_pendingCloses.count(clientSocket) > 0) {
-        log.debug() << "NOT sending file " << repr(filePath) << " with status code " << repr(statusCode) << " since for client " << repr(clientSocket) << " there's already a pendingClose scheduled"
-                    << std::endl;
+        log.debug() << "NOT sending file " << repr(filePath) << " with status code " << repr(statusCode) << " since for client "
+                    << repr(clientSocket) << " there's already a pendingClose scheduled" << std::endl;
         return true;
     }
     log.debug() << "Trying to send file content of file " << repr(filePath) << std::endl;
@@ -187,13 +191,15 @@ string HttpServer::wrapInHtmlBody(const string &text) {
 }
 
 static string getErrorPagePath(int statusCode, const LocationCtx &location) {
-    Logger::lastInstance().debug() << "Getting error page path for status code " << repr(statusCode) << " and location " << repr(location) << std::endl;
+    Logger::lastInstance().debug() << "Getting error page path for status code " << repr(statusCode) << " and location " << repr(location)
+                                   << std::endl;
     ArgResults allErrPageDirectives = getAllDirectives(location.second, "error_page");
     for (ArgResults::const_iterator errPages = allErrPageDirectives.begin(); errPages != allErrPageDirectives.end(); ++errPages) {
         Arguments::const_iterator code = errPages->begin(), before = --errPages->end();
         for (; code != before; ++code) {
             if (std::atoi(code->c_str()) == statusCode) {
-                Logger::lastInstance().debug() << "Returning error page path for status code " << repr(statusCode) << ": " << repr(errPages->back()) << std::endl;
+                Logger::lastInstance().debug() << "Returning error page path for status code " << repr(statusCode) << ": "
+                                               << repr(errPages->back()) << std::endl;
                 return errPages->back();
             }
         }
@@ -203,7 +209,8 @@ static string getErrorPagePath(int statusCode, const LocationCtx &location) {
 }
 
 bool HttpServer::sendErrorPage(int clientSocket, int statusCode, const LocationCtx &location) {
-    log.debug() << "Trying to send error page to client " << repr(clientSocket) << " with status code " << repr(statusCode) << " and location block " << repr(location) << std::endl;
+    log.debug() << "Trying to send error page to client " << repr(clientSocket) << " with status code " << repr(statusCode)
+                << " and location block " << repr(location) << std::endl;
     string errorPageLocation = getErrorPagePath(statusCode, location);
     if (errorPageLocation.empty())
         return false;
@@ -233,8 +240,8 @@ void HttpServer::sendError(int clientSocket, int statusCode, const LocationCtx *
 
 void HttpServer::sendString(int clientSocket, const string &payload, int statusCode, const string &contentType, bool onlyHeaders) {
     if (_pendingCloses.count(clientSocket) > 0) {
-        log.debug() << "NOT sending string " << repr(payload) << " with status code " << repr(statusCode) << " since for client " << repr(clientSocket) << " there's already a pendingClose scheduled"
-                    << std::endl;
+        log.debug() << "NOT sending string " << repr(payload) << " with status code " << repr(statusCode) << " since for client "
+                    << repr(clientSocket) << " there's already a pendingClose scheduled" << std::endl;
         return;
     }
     log.debug() << "Preparing to send string response with status code: " << repr(statusCode) << std::endl;

@@ -67,7 +67,8 @@ string HttpServer::resolveDots(const string &str) {
         parts.push_back(part);
     }
     std::ostringstream oss;
-    log.trace2() << "Concatenating path segments " << repr(parts) << " back to a single string (leading empty segment is implicit)" << std::endl;
+    log.trace2() << "Concatenating path segments " << repr(parts) << " back to a single string (leading empty segment is implicit)"
+                 << std::endl;
     for (size_t i = 0; i < parts.size(); ++i) {
         oss << "/" << parts[i];
     }

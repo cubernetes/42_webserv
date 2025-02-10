@@ -72,7 +72,8 @@ static void bindSocket(int listeningSocket, const HttpServer::Server &server) {
     address.sin_port = server.port;
     address.sin_addr = server.ip;
 
-    Logger::lastInstance().debug() << "Binding socket " << repr(listeningSocket) << " to " << repr(sockaddr_in_wrapper(server.ip, server.port)) << std::endl;
+    Logger::lastInstance().debug() << "Binding socket " << repr(listeningSocket) << " to "
+                                   << repr(sockaddr_in_wrapper(server.ip, server.port)) << std::endl;
     if (::bind(listeningSocket, reinterpret_cast<struct sockaddr *>(&address), sizeof(address)) < 0) {
         ::close(listeningSocket);
         throw runtime_error(string("bind error: ") + ::strerror(errno));
@@ -92,7 +93,8 @@ static bool alreadyListening(const HttpServer::Server &server, const HttpServer:
         struct in_addr otherAddr = otherServer->ip;
         in_port_t otherPort = otherServer->port;
         if (server.port == otherPort && (std::memcmp(&otherAddr, &server.ip, sizeof(otherAddr)) == 0 || otherAddr.s_addr == INADDR_ANY)) {
-            Logger::lastInstance().debug() << "Already listening on addr:port: " << repr(sockaddr_in_wrapper(otherAddr, otherPort)) << ", skipping" << std::endl;
+            Logger::lastInstance().debug() << "Already listening on addr:port: " << repr(sockaddr_in_wrapper(otherAddr, otherPort))
+                                           << ", skipping" << std::endl;
             return true;
         }
     }
@@ -127,7 +129,8 @@ void HttpServer::setupServers(const Config &config) {
         server.port = getServerPort(*serverCtx);
 
         setupListeningSocket(server);
-        log.info() << "Server with names " << repr(server.serverNames) << " is listening on " << repr(sockaddr_in_wrapper(server.ip, server.port)) << '\n';
+        log.info() << "Server with names " << repr(server.serverNames) << " is listening on "
+                   << repr(sockaddr_in_wrapper(server.ip, server.port)) << '\n';
 
         _servers.push_back(server);
 
@@ -135,8 +138,9 @@ void HttpServer::setupServers(const Config &config) {
         if (_defaultServers.find(addr) == _defaultServers.end()) {
             string server_name = "server_name";
             const Arguments &args = getFirstDirective(_servers.back().directives, server_name);
-            Logger::lastInstance().debug() << "Setting up the default server for addr:port " << repr(sockaddr_in_wrapper(server.ip, server.port)) << " to the server with server names " << repr(args)
-                                           << std::endl;
+            Logger::lastInstance().debug() << "Setting up the default server for addr:port "
+                                           << repr(sockaddr_in_wrapper(server.ip, server.port)) << " to the server with server names "
+                                           << repr(args) << std::endl;
             _defaultServers[addr] = _servers.size() - 1;
         }
         ++serverId;
