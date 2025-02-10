@@ -13,7 +13,7 @@
 // clang-format off
 const string &Logger::fatalPrefix = "[ " + ansi::redBg("FATAL") + "  ] ";
 const string &Logger::errorPrefix = "[ " + ansi::red("ERROR") + "  ] ";
-const string &Logger::warnPrefix = "[ " + ansi::yellow("WARNING") + "   ] ";
+const string &Logger::warningPrefix = "[ " + ansi::yellow("WARNING") + "   ] ";
 const string &Logger::infoPrefix = "[ " + ansi::white("INFO") + "   ] ";
 const string &Logger::debugPrefix = "[ " + ansi::rgbP("DEBUG", 146, 131, 116) + "  ] ";
 const string &Logger::tracePrefix = "[ " + ansi::rgbP("TRACE", 111, 97, 91) + "  ] ";
@@ -76,7 +76,7 @@ Logger::StreamWrapper::StreamWrapper(std::ostream &_os, Level _thisLevel, Level 
         prefix = errorPrefix;
         break;
     case WARNING:
-        prefix = warnPrefix;
+        prefix = warningPrefix;
         break;
     case INFO:
         prefix = infoPrefix;

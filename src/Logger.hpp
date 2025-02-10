@@ -67,7 +67,7 @@ class Logger {
 
     static const string &fatalPrefix;
     static const string &errorPrefix;
-    static const string &warnPrefix;
+    static const string &warningPrefix;
     static const string &infoPrefix;
     static const string &debugPrefix;
     static const string &tracePrefix;
