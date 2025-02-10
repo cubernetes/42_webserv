@@ -88,11 +88,11 @@ string HttpServer::canonicalizePath(const string &path) {
     }
     string newPath = path;
     if (newPath[0] != '/') {
-        log.warn() << "Request URI " << repr(path)
-                   << " does not start with a slash, although a relativeURI (or rather, "
-                      "abs_path, https://www.rfc-editor.org/rfc/rfc2616#section-3.2.2) "
-                      "was expected. Adding a slash in front as fallback"
-                   << std::endl;
+        log.warning() << "Request URI " << repr(path)
+                      << " does not start with a slash, although a relativeURI (or rather, "
+                         "abs_path, https://www.rfc-editor.org/rfc/rfc2616#section-3.2.2) "
+                         "was expected. Adding a slash in front as fallback"
+                      << std::endl;
         newPath = "/" + newPath;
     }
     newPath = percentDecode(newPath);

@@ -11,10 +11,10 @@ static Logger::Level convertStringToLogLevel(const char *str) {
     std::string s(str);
     if (s == "FATAL" || s == "1")
         return Logger::FATAL;
-    else if (s == "ERR" || s == "ERROR" || s == "2")
-        return Logger::ERR;
-    else if (s == "WARN" || s == "WARNING" || s == "3")
-        return Logger::WARN;
+    else if (s == "ERROR" || s == "2")
+        return Logger::ERROR;
+    else if (s == "WARNING" || s == "3")
+        return Logger::WARNING;
     else if (s == "INFO" || s == "4")
         return Logger::INFO;
     else if (s == "DEBUG" || s == "5")
@@ -34,7 +34,8 @@ static Logger::Level convertStringToLogLevel(const char *str) {
                                  "`-l' option. Run with -h for more information.");
 }
 
-Options::Options(int ac, char **av) : printHelp(), printVersion(), onlyCheckConfig(), configPath(Constants::defaultConfPath), logLevel(Logger::INFO) {
+Options::Options(int ac, char **av)
+    : printHelp(), printVersion(), onlyCheckConfig(), configPath(Constants::defaultConfPath), logLevel(Logger::INFO) {
     (void)ac;
     bool configPathSpecified = false;
     ++av;

@@ -25,7 +25,7 @@ void DirectoryIndexer::iterateOverDirEntries(Entries &entries, struct dirent *&e
     string entryPath = path + "/" + entry->d_name;
     struct stat st;
     if (::stat(entryPath.c_str(), &st) == -1) {
-        log.warn() << "indexDirectory: Failed to stat file " << entryPath << ": " << ::strerror(errno) << std::endl;
+        log.warning() << "indexDirectory: Failed to stat file " << entryPath << ": " << ::strerror(errno) << std::endl;
         ;
         return;
     }
@@ -46,9 +46,9 @@ string DirectoryIndexer::indexDirectory(string location, string path) {
     log.debug() << "Indexing directory " << repr(path) << " coming from location " << repr(location) << std::endl;
     DIR *dir = ::opendir(path.c_str());
     if (!dir) {
-        log.warn() << "indexDirectory: Failed to open directory " << path << std::endl; // TODO: @timo: make logging proper
-        return "<h1>Couldn't get directory contents</h1>";                              // not perfect, should throw
-                                                                                        // 404 or smth
+        log.warning() << "indexDirectory: Failed to open directory " << path << std::endl; // TODO: @timo: make logging proper
+        return "<h1>Couldn't get directory contents</h1>";                                 // not perfect, should throw
+                                                                                           // 404 or smth
     }
 
     Entries entries;

@@ -41,7 +41,7 @@ void HttpServer::checkForInactiveClients() {
         }
 
         if (isTimedOut(process)) {
-            log.warn() << "Timed out CGI process (sending SIGKILL): " << repr(process) << std::endl;
+            log.warning() << "Timed out CGI process (sending SIGKILL): " << repr(process) << std::endl;
             (void)::kill(process.pid, SIGKILL);
             (void)::waitpid(process.pid, NULL, WNOHANG);
             sendError(process.clientSocket, 504, process.location);

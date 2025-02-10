@@ -94,6 +94,6 @@ void HttpServer::run() {
 		checkForInactiveClients(); // reset connection for timed out CGI's
 		log.debug() << "Finished one mainloop iteration, the following line is intentionally left blank\n" << std::endl;
 	}
-  log.warn() << "Shutting server down" << std::endl;
+  log.warning() << "Shutting server down" << std::endl;
 }
 // clang-format on

@@ -113,10 +113,10 @@ void HttpServer::handleCgiRead(int cgiFd) {
         process.done = true;
 
         if (!process.headersSent) {
-            log.warn() << "CGI process " << repr(process)
-                       << " didn't send any data (not even headers), sending 502 Bad "
-                          "Gateway to client"
-                       << std::endl;
+            log.warning() << "CGI process " << repr(process)
+                          << " didn't send any data (not even headers), sending 502 Bad "
+                             "Gateway to client"
+                          << std::endl;
             sendError(process.clientSocket, 502, process.location);
         } else if (!process.response.empty()) {
             log.debug() << "CGI process is done, queueing remaining data" << std::endl;
@@ -141,8 +141,8 @@ void HttpServer::handleCgiRead(int cgiFd) {
     log.debug() << "Total Response size from CGI process " << repr(process) << " is " << repr(process.totalSize) << std::endl;
     log.trace() << "The raw data read from the CGI pipe FD: " << repr(string(buffer, static_cast<size_t>(bytesRead))) << std::endl;
     if (process.totalSize > Constants::cgiMaxResponseBodySize) { // 10GiB limit // TODO: why put a limit?
-        log.warn() << "CGI Response size exceeded limit of 10GiB, namely " << repr(process.totalSize) << " (roughly "
-                   << Utils::formatSI(process.totalSize) << ")" << std::endl;
+        log.warning() << "CGI Response size exceeded limit of 10GiB, namely " << repr(process.totalSize) << " (roughly "
+                      << Utils::formatSI(process.totalSize) << ")" << std::endl;
         log.debug() << "Sending " << num("SIGKILL") << " using " << func("kill") << punct("()") << " to the CGI process with PID "
                     << repr(process.pid) << std::endl;
         (void)::kill(process.pid, SIGKILL);
@@ -185,8 +185,8 @@ void HttpServer::handleCgiRead(int cgiFd) {
 
         } else if (process.response.length() > Constants::cgiMaxResponseSizeWithoutBody) { // Status line + Headers
                                                                                            // too long
-            log.warn() << "CGI Response size exceeded limit of 10GiB, namely " << repr(process.totalSize) << " (roughly "
-                       << Utils::formatSI(process.totalSize) << ")" << std::endl;
+            log.warning() << "CGI Response size exceeded limit of 10GiB, namely " << repr(process.totalSize) << " (roughly "
+                          << Utils::formatSI(process.totalSize) << ")" << std::endl;
             log.debug() << "Sending " << num("SIGKILL") << " using " << func("kill") << punct("()") << " to the CGI process with PID "
                         << repr(process.pid) << std::endl;
             (void)::kill(process.pid, SIGKILL);
@@ -256,7 +256,7 @@ bool HttpServer::parseHeader(const string &line, HttpRequest &request) {
     // https://stackoverflow.com/questions/31237198/is-it-possible-to-include-multiple-crlfs-in-a-http-header-field
     size_t colonPos = line.find(':');
     if (colonPos == string::npos) {
-        log.warn() << "Failed to parse header (missing colon): " << repr(line) << std::endl;
+        log.warning() << "Failed to parse header (missing colon): " << repr(line) << std::endl;
         return false;
     }
 
@@ -299,7 +299,7 @@ void HttpServer::handleDelete(int clientSocket, const HttpRequest &request, cons
     } else if (S_ISREG(fileStat.st_mode)) {
         log.debug() << "File " << repr(diskPath) << " is a regular file, deleting it" << std::endl;
         if (std::remove(diskPath.c_str()) < 0) {
-            log.warn() << "File " << repr(diskPath) << " could not be deleted" << std::endl;
+            log.warning() << "File " << repr(diskPath) << " could not be deleted" << std::endl;
             sendString(clientSocket, "Failed to delete resource " + request.path + "\n", 500);
         } else {
             log.debug() << "File " << repr(diskPath) << " was successfully deleted" << std::endl;
@@ -561,8 +561,8 @@ bool HttpServer::checkRequestBodySize(int clientSocket, const HttpRequest &reque
     log.debug() << "Checking request body size limit" << std::endl;
     size_t sizeLimit = getRequestSizeLimit(clientSocket, request);
     if (currentSize > sizeLimit) {
-        log.warn() << "Request body (so far) is too big: " << repr(currentSize) << " bytes but max allowed is " << repr(sizeLimit)
-                   << std::endl;
+        log.warning() << "Request body (so far) is too big: " << repr(currentSize) << " bytes but max allowed is " << repr(sizeLimit)
+                      << std::endl;
         sendError(clientSocket, 413, NULL); // Payload Too Large
         // TODO: @discuss: what about removing clientSocket from _pendingRequests
         // removeClientAndRequest(clientSocket);
@@ -579,8 +579,8 @@ bool HttpServer::checkRequestSizeWithoutBody(int clientSocket, size_t currentSiz
     log.debug() << "Checking request without body (request line + headers) size limit" << std::endl;
     size_t sizeLimit = Constants::clientMaxRequestSizeWithoutBody;
     if (currentSize > sizeLimit) {
-        log.warn() << "Request size (without body) (so far) is too big: " << repr(currentSize) << " bytes but max allowed is "
-                   << repr(sizeLimit) << std::endl;
+        log.warning() << "Request size (without body) (so far) is too big: " << repr(currentSize) << " bytes but max allowed is "
+                      << repr(sizeLimit) << std::endl;
         sendError(clientSocket, 413, NULL); // Payload Too Large
         // TODO: @discuss: what about removing clientSocket from _pendingRequests
         // removeClientAndRequest(clientSocket);
