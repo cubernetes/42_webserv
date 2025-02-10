@@ -272,7 +272,8 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
             argv1 = "";
         }
         char *args[] = {const_cast<char *>(argv0.c_str()), const_cast<char *>(argv1.empty() ? NULL : argv1.c_str()), NULL};
-        log.debug() << "Child: Calling " << func("execve") << punct("(") << repr(args[0]) << ", " << reprArr((char **)args, 2) << punct(", ") << reprArr(cgiEnviron, n + 1) << punct(")") << std::endl;
+        log.debug() << "Child: Calling " << func("execve") << punct("(") << repr(args[0]) << ", " << reprArr(const_cast<char **>(args), 2) << punct(", ") << reprArr(cgiEnviron, n + 1) << punct(")")
+                    << std::endl;
         (void)::execve(args[0], args, cgiEnviron);
         log.error() << "Child: " << func("execve") << punct("()") << " failed" << std::endl;
         ::exit(1);

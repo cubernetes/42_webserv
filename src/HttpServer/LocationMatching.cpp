@@ -127,7 +127,7 @@ struct sockaddr_in HttpServer::getSockaddrIn(int clientSocket) {
     struct sockaddr_in addr;
     socklen_t addrLen = sizeof(addr);
     log.debug() << "Calling " << func("getsockname") << punct("()") << " on socket " << repr(clientSocket) << std::endl;
-    if (::getsockname(clientSocket, (struct sockaddr *)&addr, &addrLen) < 0) {
+    if (::getsockname(clientSocket, reinterpret_cast<struct sockaddr *>(&addr), &addrLen) < 0) {
         int prev_errno = errno;
         sendError(clientSocket, 500, NULL);
         throw runtime_error("Error calling " + func("getsockname") + punct("()") + ": " + ::strerror(prev_errno));

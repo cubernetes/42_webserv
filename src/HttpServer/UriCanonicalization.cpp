@@ -82,7 +82,7 @@ string HttpServer::resolveDots(const string &str) {
 string HttpServer::canonicalizePath(const string &path) {
     log.debug() << "Canonicalizing request path: " << repr(path) << std::endl;
     if (path.empty()) { // see https://datatracker.ietf.org/doc/html/rfc2616#section-3.2.3
-        log.debug() << "It was empty, returning " << repr((char *)"/") << std::endl;
+        log.debug() << "It was empty, returning " << repr(const_cast<char *>("/")) << std::endl;
         return "/";
     }
     string newPath = path;

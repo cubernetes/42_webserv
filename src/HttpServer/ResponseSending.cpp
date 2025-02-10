@@ -106,11 +106,11 @@ void HttpServer::writeToClient(int clientSocket) {
 
     ssize_t bytesSent;
     if (_cgiToClient.count(clientSocket)) { // it's a writeFd for the CGI, can't use send
-        log.debug() << "Writing this data of " << repr(dataSize) << " bytes to socket " << repr(clientSocket) << ": " << repr((char *)data) << std::endl;
+        log.debug() << "Writing this data of " << repr(dataSize) << " bytes to socket " << repr(clientSocket) << ": " << repr(const_cast<char *>(data)) << std::endl;
         bytesSent = ::write(clientSocket, data, dataSize);
         log.debug() << "Written " << repr(bytesSent) << " bytes to client " << repr(clientSocket) << std::endl;
     } else {
-        log.debug() << "Sending this data of " << repr(dataSize) << " bytes to socket " << repr(clientSocket) << ": " << repr((char *)data) << std::endl;
+        log.debug() << "Sending this data of " << repr(dataSize) << " bytes to socket " << repr(clientSocket) << ": " << repr(const_cast<char *>(data)) << std::endl;
         bytesSent = ::send(clientSocket, data, dataSize, 0);
         log.debug() << "Sent " << repr(bytesSent) << " bytes to client " << repr(clientSocket) << std::endl;
     }

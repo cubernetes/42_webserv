@@ -17,7 +17,7 @@
 using std::string;
 
 void DirectoryIndexer::iterateOverDirEntries(Entries &entries, struct dirent *&entry, const string &path) {
-    log.trace() << "Entry name: " << repr((char *)entry->d_name) << std::endl;
+    log.trace() << "Entry name: " << repr(const_cast<char *>(entry->d_name)) << std::endl;
     if (std::strcmp(entry->d_name, ".") == 0) {
         log.trace() << "Entry name is a single dot, skipping" << std::endl;
         return;
@@ -35,7 +35,7 @@ void DirectoryIndexer::iterateOverDirEntries(Entries &entries, struct dirent *&e
     }
     long lastModified = static_cast<long>(st.st_mtime);
     size_t sizeBytes = static_cast<size_t>(st.st_size);
-    log.trace() << "Pushing back directory entry " << repr((char *)entry->d_name) << " to vector" << std::endl;
+    log.trace() << "Pushing back directory entry " << repr(const_cast<char *>(entry->d_name)) << " to vector" << std::endl;
     log.trace() << "Name field (formatted): " << repr(nameField) << std::endl;
     log.trace() << "Last modified (formatted): " << repr(Utils::formattedTimestamp(lastModified)) << std::endl;
     log.trace() << "Size in bytes (formatted): " << repr(Utils::formatSI(sizeBytes)) << std::endl;

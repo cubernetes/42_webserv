@@ -58,7 +58,8 @@ char Utils::decodeTwoHexChars(const char _c1, const char _c2) {
 }
 
 bool Utils::isHexDigitNoCase(const char c) {
-    if (('0' <= c && c <= '9') || c == 'a' || c == 'A' || c == 'b' || c == 'B' || c == 'c' || c == 'C' || c == 'd' || c == 'D' || c == 'e' || c == 'E' || c == 'f' || c == 'F')
+    if (('0' <= c && c <= '9') || c == 'a' || c == 'A' || c == 'b' || c == 'B' || c == 'c' || c == 'C' || c == 'd' || c == 'D' ||
+        c == 'e' || c == 'E' || c == 'f' || c == 'F')
         return true;
     return false;
 }
@@ -189,19 +190,21 @@ string Utils::millisecondRemainderSinceEpoch() {
 
 string Utils::formattedTimestamp(std::time_t _t, bool forLogger) {
     std::time_t t;
-    char ts[BUFSIZ];
+    char date[BUFSIZ];
+    char time[BUFSIZ];
 
     if (_t == 0)
         t = std::time(NULL);
     else
         t = _t;
     if (forLogger) {
-        if (std::strftime(ts, sizeof(ts), (cmt(" %Y-%m-%d ") + kwrd("%H:%M:%S.") + kwrd(millisecondRemainderSinceEpoch() + " ")).c_str(), std::localtime(&t)))
-            return string("[") + ts + "] ";
+        if (std::strftime(date, sizeof(date), " %Y-%m-%d ", std::localtime(&t)) &&
+            std::strftime(time, sizeof(time), "%H:%M:%S.", std::localtime(&t)))
+            return string("[") + cmt(date) + kwrd(time) + kwrd(millisecondRemainderSinceEpoch() + " ") + "] ";
         return "[" + cmt(" N/A date, N/A time ") + "] ";
     } else {
-        if (std::strftime(ts, sizeof(ts), "%Y-%m-%d %H:%M:%S", std::localtime(&t)))
-            return ts;
+        if (std::strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", std::localtime(&t)))
+            return date;
         return "1970-01-01 00:00:00";
     }
 }
@@ -212,11 +215,11 @@ string Utils::formatSI(size_t size) {
     if (size < 1024) {
         oss << size << " B";
     } else if (size < 1024 * 1024) {
-        oss << std::fixed << std::setprecision(2) << (double)size / (1024.0) << " KiB";
+        oss << std::fixed << std::setprecision(2) << static_cast<double>(size) / (1024.0) << " KiB";
     } else if (size < 1024 * 1024 * 1024) {
-        oss << std::fixed << std::setprecision(2) << (double)size / (1024.0 * 1024.0) << " MiB";
+        oss << std::fixed << std::setprecision(2) << static_cast<double>(size) / (1024.0 * 1024.0) << " MiB";
     } else {
-        oss << std::fixed << std::setprecision(2) << (double)size / (1024.0 * 1024.0 * 1024.0) << " GiB";
+        oss << std::fixed << std::setprecision(2) << static_cast<double>(size) / (1024.0 * 1024.0 * 1024.0) << " GiB";
     }
 
     Logger::lastInstance().debug() << "Converting number " << repr(size) << " to readable SI Units " << repr(oss.str()) << std::endl;

@@ -25,21 +25,39 @@ CXX := $(notdir $(shell ls -l $$(which $(_CXX)) | awk '{print $$NF}'))
 
 # flags
 CFLAGS += -O3
-CFLAGS += -Wall
-CFLAGS += -Wextra
 CFLAGS += -Werror # TODO: @all: Add back
-CFLAGS += -Wshadow
-CFLAGS += -Wconversion
-CFLAGS += -Wunreachable-code
 CFLAGS += -std=c++98
 CFLAGS += -MMD
 CFLAGS += -MP
+# warnings
+CFLAGS += -Wall
+CFLAGS += -Wextra
+CFLAGS += -Wshadow
+CFLAGS += -Wconversion
+CFLAGS += -Wunreachable-code
+CFLAGS += -Wnon-virtual-dtor
+CFLAGS += -Wold-style-cast
+CFLAGS += -Wcast-align
+CFLAGS += -Wunused
+CFLAGS += -Woverloaded-virtual
+CFLAGS += -Wsign-conversion
+CFLAGS += -Wnull-dereference
+CFLAGS += -Wdouble-promotion
+CFLAGS += -Wformat=2
 
 CFLAGS += -fdiagnostics-color=always
 ifeq ($(strip $(CXX)),clang++)
 CFLAGS += -ferror-limit=1
+# clang-specific warnings
+CFLAGS += -Wreturn-stack-address
+CFLAGS += -Wdangling-gsl
 else ifeq ($(strip $(CXX)),g++)
 CFLAGS += -fmax-errors=1
+# gcc-specific warnings
+CFLAGS += -Wduplicated-cond
+CFLAGS += -Wduplicated-branches
+CFLAGS += -Wlogical-op
+CFLAGS += -Wuseless-cast
 endif
 
 CXXFLAGS += -Weffc++

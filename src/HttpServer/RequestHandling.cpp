@@ -152,7 +152,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
     }
 
     if (!process.headersSent) {
-        log.debug() << "Buffering data from CGI stdout (headers have NOT yet been sent): " << repr((char *)string(buffer, static_cast<size_t>(bytesRead)).c_str()) << std::endl;
+        log.debug() << "Buffering data from CGI stdout (headers have NOT yet been sent): " << repr(const_cast<char *>(string(buffer, static_cast<size_t>(bytesRead)).c_str())) << std::endl;
         process.response.append(buffer, static_cast<size_t>(bytesRead));
         size_t headerEnd = process.response.find("\r\n\r\n");
         if (headerEnd != string::npos) {
@@ -194,7 +194,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
             log.debug() << "End of header fields marker not yet found, buffering data further" << std::endl;
         }
     } else {
-        log.debug() << "Queueing data for sending from CGI stdout (headers are already sent): " << repr((char *)string(buffer, static_cast<size_t>(bytesRead)).c_str()) << std::endl;
+        log.debug() << "Queueing data for sending from CGI stdout (headers are already sent): " << repr(const_cast<char *>(string(buffer, static_cast<size_t>(bytesRead)).c_str())) << std::endl;
         queueWrite(process.clientSocket, string(buffer, static_cast<size_t>(bytesRead)));
     }
 }
@@ -647,7 +647,7 @@ bool HttpServer::processRequestBody(int clientSocket, HttpRequest &request, cons
     log.debug() << "Processing request body" << std::endl;
     // Append new data to body
     log.debug() << "Appending new data (" << repr(bytesRead) << " bytes) to body (currently " << repr(request.body.length()) << " bytes)" << std::endl;
-    log.trace() << "Buffer is " << repr((char *)buffer) << std::endl;
+    log.trace() << "Buffer is " << repr(const_cast<char *>(buffer)) << std::endl;
     log.trace() << "Body is " << repr(request.body) << std::endl;
     request.body.append(buffer, bytesRead);
     request.bytesRead += bytesRead;
@@ -689,7 +689,7 @@ void HttpServer::handleIncomingData(int clientSocket, const char *buffer, ssize_
 
     // TODO: @timo: 408, request timeout??
     log.debug() << "Received data length: " << repr(bytesRead) << std::endl;
-    log.trace() << "The data is: " << repr((char *)buffer) << std::endl;
+    log.trace() << "The data is: " << repr(const_cast<char *>(buffer)) << std::endl;
     // Get or create request state
     HttpRequest &request = _pendingRequests[clientSocket];
     log.debug() << "Current request state: " << repr(request.state) << std::endl;

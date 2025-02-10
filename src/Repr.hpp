@@ -198,9 +198,9 @@ template <> struct ReprWrapper<char *> {
     template <> struct ReprWrapper<T> {                                                                                                                                                                \
         static inline string repr(const T &value) {                                                                                                                                                    \
             if (Logger::lastInstance().istrace5())                                                                                                                                                     \
-                return string("\"") + Utils::jsonEscape(string(1, (char)value)) + "\"";                                                                                                                \
+                return string("\"") + Utils::jsonEscape(string(1, static_cast<char>(value))) + "\"";                                                                                                   \
             else                                                                                                                                                                                       \
-                return chr(string("'") + (value == '\\' ? "\\\\" : value == '\'' ? "\\'" : string(1, (char)value)) + "'");                                                                             \
+                return chr(string("'") + (value == '\\' ? "\\\\" : value == '\'' ? "\\'" : string(1, static_cast<char>(value))) + "'");                                                                \
         }                                                                                                                                                                                              \
     }
 
@@ -214,7 +214,7 @@ CHAR_REPR(signed char);
     string CAT(repr_, name)() const { return ::repr(name); }
 #define MAKE_ASSIGN_GETTER(_, name) singleton.name = value.CAT(get, name)();
 #define MAKE_ASSIGN_MEMBER(_, name) singleton.name = value.name;
-#define MAKE_REFLECT(_, name) members[#name] = std::make_pair((ReprClosure) & ReprWrapper::CAT(repr_, name), &singleton.name);
+#define MAKE_REFLECT(_, name) members[#name] = std::make_pair(static_cast<ReprClosure>(&ReprWrapper::CAT(repr_, name)), &singleton.name);
 #define POST_REFLECT_GETTER(clsId, ...)                                                                                                                                                                \
     static inline string getClass(const clsId &v) {                                                                                                                                                    \
         (void)v;                                                                                                                                                                                       \
@@ -510,10 +510,10 @@ template <> struct ReprWrapper<struct in_addr> {
         } addr;
         addr.s_addr = value.s_addr;
         std::ostringstream oss_final;
-        oss << (int)addr.first << '.';
-        oss << (int)addr.second << '.';
-        oss << (int)addr.third << '.';
-        oss << (int)addr.fourth;
+        oss << static_cast<int>(addr.first) << '.';
+        oss << static_cast<int>(addr.second) << '.';
+        oss << static_cast<int>(addr.third) << '.';
+        oss << static_cast<int>(addr.fourth);
         if (Logger::lastInstance().istrace4())
             oss_final << kwrd("struct in_addr") << punct("(");
         oss_final << num(oss.str());

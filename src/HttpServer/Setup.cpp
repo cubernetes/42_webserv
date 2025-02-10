@@ -32,7 +32,7 @@ static struct in_addr getServerIp(const ServerCtx &serverCtx) {
     Logger::lastInstance().debug() << "Calling " << func("getaddrinfo") << punct("()") << std::endl;
     if (::getaddrinfo(hostPort[0].c_str(), NULL, &hints, &res) != 0)
         throw runtime_error("Invalid IP address for listen directive in serverCtx config");
-    struct in_addr ipv4 = ((struct sockaddr_in *)res->ai_addr)->sin_addr;
+    struct in_addr ipv4 = (reinterpret_cast<struct sockaddr_in *>(res->ai_addr))->sin_addr;
     ::freeaddrinfo(res);
     Logger::lastInstance().debug() << "Successfully got IPv4 address: " << repr(ipv4) << std::endl;
     return ipv4;
@@ -42,7 +42,7 @@ static in_port_t getServerPort(const ServerCtx &serverCtx) {
     Logger::lastInstance().debug() << "Trying to get server port from listen directive" << std::endl;
     string listen = "listen";
     const Arguments &hostPort = getFirstDirective(serverCtx.first, listen);
-    in_port_t port = ::htons((in_port_t)std::atoi(hostPort[1].c_str()));
+    in_port_t port = ::htons(static_cast<in_port_t>(std::atoi(hostPort[1].c_str())));
     Logger::lastInstance().debug() << "Successfully got port: " << repr(::ntohs(port)) << std::endl;
     return port;
 }
@@ -73,7 +73,7 @@ static void bindSocket(int listeningSocket, const HttpServer::Server &server) {
     address.sin_addr = server.ip;
 
     Logger::lastInstance().debug() << "Binding socket " << repr(listeningSocket) << " to " << repr(sockaddr_in_wrapper(server.ip, server.port)) << std::endl;
-    if (::bind(listeningSocket, (struct sockaddr *)&address, sizeof(address)) < 0) {
+    if (::bind(listeningSocket, reinterpret_cast<struct sockaddr *>(&address), sizeof(address)) < 0) {
         ::close(listeningSocket);
         throw runtime_error(string("bind error: ") + ::strerror(errno));
     }
