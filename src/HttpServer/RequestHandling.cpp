@@ -1,4 +1,5 @@
 #include <cerrno>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
@@ -297,7 +298,7 @@ void HttpServer::handleDelete(int clientSocket, const HttpRequest &request, cons
         sendString(clientSocket, "Directory deletion is turned off\n", 403);
     } else if (S_ISREG(fileStat.st_mode)) {
         log.debug() << "File " << repr(diskPath) << " is a regular file, deleting it" << std::endl;
-        if (::remove(diskPath.c_str()) < 0) {
+        if (std::remove(diskPath.c_str()) < 0) {
             log.warn() << "File " << repr(diskPath) << " could not be deleted" << std::endl;
             sendString(clientSocket, "Failed to delete resource " + request.path + "\n", 500);
         } else {
