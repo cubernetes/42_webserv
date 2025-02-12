@@ -27,10 +27,40 @@ Logger::Logger(std::ostream &_os, Level _logLevel)
     : os(_os), logLevel(_logLevel), fatal(os, FATAL, logLevel), error(os, ERROR, logLevel), warning(os, WARNING, logLevel),
       info(os, INFO, logLevel), debug(os, DEBUG, logLevel), trace(os, TRACE, logLevel), trace2(os, TRACE2, logLevel),
       trace3(os, TRACE3, logLevel), trace4(os, TRACE4, logLevel), trace5(os, TRACE5, logLevel) {
-    if (logLevel == DEBUG)
-        debug() << "Initialized Logger with logLevel: " << debug.prefix << std::endl;
-    else if (logLevel == TRACE)
-        debug() << "Initialized Logger with logLevel: " << trace.prefix << std::endl;
+    debug() << "Initialized Logger with logLevel: ";
+    switch (logLevel) {
+    case FATAL:
+        debug << fatal.prefix;
+        break;
+    case ERROR:
+        debug << error.prefix;
+        break;
+    case WARNING:
+        debug << warning.prefix;
+        break;
+    case INFO:
+        debug << info.prefix;
+        break;
+    case DEBUG:
+        debug << debug.prefix;
+        break;
+    case TRACE:
+        debug << trace.prefix;
+        break;
+    case TRACE2:
+        debug << trace2.prefix;
+        break;
+    case TRACE3:
+        debug << trace3.prefix;
+        break;
+    case TRACE4:
+        debug << trace4.prefix;
+        break;
+    case TRACE5:
+        debug << trace5.prefix;
+        break;
+    }
+    debug << std::endl;
     (void)lastInstance(this);
 }
 

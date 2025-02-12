@@ -1,4 +1,4 @@
-#pragma once /* dec_macros.h */
+#pragma once /* DecMacros.h */
 #define DEC_0 _1
 #define DEC_1 0
 #define DEC_2 1

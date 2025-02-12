@@ -23,6 +23,7 @@
 
 using std::string;
 
+// TODO: @all: unused
 string Utils::parseArgs(int ac, char **av) {
     if (ac == 1)
         return Constants::defaultConfPath;

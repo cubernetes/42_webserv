@@ -1,4 +1,4 @@
-#pragma once /* inc_macros.h */
+#pragma once /* IncMacros.h */
 #define INC__1 0
 #define INC_0 1
 #define INC_1 2
