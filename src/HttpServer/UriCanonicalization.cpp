@@ -67,7 +67,8 @@ string HttpServer::resolveDots(const string &str) {
         parts.push_back(part);
     }
     std::ostringstream oss;
-    log.trace2() << "Concatenating path segments " << repr(parts) << " back to a single string (leading empty segment is implicit)" << std::endl;
+    log.trace2() << "Concatenating path segments " << repr(parts) << " back to a single string (leading empty segment is implicit)"
+                 << std::endl;
     for (size_t i = 0; i < parts.size(); ++i) {
         oss << "/" << parts[i];
     }
@@ -82,16 +83,16 @@ string HttpServer::resolveDots(const string &str) {
 string HttpServer::canonicalizePath(const string &path) {
     log.debug() << "Canonicalizing request path: " << repr(path) << std::endl;
     if (path.empty()) { // see https://datatracker.ietf.org/doc/html/rfc2616#section-3.2.3
-        log.debug() << "It was empty, returning " << repr((char *)"/") << std::endl;
+        log.debug() << "It was empty, returning " << repr(const_cast<char *>("/")) << std::endl;
         return "/";
     }
     string newPath = path;
     if (newPath[0] != '/') {
-        log.warn() << "Request URI " << repr(path)
-                   << " does not start with a slash, although a relativeURI (or rather, "
-                      "abs_path, https://www.rfc-editor.org/rfc/rfc2616#section-3.2.2) "
-                      "was expected. Adding a slash in front as fallback"
-                   << std::endl;
+        log.warning() << "Request URI " << repr(path)
+                      << " does not start with a slash, although a relativeURI (or rather, "
+                         "abs_path, https://www.rfc-editor.org/rfc/rfc2616#section-3.2.2) "
+                         "was expected. Adding a slash in front as fallback"
+                      << std::endl;
         newPath = "/" + newPath;
     }
     newPath = percentDecode(newPath);

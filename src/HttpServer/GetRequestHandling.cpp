@@ -10,7 +10,8 @@
 #include "Repr.hpp"
 
 void HttpServer::redirectClient(int clientSocket, const string &newUri, int statusCode) {
-    log.debug() << "Redirecting client " << repr(clientSocket) << " to new URI " << repr(newUri) << " with status code " << repr(statusCode) << std::endl;
+    log.debug() << "Redirecting client " << repr(clientSocket) << " to new URI " << repr(newUri) << " with status code " << repr(statusCode)
+                << std::endl;
     std::ostringstream response;
     response << _httpVersionString << " " << statusCode << " " << statusTextFromCode(statusCode) << "\r\n"
              << "Location: " << newUri << "\r\n"
@@ -56,7 +57,8 @@ bool HttpServer::handleIndexes(int clientSocket, const string &diskPath, const H
     return false;
 }
 
-void HttpServer::handlePathWithSlash(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location, bool sendErrorMsg) {
+void HttpServer::handlePathWithSlash(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location,
+                                     bool sendErrorMsg) {
     struct stat fileStat;
     int fileExists = ::stat(diskPath.c_str(), &fileStat) == 0;
 
@@ -90,7 +92,8 @@ void HttpServer::handlePathWithSlash(int clientSocket, const string &diskPath, c
     }
 }
 
-bool HttpServer::handlePathWithoutSlash(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location, bool sendErrorMsg) {
+bool HttpServer::handlePathWithoutSlash(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location,
+                                        bool sendErrorMsg) {
     struct stat fileStat;
     int fileExists = ::stat(diskPath.c_str(), &fileStat) == 0;
 

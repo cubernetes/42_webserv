@@ -15,8 +15,9 @@ using Constants::SELECT;
 bool HttpServer::isListeningSocket(int fd) {
     bool isListening = std::find(_listeningSockets.begin(), _listeningSockets.end(), fd) != _listeningSockets.end();
     log.trace() << "All listening sockets: " << repr(_listeningSockets) << std::endl;
-    log.trace() << "Checking if " << repr(fd) << " is a listening socket: " << repr(isListening) << std::endl; // TODO: @timo: overload << s.t. you don't have to do
-                                                                                                               // repr(intVar) all the time
+    log.trace() << "Checking if " << repr(fd) << " is a listening socket: " << repr(isListening)
+                << std::endl; // TODO: @timo: overload << s.t. you don't have to do
+                              // repr(intVar) all the time
     return isListening;
 }
 
@@ -51,6 +52,6 @@ int HttpServer::multPlexFdToRawFd(const MultPlexFds &readyFds, size_t i) {
     }
 }
 
-struct pollfd *HttpServer::multPlexFdsToPollFds(const MultPlexFds &fds) { return (struct pollfd *)&fds.pollFds[0]; }
+struct pollfd *HttpServer::multPlexFdsToPollFds(const MultPlexFds &fds) { return const_cast<struct pollfd *>(&fds.pollFds[0]); }
 
 nfds_t HttpServer::getNumberOfPollFds(const MultPlexFds &fds) { return static_cast<nfds_t>(fds.pollFds.size()); }

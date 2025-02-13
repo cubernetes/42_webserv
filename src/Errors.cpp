@@ -89,7 +89,7 @@ const string Errors::Config::InvalidDirectiveArgumentCount(const string &ctx, co
 
 const string Errors::Config::UnknownDirective(const string &ctx, const string &directive) { return CONFIG_ERROR_PREFIX(ctx) + "Unknown directive: " + repr(directive); }
 
-const string Errors::Config::ZeroServers() { return CONFIG_ERROR_PREFIX((char *)"http") + "There must be at least one " + repr((char *)"server") + " directive"; }
+const string Errors::Config::ZeroServers() { return CONFIG_ERROR_PREFIX(const_cast<char *>("http")) + "There must be at least one " + repr(const_cast<char *>("server")) + " directive"; }
 
 const string Errors::Config::DirectiveArgumentInvalidDoubleQuotedString(const string &ctx, const string &directive, const string &argument) {
     return CONFIG_ERROR_PREFIX(ctx) + "String argument " + repr(argument) + " for directive " + repr(directive) + " is invalid";

@@ -49,7 +49,7 @@ void HttpServer::addNewClient(int listeningSocket) {
     socklen_t clientLen = sizeof(clientAddr);
 
     log.debug() << "Calling " << func("accept") << punct("()") << " on socket " << repr(listeningSocket) << std::endl;
-    int clientSocket = ::accept(listeningSocket, (struct sockaddr *)&clientAddr, &clientLen);
+    int clientSocket = ::accept(listeningSocket, reinterpret_cast<struct sockaddr *>(&clientAddr), &clientLen);
     log.debug() << "Got client socket FD back: " << repr(clientSocket) << std::endl;
     if (clientSocket < 0) {
         log.error() << "Error calling " << func("accept") << punct("()") << ": " << ::strerror(errno) << std::endl;

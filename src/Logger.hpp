@@ -13,7 +13,7 @@ class Logger {
     std::ostream &os;
 
   public:
-    enum Level { FATAL, ERR, WARN, INFO, DEBUG, TRACE, TRACE2, TRACE3, TRACE4, TRACE5 };
+    enum Level { FATAL, ERROR, WARNING, INFO, DEBUG, TRACE, TRACE2, TRACE3, TRACE4, TRACE5 };
     Level logLevel;
 
     class StreamWrapper {
@@ -45,7 +45,7 @@ class Logger {
 
     StreamWrapper fatal;
     StreamWrapper error;
-    StreamWrapper warn;
+    StreamWrapper warning;
     StreamWrapper info;
     StreamWrapper debug;
     StreamWrapper trace;
@@ -55,8 +55,8 @@ class Logger {
     StreamWrapper trace5;
 
     bool isfatal() { return FATAL <= logLevel; }
-    bool iserror() { return ERR <= logLevel; }
-    bool iswarn() { return WARN <= logLevel; }
+    bool iserror() { return ERROR <= logLevel; }
+    bool iswarn() { return WARNING <= logLevel; }
     bool isinfo() { return INFO <= logLevel; }
     bool isdebug() { return DEBUG <= logLevel; }
     bool istrace() { return TRACE <= logLevel; }
@@ -67,7 +67,7 @@ class Logger {
 
     static const string &fatalPrefix;
     static const string &errorPrefix;
-    static const string &warnPrefix;
+    static const string &warningPrefix;
     static const string &infoPrefix;
     static const string &debugPrefix;
     static const string &tracePrefix;
