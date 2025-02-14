@@ -41,12 +41,8 @@ class HttpServer {
     struct AddrPortCompare;
     struct HttpRequest;
     struct CgiProcess;
-    enum FdState {
-        FD_READABLE,
-        FD_WRITEABLE,
-        FD_OTHER_STATE,
-    };
-
+    enum FdState { FD_READABLE, FD_WRITEABLE, FD_OTHER_STATE };
+    enum ChunkParsingState { PARSE_CHUNK, PARSE_CHUNK_SIZE };
     enum RequestState { READING_HEADERS, READING_BODY, REQUEST_COMPLETE, REQUEST_ERROR };
 
     //// typedefs ////
@@ -81,10 +77,13 @@ class HttpServer {
         size_t bytesRead;
         string temporaryBuffer;
         bool pathParsed;
+        ChunkParsingState chunkParsingState;
+        size_t thisChunkSize;
 
         HttpRequest()
             : method(), path("/"), rawQuery(), httpVersion(), headers(), body(), state(READING_HEADERS), contentLength(0),
-              chunkedTransfer(false), bytesRead(0), temporaryBuffer(), pathParsed(false) {}
+              chunkedTransfer(false), bytesRead(0), temporaryBuffer(), pathParsed(false), chunkParsingState(PARSE_CHUNK_SIZE),
+              thisChunkSize() {}
     };
 
     struct Server {        // Basically just a thin wrapper around ServerCtx, but with some
@@ -313,7 +312,7 @@ class HttpServer {
     // POST related
     bool isHeaderComplete(const HttpRequest &request) const;
     bool needsMoreData(const HttpRequest &request) const;
-    void processContentLength(HttpRequest &request);
+    void processContentLengthAndChunkedTransfer(HttpRequest &request);
     bool validateRequest(const HttpRequest &request, int clientSocket);
     bool parseRequestLine(int clientSocket, const string &line, HttpRequest &request);
     bool parseHeader(const string &line, HttpRequest &request);
@@ -327,6 +326,11 @@ class HttpServer {
     void removeClientAndRequest(int clientSocket);
     bool checkRequestBodySize(int clientSocket, const HttpRequest &request, size_t currentSize);
     bool checkRequestSizeWithoutBody(int clientSocket, size_t currentSize);
+
+    // chunked request
+    bool processChunkedData(int clientSocket, HttpRequest &request);
+    bool getChunkAndConsume(string &buffer, size_t chunkSize, string &retChunk);
+    bool getChunkSizeStrAndConsume(string &buffer, string &chunkSizeStr);
 };
 
 std::ostream &operator<<(std::ostream &, const HttpServer &);

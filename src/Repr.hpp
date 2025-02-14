@@ -625,9 +625,6 @@ template <> struct ReprWrapper<MultPlexType> {
         case Constants::EPOLL:
             oss << "EPOLL";
             break;
-        default:
-            oss << "UNKNOWN";
-            break;
         }
         if (Logger::lastInstance().istrace5())
             return Utils::jsonEscape(oss.str());
@@ -653,9 +650,6 @@ template <> struct ReprWrapper<HttpServer::RequestState> {
         case HttpServer::REQUEST_ERROR:
             oss << "REQUEST_ERROR";
             break;
-        default:
-            oss << "UNKNOWN_STATE";
-            break;
         }
         if (Logger::lastInstance().istrace5())
             return Utils::jsonEscape(oss.str());
@@ -678,8 +672,24 @@ template <> struct ReprWrapper<HttpServer::FdState> {
         case HttpServer::FD_OTHER_STATE:
             oss << "OTHER_STATE";
             break;
-        default:
-            oss << "UNKNOWN_STATE";
+        }
+        if (Logger::lastInstance().istrace5())
+            return Utils::jsonEscape(oss.str());
+        else
+            return num(oss.str());
+    }
+};
+
+// for enum ChunkParsingState
+template <> struct ReprWrapper<HttpServer::ChunkParsingState> {
+    static inline string repr(const HttpServer::ChunkParsingState &value) {
+        std::ostringstream oss;
+        switch (value) {
+        case HttpServer::PARSE_CHUNK:
+            oss << "PARSE_CHUNK";
+            break;
+        case HttpServer::PARSE_CHUNK_SIZE:
+            oss << "PARSE_CHUNK_SIZE";
             break;
         }
         if (Logger::lastInstance().istrace5())
@@ -711,9 +721,6 @@ template <> struct ReprWrapper<TokenType> {
             break;
         case TOK_UNKNOWN:
             oss << "TOK_UNKNOWN";
-            break;
-        default:
-            oss << "UNKNOWN_TOKEN";
             break;
         }
         if (Logger::lastInstance().istrace5())

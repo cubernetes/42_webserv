@@ -226,3 +226,12 @@ string Utils::formatSI(size_t size) {
     Logger::lastInstance().debug() << "Converting number " << repr(size) << " to readable SI Units " << repr(oss.str()) << std::endl;
     return oss.str();
 }
+
+size_t Utils::hexToSize(string sizeStr) {
+    size_t s;
+    std::stringstream ss;
+    ss << std::hex << sizeStr;
+    ss >> s;
+    Logger::lastInstance().trace() << "Converting " << repr(sizeStr) << " to size_t: " << repr(s) << std::endl;
+    return s;
+}

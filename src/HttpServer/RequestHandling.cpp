@@ -5,6 +5,7 @@
 #include <ctime>
 #include <exception>
 #include <fstream>
+#include <ios>
 #include <ostream>
 #include <signal.h>
 #include <sstream>
@@ -108,7 +109,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
         // {
         //	process.dead = true;
         //	log.debug() << "Calling " << func("waitpid") << punct("()") << " on pid " << repr(process.pid) << " with flags " <<
-        //num("WNOHANG") << std::endl; 	int status; 	(void)::waitpid(process.pid, &status, WNOHANG);
+        // num("WNOHANG") << std::endl; 	int status; 	(void)::waitpid(process.pid, &status, WNOHANG);
         // }
         process.done = true;
 
@@ -476,6 +477,7 @@ bool HttpServer::isHeaderComplete(const HttpRequest &request) const {
     return !request.method.empty() && !request.path.empty() && !request.httpVersion.empty();
 }
 
+// NOTUSED, REMOVE
 bool HttpServer::needsMoreData(const HttpRequest &request) const {
     if (request.state == READING_HEADERS)
         return true;
@@ -487,12 +489,14 @@ bool HttpServer::needsMoreData(const HttpRequest &request) const {
     return false;
 }
 
-void HttpServer::processContentLength(HttpRequest &request) {
+void HttpServer::processContentLengthAndChunkedTransfer(HttpRequest &request) {
     if (request.headers.find("content-length") != request.headers.end())
         request.contentLength = static_cast<size_t>(std::atoi(request.headers["content-length"].c_str()));
 
-    if (request.headers.find("transfer-encoding") != request.headers.end() && request.headers["transfer-encoding"] == "chunked")
+    if (request.headers.find("transfer-encoding") != request.headers.end() && request.headers["transfer-encoding"] == "chunked") {
+        request.chunkParsingState = PARSE_CHUNK_SIZE;
         request.chunkedTransfer = true;
+    }
 }
 
 bool HttpServer::validateRequest(const HttpRequest &request, int clientSocket) {
@@ -593,6 +597,102 @@ bool HttpServer::checkRequestSizeWithoutBody(int clientSocket, size_t currentSiz
     return true;
 }
 
+bool HttpServer::getChunkSizeStrAndConsume(string &buffer, string &chunkSizeStr) {
+    log.trace() << "Trying to read and consume chunk size specification from buffer: " << repr(buffer) << std::endl;
+    vector<char> bytes;
+    size_t i = 0;
+    while (true) {
+        char c = buffer[i];
+        if (Utils::isHexDigitNoCase(c))
+            bytes.push_back(c);
+        else
+            break;
+        ++i;
+    }
+    if (i + 1 >= buffer.length()) {
+        log.debug() << "Chunked request: Need more data" << std::endl;
+        chunkSizeStr = "";
+        return true; // need more data
+    } else if (buffer[i] == '\r' && buffer[i + 1] == '\n') {
+        log.debug() << "Successfully parsed chunk size specification" << std::endl;
+        log.trace() << "Updating buffer from " << repr(buffer) << std::endl;
+        log.trace() << "                  to " << repr(buffer.substr(i + 2)) << std::endl;
+        buffer = buffer.substr(i + 2);
+        chunkSizeStr = string(&bytes[0], bytes.size());
+        return true; // success
+    } else {
+        log.warning() << "Error, chunk size ends in invalid bytes, expected \\r\\n, but got " << static_cast<int>(buffer[i]) << " and "
+                      << static_cast<int>(buffer[i + 1]) << " (decimal)" << std::endl;
+        return false; // error
+    }
+}
+
+bool HttpServer::getChunkAndConsume(string &buffer, size_t chunkSize, string &retChunk) {
+    log.debug() << "Trying to consume chunk of size " << repr(chunkSize) << std::endl;
+    string chunk = buffer.substr(0, chunkSize);
+    if (chunk.length() + 1 >= buffer.length()) {
+        retChunk = "";
+        return false; // need more data
+    }
+    log.debug() << "Chunk is " << repr(chunk) << " of size " << repr(chunk.length()) << std::endl;
+    log.debug() << "Successfully parsed chunk size specification" << std::endl;
+    log.trace() << "Updating buffer from " << repr(buffer) << std::endl;
+    log.trace() << "                  to " << repr(buffer.substr(chunk.length() + 2)) << std::endl;
+    buffer = buffer.substr(chunk.length() + 2);
+    retChunk = chunk;
+    return true;
+}
+
+bool HttpServer::processChunkedData(int clientSocket, HttpRequest &request) {
+    if (request.chunkParsingState == PARSE_CHUNK_SIZE) {
+        string chunkSizeStr;
+        if (!getChunkSizeStrAndConsume(request.temporaryBuffer, chunkSizeStr)) {
+            log.warning() << "Error parsing chunk size specification" << std::endl;
+            return false;
+        }
+        if (chunkSizeStr.empty()) {
+            log.debug() << "Couldn't parse entire chunk size specification, need more data" << std::endl;
+            return true; // need more data, not updating request.body
+        }
+        request.chunkParsingState = PARSE_CHUNK;
+        log.debug() << "Changed chunk parsing state to " << repr(request.chunkParsingState) << std::endl;
+        request.thisChunkSize =
+            Utils::hexToSize(chunkSizeStr); // saving parsed chunk size, since we'll need it when parsing the chunk itself
+        if (!checkRequestBodySize(clientSocket, request, request.thisChunkSize + request.body.length())) {
+            log.warning() << "Error while reading chunk: Anticipated chunk size of " << repr(request.thisChunkSize) << " is too big"
+                          << std::endl;
+            return false;
+        }
+    }
+
+    string chunk;
+    if (!getChunkAndConsume(request.temporaryBuffer, request.thisChunkSize, chunk)) {
+        log.debug() << "Couldn't parse entire chunk, need more data" << std::endl;
+        return true; // need more data, not updating request.body
+    } else if (request.thisChunkSize == 0 && chunk.empty()) {
+        request.state = REQUEST_COMPLETE;
+        log.debug() << "Found last chunk, changed request state to " << repr(request.state) << std::endl;
+        request.chunkParsingState = PARSE_CHUNK_SIZE;
+        log.debug() << "Technically needless: Changed chunk parsing state to " << repr(request.chunkParsingState) << std::endl;
+        return true; // end condition (and it was CRLF terminuated)
+    } else if (request.thisChunkSize == 0 && !chunk.empty()) {
+        log.warning() << "Error parsing chunk, chunk size of " << repr(0) << " was specified but a non-empty chunk followed" << std::endl;
+        return false; // got data although chunksize was zero, invalid request
+    } else if (request.thisChunkSize == chunk.length()) {
+        log.debug() << "Successfully extracted one chunk from the temporary buffer, appending to request body" << std::endl;
+        request.body += chunk;
+        log.debug() << "Doing recursive chunk processing call, in case there are more chunks contained in the temporary buffer"
+                    << std::endl;
+        request.chunkParsingState = PARSE_CHUNK_SIZE;
+        log.debug() << "Changed chunk parsing state to " << repr(request.chunkParsingState) << std::endl;
+        return processChunkedData(clientSocket, request);
+    } else {
+        log.warning() << "Error parsing chunk, specified chunk size " << repr(request.thisChunkSize) << " is not actual chunk size "
+                      << repr(chunk.length()) << std::endl;
+        return false; // request.thisChunkSize is not equal to actual (parsed) chunk size, invalid request
+    }
+}
+
 bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, const string &rawData) {
     log.debug() << "Processing request headers" << std::endl;
     size_t headerEnd = rawData.find("\r\n\r\n");
@@ -625,7 +725,7 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
     log.debug() << "Found line consisting only of \\r, finishing header parsing" << std::endl;
 
     // Process Content-Length and chunked transfer headers
-    processContentLength(request);
+    processContentLengthAndChunkedTransfer(request);
     log.debug() << "Content length: " << repr(request.contentLength) << " (if it is " << repr(0)
                 << ", it can also mean the header not present, like with GET request)" << std::endl;
     log.debug() << "Chunked transfer: " << repr(request.chunkedTransfer) << std::endl;
@@ -641,11 +741,24 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
     }
 
     // Move any remaining data to body
-    if (headerEnd + 4 < rawData.size()) {
-        request.body = rawData.substr(headerEnd + 4);
-        request.bytesRead = request.body.size();
-        log.debug() << "Moved " << repr(request.bytesRead) << " bytes to body" << std::endl;
+    if (headerEnd + 4 < rawData.length()) {
+        if (request.chunkedTransfer) {
+            request.temporaryBuffer = rawData.substr(headerEnd + 4);
+            log.debug() << "Chunked request: Moved " << repr(request.temporaryBuffer.length()) << " bytes to temporary buffer" << std::endl;
+            if (!processChunkedData(clientSocket, request)) { // this might set request.state to REQUEST_COMPLETE
+                sendError(clientSocket, 400, NULL);
+                _pendingRequests.erase(clientSocket);
+                return false;
+            }
+            if (request.state == REQUEST_COMPLETE)
+                return true;
+        } else {
+            request.body = rawData.substr(headerEnd + 4);
+            request.bytesRead = request.body.length();
+            log.debug() << "Unchunked request: Moved " << repr(request.body.length()) << " bytes to body" << std::endl;
+        }
     } else {
+        request.temporaryBuffer.clear();
         request.body.clear();
         request.bytesRead = 0;
     }
@@ -664,17 +777,32 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
 }
 
 bool HttpServer::processRequestBody(int clientSocket, HttpRequest &request, const char *buffer, size_t bytesRead) {
-    log.debug() << "Processing request body" << std::endl;
-    // Append new data to body
-    log.debug() << "Appending new data (" << repr(bytesRead) << " bytes) to body (currently " << repr(request.body.length()) << " bytes)"
-                << std::endl;
-    log.trace() << "Buffer is " << repr(const_cast<char *>(buffer)) << std::endl;
-    log.trace() << "Body is " << repr(request.body) << std::endl;
-    request.body.append(buffer, bytesRead);
-    request.bytesRead += bytesRead;
+
+    if (request.chunkedTransfer) {
+        log.debug() << "Processing chunked request body" << std::endl;
+        log.debug() << "Appending new data (" << repr(bytesRead) << " bytes) to temporary buffer (currently "
+                    << repr(request.temporaryBuffer.length()) << " bytes)" << std::endl;
+        log.trace() << "Buffer is " << repr(const_cast<char *>(buffer)) << std::endl;
+        log.trace() << "Temporary buffer is " << repr(request.temporaryBuffer) << std::endl;
+        request.temporaryBuffer.append(buffer, bytesRead);
+        if (!processChunkedData(clientSocket, request)) { // NOTE: this function might update the request state to REQUEST_COMPLETE
+            sendError(clientSocket, 400, NULL);
+            _pendingRequests.erase(clientSocket);
+            return false;
+        }
+    } else {
+        log.debug() << "Processing request body (unchunked)" << std::endl;
+        // Append new data to body
+        log.debug() << "Appending new data (" << repr(bytesRead) << " bytes) to body (currently " << repr(request.body.length())
+                    << " bytes)" << std::endl;
+        log.trace() << "Buffer is " << repr(const_cast<char *>(buffer)) << std::endl;
+        log.trace() << "Body is " << repr(request.body) << std::endl;
+        request.body.append(buffer, bytesRead);
+        request.bytesRead += bytesRead;
+    }
 
     // Check size limit
-    if (!checkRequestBodySize(clientSocket, request, request.body.size()))
+    if (!checkRequestBodySize(clientSocket, request, request.body.length()))
         return false;
 
     // Check if we have all the data
@@ -719,10 +847,10 @@ void HttpServer::handleIncomingData(int clientSocket, const char *buffer, ssize_
     if (request.state == READING_HEADERS) {
         // During header reading, we temporarily accumulate data
         string rawData = request.temporaryBuffer + string(buffer, static_cast<size_t>(bytesRead));
-        log.debug() << "Accumulated data length: " << repr(rawData.size()) << std::endl;
+        log.debug() << "Accumulated data length: " << repr(rawData.length()) << std::endl;
 
         // Check accumulated size (without body)
-        if (!checkRequestSizeWithoutBody(clientSocket, rawData.size()))
+        if (!checkRequestSizeWithoutBody(clientSocket, rawData.length()))
             return;
 
         // Store for next iteration if headers aren't complete
@@ -730,13 +858,19 @@ void HttpServer::handleIncomingData(int clientSocket, const char *buffer, ssize_
 
         // Try to process headers
         if (processRequestHeaders(clientSocket, request, rawData)) {
-            log.debug() << "Headers fully processed. Body size so far: " << repr(request.body.size()) << std::endl;
-            log.debug() << "Expected content length: " << repr(request.contentLength) << std::endl;
-            request.temporaryBuffer.clear();
+            log.debug() << "Headers fully processed. Body size so far: " << repr(request.body.length()) << std::endl;
+            if (!request.chunkedTransfer)
+                log.debug() << "Expected content length: " << repr(request.contentLength) << std::endl;
+            else
+                log.debug() << "Is chunked requests: " << repr(request.chunkedTransfer) << std::endl;
         }
     } else if (request.state == READING_BODY) {
-        log.debug() << "Reading body. Current size: " << repr(request.bytesRead) << " Expected: " << repr(request.contentLength)
-                    << std::endl;
+        if (request.chunkedTransfer) {
+            log.debug() << "Reading body using chunked transfer encoding. Current size: " << repr(request.bytesRead) << std::endl;
+        } else {
+            log.debug() << "Reading body (unchunked). Current size: " << repr(request.bytesRead)
+                        << " Expected: " << repr(request.contentLength) << std::endl;
+        }
         if (!processRequestBody(clientSocket, request, buffer, static_cast<size_t>(bytesRead))) {
             return;
         }
