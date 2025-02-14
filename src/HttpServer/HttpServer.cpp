@@ -18,9 +18,11 @@ HttpServer::~HttpServer() {
 
 void cgiDied(int signal) {
     (void)signal;
-    if (Logger::lastInstance().isdebug())
-        write(1, "Some CGI process died\n", 22);
-    ;
+    if (Logger::lastInstance().isdebug()) {
+        if (write(1, "Some CGI process died\n", 22) < 0) {
+            /* ignore */
+        }
+    }
 }
 
 void finish(int signal) {

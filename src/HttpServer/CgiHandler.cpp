@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <bits/types/idtype_t.h>
 #include <cctype>
 #include <cerrno>
 #include <cstdlib>
