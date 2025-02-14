@@ -50,6 +50,7 @@ namespace Utils {
     string formattedTimestamp(std::time_t _t = 0, bool forLogger = false);
     string millisecondRemainderSinceEpoch();
     string formatSI(size_t size);
+    size_t hexToSize(string sizeStr);
 
     template <typename T> static inline vector<T> &getTmpVec() {
         static vector<T> _;
