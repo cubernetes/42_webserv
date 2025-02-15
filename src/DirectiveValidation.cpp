@@ -23,12 +23,12 @@
 #include "Repr.hpp"
 #include "Utils.hpp"
 
-#define CHECKFN(ctx, checkFunction)                                                                                                                                                                    \
-    if (checkFunction(ctx, directive, arguments) && ++counts[directive] <= 1)                                                                                                                          \
+#define CHECKFN(ctx, checkFunction)                                                                                                        \
+    if (checkFunction(ctx, directive, arguments) && ++counts[directive] <= 1)                                                              \
     continue
 
-#define CHECKFN_MULTI(ctx, checkFunction)                                                                                                                                                              \
-    if (checkFunction(ctx, directive, arguments))                                                                                                                                                      \
+#define CHECKFN_MULTI(ctx, checkFunction)                                                                                                  \
+    if (checkFunction(ctx, directive, arguments))                                                                                          \
     continue
 
 using std::map;
@@ -150,9 +150,10 @@ static inline void ensureValidDoubleQuotedString(const string &ctx, const string
 
 static inline void ensureValidHttpUri(const string &ctx, const string &directive, const string &argument) {
     if (!DirectiveValidation::isHttpUri(argument))
-        throw runtime_error(Errors::Config::DirectiveArgumentInvalidHttpUri(ctx, directive,
-                                                                            argument)); // TODO: normally, you'd use a regex to validate the domain, but
-                                                                                        // hell nah we are not implementing a NFA from scratch
+        throw runtime_error(
+            Errors::Config::DirectiveArgumentInvalidHttpUri(ctx, directive,
+                                                            argument)); // TODO: normally, you'd use a regex to validate the domain, but
+                                                                        // hell nah we are not implementing a NFA from scratch
 }
 
 // was only needed for the int argument to the worker_processes directive, which is not
@@ -193,9 +194,11 @@ static inline void ensureOnOff(const string &ctx, const string &directive, strin
 // only allow official status codes, might even prune this list even further
 // https://en.wikipedia.org/wiki/List_of_HTTP_status_codes
 static inline void ensureStatusCode(const string &ctx, const string &directive, const string &argument) {
-    static const char *validCodesArr[] = {"100", "101", "102", "103", "200", "201", "202", "203", "204", "205", "206", "207", "208", "226", "300", "301", "302", "303", "304", "305", "306",
-                                          "307", "308", "400", "401", "402", "403", "404", "405", "406", "407", "408", "409", "410", "411", "412", "413", "414", "415", "416", "417", "418",
-                                          "421", "422", "423", "424", "425", "426", "428", "429", "431", "451", "500", "501", "502", "503", "504", "505", "506", "507", "508", "510", "511"};
+    static const char *validCodesArr[] = {"100", "101", "102", "103", "200", "201", "202", "203", "204", "205", "206", "207", "208",
+                                          "226", "300", "301", "302", "303", "304", "305", "306", "307", "308", "400", "401", "402",
+                                          "403", "404", "405", "406", "407", "408", "409", "410", "411", "412", "413", "414", "415",
+                                          "416", "417", "418", "421", "422", "423", "424", "425", "426", "428", "429", "431", "451",
+                                          "500", "501", "502", "503", "504", "505", "506", "507", "508", "510", "511"};
     static const vector<string> validCodes(validCodesArr, validCodesArr + sizeof(validCodesArr) / sizeof(validCodesArr[0]));
     if (std::find(validCodes.begin(), validCodes.end(), argument) != validCodes.end())
         return;
@@ -446,7 +449,9 @@ static void checkLocationDirectives(Directives &directives) {
     }
 }
 
-static inline bool addrSame(const struct in_addr &addr1, const struct in_addr &addr2) { return std::memcmp(&addr1, &addr2, sizeof(addr1)) == 0; }
+static inline bool addrSame(const struct in_addr &addr1, const struct in_addr &addr2) {
+    return std::memcmp(&addr1, &addr2, sizeof(addr1)) == 0;
+}
 
 static bool listenDirectivesSame(const Arguments &listenDirective, const Arguments &otherListenDirective) {
     /*
@@ -482,8 +487,10 @@ static bool listenDirectivesSame(const Arguments &listenDirective, const Argumen
 }
 
 static string overlapListen(const ArgResults &listenDirectives, const ArgResults &otherListenDirectives) {
-    for (ArgResults::const_iterator listenDirective = listenDirectives.begin(); listenDirective != listenDirectives.end(); ++listenDirective) {
-        for (ArgResults::const_iterator otherListenDirective = otherListenDirectives.begin(); otherListenDirective != otherListenDirectives.end(); ++otherListenDirective) {
+    for (ArgResults::const_iterator listenDirective = listenDirectives.begin(); listenDirective != listenDirectives.end();
+         ++listenDirective) {
+        for (ArgResults::const_iterator otherListenDirective = otherListenDirectives.begin();
+             otherListenDirective != otherListenDirectives.end(); ++otherListenDirective) {
             if (listenDirectivesSame(*listenDirective, *otherListenDirective)) {
                 return (*listenDirective)[0] + ":" + (*listenDirective)[1];
             }
@@ -492,14 +499,20 @@ static string overlapListen(const ArgResults &listenDirectives, const ArgResults
     return "";
 }
 
-static void ensureNoOverlapServerName(const ArgResults &serverNameDirectives, const ArgResults &otherServerNameDirectives, size_t serverId, size_t otherServerId, string listenOverlap) {
-    for (ArgResults::const_iterator serverNameDirective = serverNameDirectives.begin(); serverNameDirective != serverNameDirectives.end(); ++serverNameDirective) {
-        for (ArgResults::const_iterator otherServerNameDirective = otherServerNameDirectives.begin(); otherServerNameDirective != otherServerNameDirectives.end(); ++otherServerNameDirective) {
-            for (Arguments::const_iterator serverName = serverNameDirective->begin(); serverName != serverNameDirective->end(); ++serverName) {
-                for (Arguments::const_iterator otherServerName = otherServerNameDirective->begin(); otherServerName != otherServerNameDirective->end(); ++otherServerName) {
+static void ensureNoOverlapServerName(const ArgResults &serverNameDirectives, const ArgResults &otherServerNameDirectives, size_t serverId,
+                                      size_t otherServerId, string listenOverlap) {
+    for (ArgResults::const_iterator serverNameDirective = serverNameDirectives.begin(); serverNameDirective != serverNameDirectives.end();
+         ++serverNameDirective) {
+        for (ArgResults::const_iterator otherServerNameDirective = otherServerNameDirectives.begin();
+             otherServerNameDirective != otherServerNameDirectives.end(); ++otherServerNameDirective) {
+            for (Arguments::const_iterator serverName = serverNameDirective->begin(); serverName != serverNameDirective->end();
+                 ++serverName) {
+                for (Arguments::const_iterator otherServerName = otherServerNameDirective->begin();
+                     otherServerName != otherServerNameDirective->end(); ++otherServerName) {
                     if (*serverName == *otherServerName) {
-                        throw runtime_error("Config error: duplicate server_name's between server " + repr(serverId) + " and server " + repr(otherServerId) + ": " + repr(*serverName) +
-                                            " (both listening on " + num(listenOverlap) + ")");
+                        throw runtime_error("Config error: duplicate server_name's between server " + repr(serverId) + " and server " +
+                                            repr(otherServerId) + ": " + repr(*serverName) + " (both listening on " + num(listenOverlap) +
+                                            ")");
                     }
                 }
             }
@@ -511,12 +524,15 @@ static void ensureServerUniqueness(const Directives &directives, const ServerCtx
     ArgResults listenDirectives = getAllDirectives(directives, "listen");
     ArgResults serverNameDirectives = getAllDirectives(directives, "server_name");
 
-    for (ArgResults::const_iterator listenDirective = listenDirectives.begin(); listenDirective != listenDirectives.end(); ++listenDirective) {
-        for (ArgResults::const_iterator otherListenDirective = listenDirectives.begin(); otherListenDirective != listenDirectives.end(); ++otherListenDirective) {
+    for (ArgResults::const_iterator listenDirective = listenDirectives.begin(); listenDirective != listenDirectives.end();
+         ++listenDirective) {
+        for (ArgResults::const_iterator otherListenDirective = listenDirectives.begin(); otherListenDirective != listenDirectives.end();
+             ++otherListenDirective) {
             if (listenDirective == otherListenDirective)
                 continue;
             if (listenDirectivesSame(*listenDirective, *otherListenDirective)) {
-                throw runtime_error("Config error: duplicate listen directives in server " + repr(serverId) + ": " + repr(*listenDirective) + " and " + repr(*otherListenDirective));
+                throw runtime_error("Config error: duplicate listen directives in server " + repr(serverId) + ": " +
+                                    repr(*listenDirective) + " and " + repr(*otherListenDirective));
             }
         }
     }
@@ -550,7 +566,8 @@ void DirectiveValidation::checkDirectives(Config &config) {
         checkServerDirectives(server->first);
         size_t locationId = 0;
         for (LocationCtxs::iterator location = server->second.begin(); location != server->second.end(); ++location) {
-            Logger::lastInstance().trace2() << "Validating semantics of directives in location block " << repr(locationId) << " in server " << repr(serverId) << std::endl;
+            Logger::lastInstance().trace2() << "Validating semantics of directives in location block " << repr(locationId) << " in server "
+                                            << repr(serverId) << std::endl;
             Logger::lastInstance().trace3() << "Location block " << repr(locationId) << ": " << repr(*location) << std::endl;
             checkLocationDirectives(location->second);
             ++locationId;
@@ -561,7 +578,8 @@ void DirectiveValidation::checkDirectives(Config &config) {
     // directives must be validated first
     serverId = 0;
     for (ServerCtxs::iterator server = config.second.begin(); server != config.second.end(); ++server) {
-        Logger::lastInstance().trace() << "Ensuring that listen & server_name directives in server " << repr(serverId) << " don't conflict with other servers" << std::endl;
+        Logger::lastInstance().trace() << "Ensuring that listen & server_name directives in server " << repr(serverId)
+                                       << " don't conflict with other servers" << std::endl;
         ensureServerUniqueness(server->first, config.second, serverId);
         ++serverId;
     }

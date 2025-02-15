@@ -66,7 +66,9 @@ string DirectoryIndexer::indexDirectory(string location, string path) {
     for (Entries::iterator it = entries.begin(); it != entries.end(); ++it) {
         result << "<tr>";
         {
-            result << "<td>" << "<a href=\"" << location << it->first << "\">" << it->first << "</a>" << "</td>";
+            result << "<td>"
+                   << "<a href=\"" << location << it->first << "\">" << it->first << "</a>"
+                   << "</td>";
             result << "<td>" << Utils::formattedTimestamp(it->second.first) << "<td>";
             result << "<td>" << Utils::formatSI(it->second.second) << "<td>";
         }

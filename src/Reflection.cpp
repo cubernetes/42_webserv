@@ -42,6 +42,8 @@ string Reflection::reprStruct(string name, Members members) const {
     return out.str();
 }
 
-void Reflection::reflectMember(ReprClosure reprClosure, const char *memberId, const void *memberPtr) { _members[memberId] = std::make_pair(reprClosure, memberPtr); }
+void Reflection::reflectMember(ReprClosure reprClosure, const char *memberId, const void *memberPtr) {
+    _members[memberId] = std::make_pair(reprClosure, memberPtr);
+}
 
 string Reflection::repr() const { return reprStruct(_class, _members); }

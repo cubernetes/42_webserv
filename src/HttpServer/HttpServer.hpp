@@ -200,13 +200,13 @@ class HttpServer {
     HttpServer()
         : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _httpVersionString(),
           _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(),
-          _pendingRequests(), _tmpCgiFds(), log(Logger::lastInstance()) {};
+          _pendingRequests(), _tmpCgiFds(), log(Logger::lastInstance()){};
     // Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a
     // server and its config
     HttpServer(const HttpServer &)
         : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _httpVersionString(),
           _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(),
-          _pendingRequests(), _tmpCgiFds(), log(Logger::lastInstance()) {};
+          _pendingRequests(), _tmpCgiFds(), log(Logger::lastInstance()){};
     // HttpServer cannot be assigned to
     HttpServer &operator=(const HttpServer &) { return *this; };
 
