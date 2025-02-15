@@ -166,7 +166,7 @@ bool HttpServer::sendFileContent(int clientSocket, const string &filePath, const
     headers << _httpVersionString << " " << statusCode << " " << statusTextFromCode(statusCode) << "\r\n"
             << "Content-Length: " << fileSize << "\r\n"
             << "Content-Type: " << (contentType.empty() ? getMimeType(filePath) : contentType) << "\r\n"
-            << "Connection: close\r\n\r\n";
+            << "Connection: keep-alive\r\n\r\n";
 
     queueWrite(clientSocket, headers.str());
 
@@ -251,7 +251,7 @@ void HttpServer::sendString(int clientSocket, const string &payload, int statusC
     response << _httpVersionString << " " << statusCode << " " << statusTextFromCode(statusCode) << "\r\n"
              << "Content-Type: " << contentType << "\r\n"
              << "Content-Length: " << payload.length() << "\r\n"
-             << "Connection: close\r\n"
+             << "Connection: keep-alive\r\n"
              << "\r\n";
     if (!onlyHeaders) {
         log.debug() << "Queueing actual string payload, since it's not a HEAD request" << std::endl;

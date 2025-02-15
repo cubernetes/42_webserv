@@ -76,7 +76,7 @@ HttpServer::MultPlexFds HttpServer::determineRemoteClients(const MultPlexFds &m,
     default:
         throw std::logic_error("Filtering remote clients from unknown multiplex FDs is not implemented");
     }
-    log.trace() << "Remove clients are " << repr(remaining) << std::endl;
+    log.trace() << "Remote clients are " << repr(remaining) << std::endl;
     return remaining;
 }
 

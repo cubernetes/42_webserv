@@ -37,6 +37,11 @@ void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds &monitorFds, int fd) {
     bool isClientSocket = std::find(rawClientFds.begin(), rawClientFds.end(), fd) != rawClientFds.end();
     log.trace() << "Is FD " << repr(fd) << " a remote client FD?: " << repr(isClientSocket) << std::endl;
 
+    if (persistConns.count(fd) > 0) {
+        log.debug() << "Connection on FD " << repr(fd) << " has handled a response, but is persistent, therefore not closing" << std::endl;
+        return;
+    }
+
     Logger::StreamWrapper &out = isClientSocket ? log.info : log.debug;
 
     out();
@@ -87,8 +92,4 @@ void HttpServer::closeAndRemoveAllMultPlexFd(MultPlexFds &monitorFds) {
     }
 }
 
-void HttpServer::removeClient(int clientSocket) {
-    // TODO: @all: this function should actually be the one that removes all
-    // PendingWrites, PendingCloses, PendingRequests, cgi stuff
-    closeAndRemoveMultPlexFd(_monitorFds, clientSocket);
-}
+void HttpServer::removeClient(int clientSocket) { closeAndRemoveMultPlexFd(_monitorFds, clientSocket); }

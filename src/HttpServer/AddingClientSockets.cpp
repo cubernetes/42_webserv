@@ -57,6 +57,10 @@ void HttpServer::addNewClient(int listeningSocket) {
     }
 
     addClientSocketToMonitorFds(_monitorFds, clientSocket);
+    if (!persistConns.insert(std::make_pair(clientSocket, std::time(NULL))).second) {
+        log.error() << "New client socket " << repr(clientSocket) << " is already in persistent connections map, this should never happen"
+                    << std::endl;
+    }
     log.info();
     if (!ansi::noColor())
         log.info << ANSI_BLACK ANSI_GREEN_BG;

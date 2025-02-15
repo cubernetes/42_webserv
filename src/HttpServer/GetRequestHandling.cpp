@@ -15,7 +15,7 @@ void HttpServer::redirectClient(int clientSocket, const string &newUri, int stat
     std::ostringstream response;
     response << _httpVersionString << " " << statusCode << " " << statusTextFromCode(statusCode) << "\r\n"
              << "Location: " << newUri << "\r\n"
-             << "Connection: close\r\n\r\n";
+             << "Connection: keep-alive\r\n\r\n";
     string responseStr = response.str();
     log.debug() << "Sending redirection response immediately using " << func("send") << punct("()") << std::endl;
     log.trace() << "Full response (" << repr(responseStr.length()) << " bytes): " << repr(responseStr) << std::endl;

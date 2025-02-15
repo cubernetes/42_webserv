@@ -434,7 +434,6 @@ void HttpServer::rewriteRequest(int clientSocket, int statusCode, const string &
         sendError(clientSocket, 500, &location); // proper parsing should catch this case!
 }
 
-// MAYBE: refactor
 void HttpServer::handleRequest(int clientSocket, const HttpRequest &request, const LocationCtx &location) {
     log.info() << "Handling request to path: " << repr(request.path) << " to matched location " << repr(location.first) << std::endl;
     log.trace() << "Request: " << repr(request) << std::endl;
@@ -489,13 +488,19 @@ bool HttpServer::needsMoreData(const HttpRequest &request) const {
     return false;
 }
 
-void HttpServer::processContentLengthAndChunkedTransfer(HttpRequest &request) {
+void HttpServer::processContLenChunkedAndConnectionHeaders(int clientSocket, HttpRequest &request) {
     if (request.headers.find("content-length") != request.headers.end())
         request.contentLength = static_cast<size_t>(std::atoi(request.headers["content-length"].c_str()));
 
     if (request.headers.find("transfer-encoding") != request.headers.end() && request.headers["transfer-encoding"] == "chunked") {
         request.chunkParsingState = PARSE_CHUNK_SIZE;
         request.chunkedTransfer = true;
+    }
+
+    if (request.headers.find("connection") != request.headers.end() && request.headers["connection"] == "close") {
+        log.debug() << "Requestion has 'Connection: close' header, marking the client socket " << repr(clientSocket) << " as non-persistent"
+                    << std::endl;
+        persistConns.erase(clientSocket);
     }
 }
 
@@ -725,7 +730,7 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
     log.debug() << "Found line consisting only of \\r, finishing header parsing" << std::endl;
 
     // Process Content-Length and chunked transfer headers
-    processContentLengthAndChunkedTransfer(request);
+    processContLenChunkedAndConnectionHeaders(clientSocket, request);
     log.debug() << "Content length: " << repr(request.contentLength) << " (if it is " << repr(0)
                 << ", it can also mean the header not present, like with GET request)" << std::endl;
     log.debug() << "Chunked transfer: " << repr(request.chunkedTransfer) << std::endl;
@@ -902,7 +907,9 @@ void HttpServer::readFromClient(int clientSocket) {
 
     log.debug() << "Actually read " << repr(bytesRead) << " bytes" << std::endl;
     if (bytesRead <= 0) {
-        log.debug() << "Removing client since only " << repr(bytesRead) << " bytes were read" << std::endl;
+        log.debug() << "Removing client (ignoring whether it's a persistent connection or not) since only " << repr(bytesRead)
+                    << " bytes were read" << std::endl;
+        persistConns.erase(clientSocket);
         removeClientAndRequest(clientSocket);
         _clientToCgi.erase(clientSocket);
         return;
