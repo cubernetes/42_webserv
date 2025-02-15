@@ -62,6 +62,7 @@ class HttpServer {
     typedef map<int, int> CgiFdToClientMap;
     typedef set<int> PendingCloses;
     typedef map<int, HttpRequest> PendingRequests;
+    typedef map<int, std::time_t> PersistConns;
 
     //// structs and other constructs ////
     struct HttpRequest {
@@ -193,6 +194,7 @@ class HttpServer {
     DefaultServers _defaultServers;
     PendingRequests _pendingRequests;
     set<int> _tmpCgiFds;
+    PersistConns persistConns;
     Logger &log;
 
     //// private methods ////
@@ -200,13 +202,13 @@ class HttpServer {
     HttpServer()
         : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _httpVersionString(),
           _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(),
-          _pendingRequests(), _tmpCgiFds(), log(Logger::lastInstance()){};
+          _pendingRequests(), _tmpCgiFds(), persistConns(), log(Logger::lastInstance()) {};
     // Copying HttpServer is forbidden, since that would violate the 1-1 mapping between a
     // server and its config
     HttpServer(const HttpServer &)
         : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(), _httpVersionString(),
           _rawConfig(), _config(), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(),
-          _pendingRequests(), _tmpCgiFds(), log(Logger::lastInstance()){};
+          _pendingRequests(), _tmpCgiFds(), persistConns(), log(Logger::lastInstance()) {};
     // HttpServer cannot be assigned to
     HttpServer &operator=(const HttpServer &) { return *this; };
 
@@ -313,7 +315,7 @@ class HttpServer {
     // POST related
     bool isHeaderComplete(const HttpRequest &request) const;
     bool needsMoreData(const HttpRequest &request) const;
-    void processContentLengthAndChunkedTransfer(HttpRequest &request);
+    void processContLenChunkedAndConnectionHeaders(int clientSocket, HttpRequest &request);
     bool validateRequest(const HttpRequest &request, int clientSocket);
     bool parseRequestLine(int clientSocket, const string &line, HttpRequest &request);
     bool parseHeader(const string &line, HttpRequest &request);
