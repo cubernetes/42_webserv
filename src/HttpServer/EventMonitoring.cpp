@@ -63,7 +63,7 @@ HttpServer::MultPlexFds HttpServer::determineRemoteClients(const MultPlexFds &m,
     case POLL:
         for (size_t i = 0; i < m.pollFds.size(); ++i) {
             int fd = m.pollFds[i].fd;
-            if (std::find(ls.begin(), ls.end(), fd) == ls.end() && cgiToClient.count(fd) == 0) {
+            if (std::find(ls.begin(), ls.end(), fd) == ls.end() && cgiToClient.count(fd) == 0 && _tmpCgiFds.count(fd) == 0) {
                 remaining.pollFds.push_back(m.pollFds[i]);
                 if (i < m.fdStates.size())
                     remaining.fdStates.push_back(m.fdStates[i]);

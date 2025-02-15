@@ -42,7 +42,7 @@ void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds &monitorFds, int fd) {
     out();
 
     if (!ansi::noColor() && isClientSocket)
-        out << ANSI_RED_BG;
+        out << ANSI_YELLOW_BG ANSI_BLACK;
     Constants::forceNoColor = true;
 
     out << "Calling close() on FD " << repr(fd);
@@ -54,6 +54,7 @@ void HttpServer::closeAndRemoveMultPlexFd(MultPlexFds &monitorFds, int fd) {
     out << std::endl;
 
     ::close(fd); // TODO: @timo: guard every syscall
+    _tmpCgiFds.erase(fd);
     log.debug() << "Removing FD " << repr(fd) << " from monitoring FDs" << std::endl;
     switch (monitorFds.multPlexType) {
     case SELECT:

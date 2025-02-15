@@ -15,7 +15,8 @@ static bool isTimedOut(const HttpServer::CgiProcess &process) {
     std::time_t now = std::time(NULL);
     Logger::lastInstance().debug() << "Checking wether CGI process " << repr(process) << " is timed out" << std::endl;
     Logger::lastInstance().debug() << "Now: " << repr(Utils::formattedTimestamp(now)) << " (" << repr(now) << ")" << std::endl;
-    Logger::lastInstance().debug() << "Last active: " << repr(Utils::formattedTimestamp(lastActive)) << " (" << repr(lastActive) << ")" << std::endl;
+    Logger::lastInstance().debug() << "Last active: " << repr(Utils::formattedTimestamp(lastActive)) << " (" << repr(lastActive) << ")"
+                                   << std::endl;
     Logger::lastInstance().debug() << "Difference: " << repr(now - lastActive) << std::endl;
     Logger::lastInstance().debug() << "Timeout: " << repr(Constants::cgiTimeout) << std::endl;
     if (now - lastActive >= Constants::cgiTimeout) {
@@ -50,6 +51,8 @@ void HttpServer::checkForInactiveClients() {
             deleteFromClientToCgi.push_back(clientSocket);
             log.debug() << "Removing CGI read FD " << repr(process.readFd) << " (stdout) from cgiToClientMap" << std::endl;
             deleteFromCgiToClient.push_back(process.readFd);
+            log.debug() << "Inserting CGI read FD " << repr(process.readFd) << " to _tmpCgiFds" << std::endl;
+            _tmpCgiFds.insert(process.readFd);
             // closeAndRemoveMultPlexFd(_monitorFds, clientSocket);
             // _pendingWrites.erase(clientSocket);
         } else if (process.dead && process.noRecentReadEvent) {
@@ -58,9 +61,12 @@ void HttpServer::checkForInactiveClients() {
                 log.trace() << "Process died, response is empty and headers have not yet been sent, sending 502 Bad Gateway" << std::endl;
                 sendError(clientSocket, 502, process.location);
             } else if (process.response.empty() && process.headersSent) {
-                log.trace() << "Process died, response is empty, BUT headers have been sent/enqueued, not sending anything extra/any errors" << std::endl;
-            } else if (!process.response.empty()) { // not perfect, we should check if it's a valid response, i.e. headers present, \r\n\r\n, etc., but it'll do
-                log.trace() << "Process died but there's still response data to enqueue, sending that data raw (no header validation)" << std::endl;
+                log.trace() << "Process died, response is empty, BUT headers have been sent/enqueued, not sending anything extra/any errors"
+                            << std::endl;
+            } else if (!process.response.empty()) { // not perfect, we should check if it's a valid response, i.e. headers present,
+                                                    // \r\n\r\n, etc., but it'll do
+                log.trace() << "Process died but there's still response data to enqueue, sending that data raw (no header validation)"
+                            << std::endl;
                 queueWrite(clientSocket, _httpVersionString + " 200 " + statusTextFromCode(200) + "\r\n" + process.response);
                 log.trace() << "Marking process as done: " << repr(process) << std::endl;
                 process.done = true;
@@ -71,7 +77,9 @@ void HttpServer::checkForInactiveClients() {
             deleteFromClientToCgi.push_back(clientSocket);
             // _pendingWrites.erase(clientSocket);
         } else {
-            log.debug() << "CGI process " << repr(process) << " is not done yet, since it's either not timed out, or timed out but not dead/dead but still has read events" << std::endl;
+            log.debug() << "CGI process " << repr(process)
+                        << " is not done yet, since it's either not timed out, or timed out but not dead/dead but still has read events"
+                        << std::endl;
         }
         if (::waitpid(process.pid, NULL, WNOHANG) > 0) {
             log.debug() << "Reaped CGI process " << repr(process) << std::endl;

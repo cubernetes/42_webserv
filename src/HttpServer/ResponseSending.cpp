@@ -82,7 +82,7 @@ void HttpServer::terminateIfNoPendingDataAndNoCgi(PendingWriteMap::iterator &it,
         // for POLL: remove POLLOUT from events since we're done writing
         stopMonitoringForWriteEvents(_monitorFds, clientSocket);
         // TODO: @all: yeah actually we really have to close the connection here somehow,
-        // removeCLient or smth
+        // removeClient or smth
         removeClient(clientSocket); // REALLY NOT SURE ABOUT THIS ONE
         log.debug() << "Removing client " << repr(clientSocket) << " from pendingCloses" << std::endl;
         _pendingCloses.erase(clientSocket); // also not 100% sure about this one

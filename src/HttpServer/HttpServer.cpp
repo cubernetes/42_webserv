@@ -46,7 +46,7 @@ HttpServer::HttpServer(const string &configPath, Logger &_log, size_t onlyCheckC
     : _monitorFds(Constants::defaultMultPlexType), _clientToCgi(), _cgiToClient(), _listeningSockets(),
       _httpVersionString(Constants::httpVersionString), _rawConfig(removeComments(readConfig(configPath))),
       _config(parseConfig(_rawConfig)), _mimeTypes(), _statusTexts(), _pendingWrites(), _pendingCloses(), _servers(), _defaultServers(),
-      _pendingRequests(), log(_log) {
+      _pendingRequests(), _tmpCgiFds(), log(_log) {
     TRACE_ARG_CTOR(const string &, configPath);
     if (onlyCheckConfig > 0) {
         if (onlyCheckConfig > 1)
