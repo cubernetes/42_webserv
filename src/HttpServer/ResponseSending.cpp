@@ -184,9 +184,10 @@ bool HttpServer::sendFileContent(int clientSocket, const string &filePath, const
     return true;
 }
 
-string HttpServer::wrapInHtmlBody(const string &text) {
-    log.trace() << "Wrapping text in some html and body tags: " << repr(text) << std::endl;
-    return "<html>\r\n\t<body>\r\n\t\t" + text + "\r\n\t</body>\r\n</html>\r\n";
+string HttpServer::generateServerMessage(const string &text) {
+    log.trace() << "Wrapping text in some html and body tags and setting title: " << repr(text) << std::endl;
+    return "<html><\r\n<head><title>" + text + "</title></head>\r\n<body>\r\n<center><h1>" + text + "</h1></center>\r\n<hr><center>" +
+           "webserv/" + Constants::webservVersion + "</center>\r\n</body>\r\n</html>\r\n";
 }
 
 static string getErrorPagePath(int statusCode, const LocationCtx &location) {
@@ -232,7 +233,7 @@ void HttpServer::sendError(int clientSocket, int statusCode, const LocationCtx *
         else
             log.debug() << "Couldn't send error page" << std::endl;
         log.debug() << "Sending hardcoded error with status code: " << repr(statusCode) << std::endl;
-        string errorContent = wrapInHtmlBody("<h1>\r\n\t\t\t" + STR(statusCode) + " " + statusTextFromCode(statusCode) + "\r\n\t\t</h1>");
+        string errorContent = generateServerMessage(STR(statusCode) + " " + statusTextFromCode(statusCode));
         sendString(clientSocket, errorContent, statusCode);
     }
 }

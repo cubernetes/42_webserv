@@ -309,7 +309,7 @@ class HttpServer {
     // helpers
     string getMimeType(const string &path);
     string statusTextFromCode(int statusCode);
-    string wrapInHtmlBody(const string &text);
+    string generateServerMessage(const string &text);
     bool isListeningSocket(int socket);
 
     // POST related

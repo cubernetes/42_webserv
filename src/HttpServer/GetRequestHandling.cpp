@@ -13,7 +13,7 @@ void HttpServer::redirectClient(int clientSocket, const string &newUri, int stat
     log.debug() << "Redirecting client " << repr(clientSocket) << " to new URI " << repr(newUri) << " with status code " << repr(statusCode)
                 << std::endl;
     std::ostringstream response;
-    string body = wrapInHtmlBody("<h1>\r\n\t\t\t" + Utils::STR(statusCode) + " " + statusTextFromCode(statusCode) + "\r\n\t\t</h1>");
+    string body = generateServerMessage(Utils::STR(statusCode) + " " + statusTextFromCode(statusCode));
     response << _httpVersionString << " " << statusCode << " " << statusTextFromCode(statusCode) << "\r\n"
              << "Location: " << newUri << "\r\n"
              << "Content-Length: " << body.length() << "\r\n"
