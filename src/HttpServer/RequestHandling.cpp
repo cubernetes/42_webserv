@@ -144,8 +144,10 @@ void HttpServer::handleCgiRead(int cgiFd) {
     log.debug() << "Total Response size from CGI process " << repr(process) << " is " << repr(process.totalSize) << std::endl;
     log.trace() << "The raw data read from the CGI pipe FD: " << repr(string(buffer, static_cast<size_t>(bytesRead))) << std::endl;
     if (process.totalSize > Constants::cgiMaxResponseBodySize) { // 10GiB limit // TODO: why put a limit?
-        log.warning() << "CGI Response size exceeded limit of 10GiB, namely " << repr(process.totalSize) << " (roughly "
-                      << Utils::formatSI(process.totalSize) << ")" << std::endl;
+        string formattedSize = Utils::formatSI(process.totalSize);
+        string formattedMaxSize = Utils::formatSI(Constants::cgiMaxResponseBodySize);
+        log.warning() << "CGI response body size exceeded limit of " << repr(Constants::cgiMaxResponseBodySize) << " (roughly "
+                      << formattedMaxSize << "), namely " << repr(process.totalSize) << " (roughly " << formattedSize << ")" << std::endl;
         log.debug() << "Sending " << num("SIGKILL") << " using " << func("kill") << punct("()") << " to the CGI process with PID "
                     << repr(process.pid) << std::endl;
         (void)::kill(process.pid, SIGKILL);
@@ -187,12 +189,15 @@ void HttpServer::handleCgiRead(int cgiFd) {
 
         } else if (process.response.length() > Constants::cgiMaxResponseSizeWithoutBody) { // Status line + Headers
                                                                                            // too long
-            log.warning() << "CGI Response size exceeded limit of 10GiB, namely " << repr(process.totalSize) << " (roughly "
-                          << Utils::formatSI(process.totalSize) << ")" << std::endl;
+            string formattedSize = Utils::formatSI(process.totalSize);
+            string formattedMaxSize = Utils::formatSI(Constants::cgiMaxResponseSizeWithoutBody);
+            log.warning() << "CGI response size (without body) exceeded limit of " << repr(Constants::cgiMaxResponseSizeWithoutBody)
+                          << " (roughly " << formattedMaxSize << "), namely " << repr(process.totalSize) << " (roughly " << formattedSize
+                          << ")" << std::endl;
             log.debug() << "Sending " << num("SIGKILL") << " using " << func("kill") << punct("()") << " to the CGI process with PID "
                         << repr(process.pid) << std::endl;
             (void)::kill(process.pid, SIGKILL);
-            sendError(clientSocket, 502, process.location);
+            sendError(clientSocket, 413, process.location);
             // TODO: @all: not sure if the following line is correct
             closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
             log.debug() << "Removing remote client " << repr(clientSocket) << " from clientToCgi map" << std::endl;

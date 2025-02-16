@@ -45,6 +45,7 @@ void HttpServer::checkForInactiveClients() {
             log.warning() << "Timed out CGI process (sending SIGKILL): " << repr(process) << std::endl;
             (void)::kill(process.pid, SIGKILL);
             (void)::waitpid(process.pid, NULL, WNOHANG);
+            _pendingCloses.erase(process.clientSocket); // overwrite behaviour
             sendError(process.clientSocket, 504, process.location);
 
             log.debug() << "Removing client " << repr(clientSocket) << " from clientToCgi map (CGI has no more data to send)" << std::endl;
