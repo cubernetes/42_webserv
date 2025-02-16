@@ -506,7 +506,7 @@ bool HttpServer::validateRequest(const HttpRequest &request, int clientSocket) {
     }
     log.debug() << "Headers are complete" << std::endl;
 
-    // NOT doing that here
+    // // NOT doing that here TODO: WHYYYY: Answer: because we don't have a location context yet
     // log.debug() << "Checking if HTTP method is allowed" << std::endl;
     // // Check HTTP method
     // if (!methodIsImplemented(request.method)) { // NOTODO: @timo: make more stuff static
