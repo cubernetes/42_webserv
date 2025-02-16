@@ -38,7 +38,7 @@ namespace Constants {
     const string &defaultAddress = "*";
     const string &defaultMimeType = "application/octet-stream";
     const string &httpVersionString = "HTTP/1.1";
-    const string &webservVersion = "0.1";
+    const string &webservVersion = "0.2";
     const string &helpText = HELP_TEXT;
     const string &defaultClientMaxBodySize = "1m"; // k=Kibibyte, m=Mibibyte, g=Gibibyte
     enum MultPlexType defaultMultPlexType = POLL;
