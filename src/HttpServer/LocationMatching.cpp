@@ -50,7 +50,7 @@ size_t HttpServer::getIndexOfDefaultServer(const struct in_addr &addr, in_port_t
     AddrPort addrPortDefault(addrDefault, port);
     DefaultServers::const_iterator anyMatch = _defaultServers.find(addrPortDefault);
     if (anyMatch != _defaultServers.end()) {
-        log.debug() << "Found default server (using INADDR_ANY/0.0.0.0) with id " << repr(exactMatch->second) << std::endl;
+        log.debug() << "Found default server (using INADDR_ANY/0.0.0.0)" << std::endl;
         return anyMatch->second + 1;
     }
     log.debug() << "Could not find any default server for addr:port " << repr(sockaddr_in_wrapper(addr, port)) << std::endl;
