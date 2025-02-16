@@ -84,7 +84,7 @@ string ansi::blackBg(string s) {
 string ansi::redBg(string s) {
     if (noColor())
         return s;
-    return ANSI_RED_BG + s + ANSI_RST;
+    return ANSI_BLACK ANSI_RED_BG + s + ANSI_RST;
 }
 
 string ansi::greenBg(string s) {

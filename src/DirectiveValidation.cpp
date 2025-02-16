@@ -61,6 +61,11 @@ static inline void ensureNotEmpty(const string &ctx, const string &directive, co
         throw runtime_error(Errors::Config::DirectiveArgumentEmpty(ctx, directive));
 }
 
+static inline void ensureNoSlash(const string &ctx, const string &directive, const string &argument) {
+    if (argument.find('/') != argument.npos)
+        throw runtime_error(Errors::Config::DirectiveArgumentContainsSlash(ctx, directive, argument));
+}
+
 bool DirectiveValidation::evenNumberOfBackslashes(const string &str, size_t endingAt) {
     int count = 0;
     for (int i = static_cast<int>(endingAt); i >= 0; --i) {
@@ -237,6 +242,7 @@ static inline bool checkIndex(const string &ctx, const string &directive, const 
         ensureArity(ctx, directive, arguments, 1, -1);
         for (Arguments::const_iterator argument = arguments.begin(); argument != arguments.end(); ++argument) {
             ensureNotEmpty(ctx, directive, *argument);
+            ensureNoSlash(ctx, directive, *argument);
         }
         return true;
     }

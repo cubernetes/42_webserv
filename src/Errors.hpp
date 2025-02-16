@@ -15,6 +15,7 @@ namespace Errors {
         const string OpeningError(const string &path);
         const string ParseError(Tokens &tokens);
         const string DirectiveArgumentEmpty(const string &ctx, const string &directive);
+        const string DirectiveArgumentContainsSlash(const string &ctx, const string &directive, const string &argument);
         const string DirectiveArgumentInvalidPort(const string &ctx, const string &directive, const string &argument);
         const string DirectiveArgumentNotNumeric(const string &ctx, const string &directive, const string &argument);
         const string DirectiveArgumentNotUnique(const string &ctx, const string &directive, const string &argument);

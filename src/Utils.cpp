@@ -23,18 +23,6 @@
 
 using std::string;
 
-// TODO: @all: unused
-string Utils::parseArgs(int ac, char **av) {
-    if (ac == 1)
-        return Constants::defaultConfPath;
-    else if (ac == 2) {
-        if (av && av[0] && av[1])
-            return av[1];
-        throw std::runtime_error(Errors::DegenerateArgv(ac, av));
-    }
-    throw std::runtime_error(Errors::WrongArgs(ac));
-}
-
 // https://stackoverflow.com/a/7913978
 bool Utils::isPrefix(string prefix, string longerString) {
     std::pair<string::const_iterator, string::const_iterator> matcher = std::mismatch(prefix.begin(), prefix.end(), longerString.begin());
@@ -173,7 +161,7 @@ string Utils::millisecondRemainderSinceEpoch() {
     int millisec;
     struct timeval tv;
 
-    // TODO: use clock_gettime() instead
+    // NOTODO: use clock_gettime() instead
     ::gettimeofday(&tv, NULL);
 
     millisec = static_cast<int>(std::floor(static_cast<double>(tv.tv_usec) / 1000 + .5)); // Round to nearest millisec

@@ -94,8 +94,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
         persistConns.erase(clientSocket);
         closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
         log.debug() << "Removing remote client " << repr(clientSocket) << " from clientToCgi map" << std::endl;
-        _clientToCgi.erase(clientSocket); // TODO: @all couple _cgiToClient and _clientToCgi as as to
-                                          // never forget to remove one of them if the other is removed
+        _clientToCgi.erase(clientSocket); // NOTODO: @all couple _cgiToClient and _clientToCgi as as to
         log.debug() << "Removing CGI pipe FD " << repr(cgiFd) << " from cgiToClient map" << std::endl;
         _cgiToClient.erase(cgiFd);
         return;
@@ -197,11 +196,9 @@ void HttpServer::handleCgiRead(int cgiFd) {
             // TODO: @all: not sure if the following line is correct
             closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
             log.debug() << "Removing remote client " << repr(clientSocket) << " from clientToCgi map" << std::endl;
-            _clientToCgi.erase(clientSocket); // TODO: @timo: rename _clientToCgi to
-                                              // something like _clientFdToCgiProcess
+            _clientToCgi.erase(clientSocket);
             log.debug() << "Removing CGI pipe FD " << repr(cgiFd) << " from cgiToClient map" << std::endl;
-            _cgiToClient.erase(cgiFd); // TODO: @timo: rename _cgiToClient to something
-                                       // like _cgiFdToClientFd
+            _cgiToClient.erase(cgiFd);
             return;
         } else {
             log.debug() << "End of header fields marker not yet found, buffering data further" << std::endl;
@@ -226,7 +223,7 @@ bool HttpServer::parseRequestLine(int clientSocket, const string &_line, HttpReq
         return false;
     }
     std::istringstream iss(line);
-    if (!(iss >> request.method >> request.path >> request.httpVersion)) { // TODO: @all: technically, only space is allowed as a
+    if (!(iss >> request.method >> request.path >> request.httpVersion)) { // NOTODO: @all: technically, only space is allowed as a
                                                                            // separator, not just any whitespace
         log.debug() << "Failed to parse request line: " << repr(line) << std::endl;
         sendError(clientSocket, 400, NULL);
@@ -478,18 +475,6 @@ bool HttpServer::isHeaderComplete(const HttpRequest &request) const {
     return !request.method.empty() && !request.path.empty() && !request.httpVersion.empty();
 }
 
-// NOTUSED, REMOVE
-bool HttpServer::needsMoreData(const HttpRequest &request) const {
-    if (request.state == READING_HEADERS)
-        return true;
-    if (request.state == READING_BODY) {
-        if (request.chunkedTransfer)
-            return true; // TODO: @sonia Will be handled in follow-up PR
-        return request.bytesRead < request.contentLength;
-    }
-    return false;
-}
-
 void HttpServer::processContLenChunkedAndConnectionHeaders(int clientSocket, HttpRequest &request) {
     if (request.headers.find("content-length") != request.headers.end())
         request.contentLength = static_cast<size_t>(std::atoi(request.headers["content-length"].c_str()));
@@ -516,10 +501,10 @@ bool HttpServer::validateRequest(const HttpRequest &request, int clientSocket) {
     }
     log.debug() << "Headers are complete" << std::endl;
 
-    // Not doing that here
+    // NOT doing that here
     // log.debug() << "Checking if HTTP method is allowed" << std::endl;
     // // Check HTTP method
-    // if (!methodIsImplemented(request.method)) { // TODO: @timo: make more stuff static
+    // if (!methodIsImplemented(request.method)) { // NOTODO: @timo: make more stuff static
     //     log.debug() << "Invalid request: Unsupported method: " << repr(request.method) << std::endl;
     //     sendError(clientSocket, 405, NULL);
     //     return false;
@@ -575,8 +560,6 @@ bool HttpServer::checkRequestBodySize(int clientSocket, const HttpRequest &reque
         log.warning() << "Request body (so far) is too big: " << repr(currentSize) << " bytes but max allowed is " << repr(sizeLimit)
                       << std::endl;
         sendError(clientSocket, 413, NULL); // Payload Too Large
-        // TODO: @discuss: what about removing clientSocket from _pendingRequests
-        // removeClientAndRequest(clientSocket);
         log.debug() << "Removing socket " << repr(clientSocket) << " from pendingRequests" << std::endl;
         _pendingRequests.erase(clientSocket);
         return false;
@@ -593,8 +576,6 @@ bool HttpServer::checkRequestSizeWithoutBody(int clientSocket, size_t currentSiz
         log.warning() << "Request size (without body) (so far) is too big: " << repr(currentSize) << " bytes but max allowed is "
                       << repr(sizeLimit) << std::endl;
         sendError(clientSocket, 413, NULL); // Payload Too Large
-        // TODO: @discuss: what about removing clientSocket from _pendingRequests
-        // removeClientAndRequest(clientSocket);
         log.debug() << "Removing socket " << repr(clientSocket) << " from pendingRequests" << std::endl;
         _pendingRequests.erase(clientSocket);
         return false;
@@ -740,8 +721,6 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
     // Validate the request
     if (!validateRequest(request, clientSocket)) {
         log.debug() << "Request validation failed" << std::endl;
-        // TODO: @discuss: what about removing clientSocket from _pendingRequests
-        // removeClientAndRequest(clientSocket);
         log.debug() << "Removing socket " << repr(clientSocket) << " from pendingRequests" << std::endl;
         _pendingRequests.erase(clientSocket);
         return false;

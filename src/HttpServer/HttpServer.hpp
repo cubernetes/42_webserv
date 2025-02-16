@@ -314,7 +314,6 @@ class HttpServer {
 
     // POST related
     bool isHeaderComplete(const HttpRequest &request) const;
-    bool needsMoreData(const HttpRequest &request) const;
     void processContLenChunkedAndConnectionHeaders(int clientSocket, HttpRequest &request);
     bool validateRequest(const HttpRequest &request, int clientSocket);
     bool parseRequestLine(int clientSocket, const string &line, HttpRequest &request);

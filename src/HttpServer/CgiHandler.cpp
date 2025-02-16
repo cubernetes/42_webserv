@@ -83,7 +83,7 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
     string relativePath = request.path;
     string extension = request.path.substr(request.path.rfind("."));
     if (Utils::isPrefix(rootPath, request.path)) {
-        relativePath = request.path.substr(rootPath.length()); // TODO: @all: this doesn't seem quite right, no?
+        relativePath = request.path.substr(rootPath.length()); // NOTODO: @all: this doesn't seem quite right, no?
     }
 
     // Find any path info after the script name
@@ -96,10 +96,10 @@ std::map<string, string> CgiHandler::setupEnvironment(const HttpServer::HttpRequ
     env["SERVER_PROTOCOL"] = "HTTP/1.1";
     env["SERVER_SOFTWARE"] = "webserv/1.0";
     env["REQUEST_METHOD"] = request.method;
-    env["SCRIPT_FILENAME"] = rootPath + relativePath; // TODO: really not sure
-    env["SCRIPT_NAME"] = relativePath;                // TODO: really not sure
+    env["SCRIPT_FILENAME"] = rootPath + relativePath; // NOTODO: really not sure
+    env["SCRIPT_NAME"] = relativePath;                // NOTODO: really not sure
     env["SERVER_NAME"] = getHost(request);
-    // env["REMOTE_ADDR"] = getHost(request); // TODO: @all: maybe a different time
+    // env["REMOTE_ADDR"] = getHost(request); // NOTODO: @all: maybe a different time
     env["QUERY_STRING"] = request.rawQuery;
 
     for (std::map<string, string>::const_iterator it = request.headers.begin(); it != request.headers.end(); ++it) {
@@ -245,13 +245,10 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
         (void)::close(toCgi[PIPE_WRITE]);  // doesn't need to write to itself
         (void)::close(fromCgi[PIPE_READ]); // doesn't need to read from itself
 
-        // TODO: @all: protect dup2()
-        ::dup2(toCgi[PIPE_READ],
-               STDIN_FILENO); // whenever something writes to toCgi WRITE end, then CGI
-                              // will receive it via stdin
-        ::dup2(fromCgi[PIPE_WRITE],
-               STDOUT_FILENO); // whenever CGI writes something to stdout, it will go to
-                               // WRITE end of formCgi pipe
+        if (::dup2(toCgi[PIPE_READ], STDIN_FILENO) < 0)     // whenever something writes to toCgi WRITE end, then CGI
+            ::exit(1);                                      // will receive it via stdin
+        if (::dup2(fromCgi[PIPE_WRITE], STDOUT_FILENO) < 0) // whenever CGI writes something to stdout, it will go to
+            ::exit(1);                                      // WRITE end of formCgi pipe
 
         (void)::close(toCgi[PIPE_READ]);
         (void)::close(fromCgi[PIPE_WRITE]);
@@ -259,9 +256,8 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
 #if DEBUG_CHILD
         log.debug() << "Child: Changing dir to: " << repr(rootPath + cgiDir) << std::endl;
 #endif
-        if (::chdir((rootPath + cgiDir).c_str()) < 0) {
+        if (::chdir((rootPath + cgiDir).c_str()) < 0)
             ::exit(1);
-        }
 
         // cgiDir is guaranteed to be a prefix, and needs to be removed since we cd'd into
         // it
@@ -328,7 +324,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
     // from timo: commented out for now
     // if (!result.second) {
     // 	// If key already exists, update the existing entry
-    // 	// TODO: @discuss: is this even correct? what happens to the old CgiProcess entry?
+    // 	// NOTODO: @discuss: is this even correct? what happens to the old CgiProcess entry?
     // 	result.first->second = HttpServer::CgiProcess(pid, cgiReadFd, clientSocket,
     // &location);
     // }

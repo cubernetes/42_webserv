@@ -34,7 +34,6 @@ struct in_port_t_helper {
 };
 
 namespace Utils {
-    string parseArgs(int ac, char **av);
     bool isPrefix(string prefix, string longerString);
     string strToLower(const string &str);
     string strToUpper(const string &str);

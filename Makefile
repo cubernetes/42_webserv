@@ -25,7 +25,7 @@ CXX := $(notdir $(shell ls -l $$(which $(_CXX)) | awk '{print $$NF}'))
 
 # flags
 CFLAGS += -O3
-CFLAGS += -Werror # TODO: @all: Add back
+CFLAGS += -Werror
 CFLAGS += -std=c++98
 CFLAGS += -MMD
 CFLAGS += -MP

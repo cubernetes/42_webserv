@@ -37,7 +37,7 @@ bool HttpServer::handleDirectoryRedirect(int clientSocket, const string &path) {
     return false;
 }
 
-// TODO: @timo: precompute indexes and validate so that they don't contain slashes
+// NOTODO: @timo: precompute indexes
 bool HttpServer::handleIndexes(int clientSocket, const string &diskPath, const HttpRequest &request, const LocationCtx &location) {
     ArgResults res = getAllDirectives(location.second, "index");
     Arguments indexes;
@@ -135,7 +135,7 @@ bool HttpServer::handlePathWithoutSlash(int clientSocket, const string &diskPath
 string HttpServer::determineDiskPath(const HttpRequest &request, const LocationCtx &location) {
     log.debug() << "Determining file to server for request " << repr(request) << " to location " << repr(location) << std::endl;
     string pathWithoutRoot;
-    if (directiveExists(location.second, "alias")) { // TODO: @timo: sanitziation?
+    if (directiveExists(location.second, "alias")) { // NOTODO: @timo: sanitziation?
         string alias = getFirstDirective(location.second, "alias")[0];
         log.debug() << "Alias directive is present and has the value " << repr(alias) << std::endl;
         string prefix = location.first;

@@ -76,6 +76,8 @@ Logger &Logger::lastInstance(Logger *instance) {
     return *last_instance;
 }
 
+Logger::~Logger() { (void)lastInstance(&fallbackInstance); }
+
 Logger::Logger()
     : os(std::cout), logLevel(INFO), fatal(os, FATAL, logLevel), error(os, ERROR, logLevel), warning(os, WARNING, logLevel),
       info(os, INFO, logLevel), debug(os, DEBUG, logLevel), trace(os, TRACE, logLevel), trace2(os, TRACE2, logLevel),

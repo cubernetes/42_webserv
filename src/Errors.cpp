@@ -36,6 +36,10 @@ const string Errors::Config::DirectiveArgumentEmpty(const string &ctx, const str
     return CONFIG_ERROR_PREFIX(ctx) + "Argument for directive " + repr(directive) + " must not be empty";
 }
 
+const string Errors::Config::DirectiveArgumentContainsSlash(const string &ctx, const string &directive, const string &argument) {
+    return CONFIG_ERROR_PREFIX(ctx) + "Argument " + repr(argument) + " for directive " + repr(directive) + " must not contain a slash";
+}
+
 const string Errors::Config::DirectiveArgumentInvalidPort(const string &ctx, const string &directive, const string &argument) {
     return CONFIG_ERROR_PREFIX(ctx) + "Port argument " + repr(argument) + " for directive " + repr(directive) + " is invalid";
 }

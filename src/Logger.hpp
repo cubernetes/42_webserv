@@ -38,6 +38,7 @@ class Logger {
     };
 
     Logger(std::ostream &_os, Level _logLevel = INFO);
+    ~Logger();
     Logger();
     Logger(const Logger &other);
     Logger &operator=(Logger &other);

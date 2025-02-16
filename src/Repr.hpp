@@ -194,7 +194,6 @@ template <> struct ReprWrapper<char *> {
     }
 };
 
-// TODO: @timo: escape for char literal
 #define CHAR_REPR(T)                                                                                                                       \
     template <> struct ReprWrapper<T> {                                                                                                    \
         static inline string repr(const T &value) {                                                                                        \

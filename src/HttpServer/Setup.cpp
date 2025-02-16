@@ -50,8 +50,8 @@ static in_port_t getServerPort(const ServerCtx &serverCtx) {
 static int createTcpListenSocket() {
     Logger::lastInstance().debug() << "Creating AF_INET SOCK_STREAM socket (TCP)" << std::endl;
     int listeningSocket = ::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC,
-                                   0); // TODO: @timo: close all fds from _monitorFds array
-                                       // // TODO: @timo: close all fds from _monitorFds and
+                                   0); // NOTODO: @timo: close all fds from _monitorFds array
+                                       // NOTODO: @timo: close all fds from _monitorFds and
                                        // associated CGI read/write fds whenever forking.
     if (listeningSocket < 0)
         throw runtime_error(string("Failed to create socket: ") + ::strerror(errno));

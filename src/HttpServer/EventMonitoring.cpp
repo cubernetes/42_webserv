@@ -53,10 +53,10 @@ HttpServer::MultPlexFds HttpServer::doPoll(MultPlexFds &monitorFds) {
     int nReady = ::poll(pollFds, nPollFds, Constants::multiplexTimeout);
 
     if (nReady < 0) {
-        if (errno == EINTR) // TODO: @all: why is EINTR okay? What about the other codes?
+        if (errno == EINTR) // NOTODO: @all: why is EINTR okay? What about the other codes?
                             // What about EAGAIN?
             return MultPlexFds(POLL);
-        throw runtime_error(string("poll failed: ") + ::strerror(errno)); // TODO: @timo: make Errors::...
+        throw runtime_error(string("poll failed: ") + ::strerror(errno)); // NOTODO: @timo: make Errors::...
     }
 
     return getReadyPollFds(monitorFds, nReady, pollFds, nPollFds);
@@ -126,6 +126,6 @@ void HttpServer::handleReadyFds(const MultPlexFds &readyFds) {
             writeToClient(fd);
         else
             throw std::logic_error("Cannot handle fd other than readable or writable at "
-                                   "this step"); // TODO: @timo: proper logging
+                                   "this step"); // NOTODO: @timo: proper logging
     }
 }
