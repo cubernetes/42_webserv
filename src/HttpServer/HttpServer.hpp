@@ -340,3 +340,11 @@ std::ostream &operator<<(std::ostream &, const HttpServer &);
 
 void initMimeTypes(HttpServer::MimeTypes &mimeTypes);
 void initStatusTexts(HttpServer::StatusTexts &statusTexts);
+
+static inline bool operator==(const struct pollfd &a, const struct pollfd &b) {
+    if (a.fd == b.fd) {
+        return true;
+    } else {
+        return false;
+    }
+}

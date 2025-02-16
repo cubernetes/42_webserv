@@ -25,6 +25,8 @@ void HttpServer::addClientSocketToPollFds(MultPlexFds &monitorFds, int clientSoc
     pfd.events = POLLIN | POLLOUT;
     pfd.revents = 0;
     log.debug() << "Adding pollfd " << pfd << " to monitoring FDs" << std::endl;
+    if (std::find(_monitorFds.pollFds.begin(), _monitorFds.pollFds.end(), pfd) != _monitorFds.pollFds.end())
+        log.error() << "ERROR3: pushing a pollfd " << repr(pfd.fd) << " that is already in the monitoring fds: " << repr(pfd) << std::endl;
     monitorFds.pollFds.push_back(pfd);
 }
 

@@ -116,7 +116,7 @@ string getHost(const HttpServer::HttpRequest &request) {
             notFound = false;
             size_t colonPos = host.find(':');
             if (colonPos != string::npos)
-                host = host.substr(0, colonPos); // TODO: @all: why was it (void) casted before?
+                host = host.substr(0, colonPos);
         }
     }
     if (notFound)
@@ -147,7 +147,7 @@ const LocationCtx &HttpServer::requestToLocation(int clientSocket, const HttpReq
     // find server by matching against host, addr, and port
     size_t serverIdx;
     if (!(serverIdx = findMatchingServer(host, addr.sin_addr, addr.sin_port))) {
-        sendError(clientSocket, 404, NULL); // TODO: @all: is 404 rlly correct?
+        sendError(clientSocket, 404, NULL);
         throw runtime_error("Couldn't find any server for hostname '" + repr(host) + "' and addr:port being " +
                             repr<struct sockaddr_in_wrapper>(addr));
     }
@@ -156,7 +156,7 @@ const LocationCtx &HttpServer::requestToLocation(int clientSocket, const HttpReq
     // find location by matching against request path
     size_t locationIdx;
     if (!(locationIdx = findMatchingLocation(server, request.path))) {
-        sendError(clientSocket, 404, NULL); // TODO: @all: is 404 rlly correct?
+        sendError(clientSocket, 404, NULL);
         throw runtime_error(string("Could not find a location for path ") + repr(request.path));
     }
     log.debug() << "Request " << repr(request) << " was successfully translated to location " << repr(server.locations[locationIdx - 1])

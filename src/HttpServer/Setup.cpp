@@ -114,6 +114,8 @@ void HttpServer::setupListeningSocket(const Server &server) {
     pfd.fd = listeningSocket;
     pfd.events = POLLIN;
     pfd.revents = 0;
+    if (std::find(_monitorFds.pollFds.begin(), _monitorFds.pollFds.end(), pfd) != _monitorFds.pollFds.end())
+        log.error() << "ERROR4: pushing a pollfd " << repr(pfd.fd) << " that is already in the monitoring fds: " << repr(pfd) << std::endl;
     _monitorFds.pollFds.push_back(pfd);
 
     _listeningSockets.push_back(listeningSocket);

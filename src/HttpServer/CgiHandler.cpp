@@ -155,15 +155,19 @@ static char *ft_strdup(char const *s) {
 }
 
 char **CgiHandler::exportEnvironment(const std::map<string, string> &env, size_t &n) {
+#if DEBUG_CHILD
     log.debug() << "Creating environment char **array from map " << repr(env) << std::endl;
+#endif
     size_t size = env.size();
     char **envArr = new (std::nothrow) char *[size + 1];
     size_t i = 0;
     for (std::map<string, string>::const_iterator it = env.begin(); it != env.end(); ++it) {
         if (it->first.empty() || it->first.find('=') != string::npos) {
+#if DEBUG_CHILD
             log.trace() << "Found key in map that is empty or contains an equals sign "
                            "(skipping): "
                         << repr(it->first) << std::endl;
+#endif
             continue;
         }
         envArr[i] = ft_strdup((it->first + "=" + it->second).c_str());
@@ -171,7 +175,9 @@ char **CgiHandler::exportEnvironment(const std::map<string, string> &env, size_t
     }
     envArr[i] = NULL;
     n = i;
+#if DEBUG_CHILD
     log.debug() << "env array is " << reprArr(envArr, n + 1) << std::endl;
+#endif
     return envArr;
 }
 
@@ -227,6 +233,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
     }
 
     if (pid == 0) { // we are in child
+#if DEBUG_CHILD
 #if PP_DEBUG
         sleep(1);
         log.warning() << "DEBUG: Child: Slept for 1 seconds, please remove this and related "
@@ -234,6 +241,7 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
                       << std::endl;
 #endif
         log.debug() << "Child: Entered, about to close FDs" << std::endl;
+#endif
         (void)::close(toCgi[PIPE_WRITE]);  // doesn't need to write to itself
         (void)::close(fromCgi[PIPE_READ]); // doesn't need to read from itself
 
@@ -248,7 +256,9 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
         (void)::close(toCgi[PIPE_READ]);
         (void)::close(fromCgi[PIPE_WRITE]);
 
+#if DEBUG_CHILD
         log.debug() << "Child: Changing dir to: " << repr(rootPath + cgiDir) << std::endl;
+#endif
         if (::chdir((rootPath + cgiDir).c_str()) < 0) {
             ::exit(1);
         }
@@ -259,12 +269,16 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
          *       /foo/ - /foo/test.py ->  test.py ->  ./test.py
          */
         scriptPath = "./" + request.path.substr(cgiDir.length());
+#if DEBUG_CHILD
         log.debug() << "Child: Script path is: " << repr(scriptPath) << std::endl;
+#endif
 
+#if DEBUG_CHILD
 #if !STRICT_EVAL
         char *cwd = ::getcwd(NULL, 0);
         log.debug() << "Child: CWD is: " << repr(cwd) << std::endl;
         ::free(cwd);
+#endif
 #endif
 
         size_t n;
@@ -279,10 +293,14 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
             argv1 = "";
         }
         char *args[] = {const_cast<char *>(argv0.c_str()), const_cast<char *>(argv1.empty() ? NULL : argv1.c_str()), NULL};
+#if DEBUG_CHILD
         log.debug() << "Child: Calling " << func("execve") << punct("(") << repr(args[0]) << ", " << reprArr(const_cast<char **>(args), 2)
                     << punct(", ") << reprArr(cgiEnviron, n + 1) << punct(")") << std::endl;
+#endif
         (void)::execve(args[0], args, cgiEnviron);
+#if DEBUG_CHILD
         log.error() << "Child: " << func("execve") << punct("()") << " failed" << std::endl;
+#endif
         ::exit(1);
     }
 #if PP_DEBUG
@@ -318,16 +336,23 @@ void CgiHandler::execute(int clientSocket, const HttpServer::HttpRequest &reques
     struct pollfd pfd;
     pfd.fd = cgiReadFd;
     pfd.events = POLLIN; // get notified when CGI has data ready to send
+    pfd.revents = 0;
     log.debug() << "Parent: Add new mapping from cgiReadFd to clientSocket: " << repr(cgiReadFd) << "->" << repr(clientSocket) << std::endl;
     _server._cgiToClient[cgiReadFd] = clientSocket;
+    if (std::find(_server._monitorFds.pollFds.begin(), _server._monitorFds.pollFds.end(), pfd) != _server._monitorFds.pollFds.end())
+        log.error() << "ERROR1: pushing a pollfd " << repr(pfd.fd) << " that is already in the monitoring fds: " << repr(pfd) << std::endl;
     _server._monitorFds.pollFds.push_back(pfd);
 
     struct pollfd pfd2;
     pfd2.fd = cgiWriteFd;
     pfd2.events = POLLOUT; // for the pendingWrite
+    pfd2.revents = 0;
     log.debug() << "Parent: Add new mapping from cgiWriteFd to clientSocket: " << repr(cgiWriteFd) << "->" << repr(clientSocket)
                 << std::endl;
     _server._cgiToClient[cgiWriteFd] = clientSocket;
+    if (std::find(_server._monitorFds.pollFds.begin(), _server._monitorFds.pollFds.end(), pfd2) != _server._monitorFds.pollFds.end())
+        log.error() << "ERROR2: pushing a pollfd " << repr(pfd2.fd) << " that is already in the monitoring fds: " << repr(pfd2)
+                    << std::endl;
     _server._monitorFds.pollFds.push_back(pfd2);
 
     log.debug() << "Parent: Queueing data to write to CGI process (write FD: " << repr(cgiWriteFd) << "): " << repr(request.body)

@@ -18,23 +18,32 @@ using std::runtime_error;
 
 HttpServer::MultPlexFds HttpServer::getReadyPollFds(MultPlexFds &monitorFds, int nReady, struct pollfd *pollFds, nfds_t nPollFds) {
     MultPlexFds readyFds(POLL);
+    vector<int> pollFdsToRemove;
 
     (void)nReady;
-    for (int i = 0; i < static_cast<int>(nPollFds); ++i) {
+    log.trace() << "Determining readyFds from the following pollfds: " << reprArr(pollFds, nPollFds) << std::endl;
+    for (size_t i = 0; i < nPollFds; ++i) {
+        log.trace2() << "Value if i: " << repr(i) << std::endl;
+        log.trace2() << "Checking the following pollfd: " << repr(pollFds[i]) << std::endl;
         if (pollFds[i].revents & POLLIN) {
-            log.trace() << "Poll revents contains POLLIN: " << repr(pollFds[i]) << std::endl;
+            log.trace2() << "Poll revents contains POLLIN: " << repr(pollFds[i]) << std::endl;
             readyFds.pollFds.push_back(pollFds[i]);
             readyFds.fdStates.push_back(FD_READABLE);
         } else if (pollFds[i].revents & POLLOUT) {
-            log.trace() << "Poll revents contains POLLOUT: " << repr(pollFds[i]) << std::endl;
+            log.trace2() << "Poll revents contains POLLOUT: " << repr(pollFds[i]) << std::endl;
             readyFds.pollFds.push_back(pollFds[i]);
             readyFds.fdStates.push_back(FD_WRITEABLE);
         } else if (pollFds[i].revents != 0) {
             log.debug() << "Poll revents contains an event that is neither POLLIN nor POLLOUT: " << repr(pollFds[i]) << std::endl;
-            closeAndRemoveMultPlexFd(monitorFds, pollFds[i].fd);
+            log.debug() << "Queueing for removal" << std::endl;
+            pollFdsToRemove.push_back(pollFds[i].fd);
         }
     }
 
+    for (vector<int>::const_iterator fd = pollFdsToRemove.begin(); fd != pollFdsToRemove.end(); ++fd) {
+        log.debug() << "Removing FD " << repr(*fd) << " from monitoring FDs" << std::endl;
+        closeAndRemoveMultPlexFd(monitorFds, *fd);
+    }
     return readyFds;
 }
 

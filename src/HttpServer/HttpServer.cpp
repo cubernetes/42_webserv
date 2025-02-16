@@ -39,6 +39,7 @@ void HttpServer::initSignals() {
     log.debug() << "Handling SIGTERM to finish gracefully" << std::endl;
     ::signal(SIGTERM, &finish);
     ::signal(SIGCHLD, &cgiDied);
+    //::signal(SIGCHLD, SIG_IGN); DON'T do this, because then things stop working, see stackoverflow
 }
 
 bool HttpServer::_running = true;

@@ -60,11 +60,11 @@ void HttpServer::handleCgiRead(int cgiFd) {
     ClientFdToCgiMap::iterator it = _clientToCgi.find(clientSocket);
     if (it == _clientToCgi.end()) {
         // CGI process not found, should never happen
-        log.error() << "Error in invalidation of cgiToClient map, CGI process "
-                       "doesn't exist anymore"
+        log.debug() << "During invalidation of cgiToClient map, CGI process "
+                       "doesn't exist anymore, cleaning up"
                     << std::endl;
         _cgiToClient.erase(cgiFd);
-        sendError(cgiFd, 502, NULL);
+        // sendError(cgiFd /* cgiFd??? doesn't make sense */, 502, NULL);
         return;
     }
     CgiProcess &process = it->second;
@@ -89,8 +89,9 @@ void HttpServer::handleCgiRead(int cgiFd) {
         log.debug() << "Sending " << num("SIGKILL") << " using " << func("kill") << punct("()") << " to the CGI process with PID "
                     << repr(process.pid) << std::endl;
         ::kill(process.pid, SIGKILL);
-        sendError(process.clientSocket, 502, process.location);
-        // TODO: @all: not sure if the following line is correct
+        sendError(clientSocket, 502, process.location);
+        log.debug() << "Removing remote client " << repr(clientSocket) << " from persistent connections" << std::endl;
+        persistConns.erase(clientSocket);
         closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
         log.debug() << "Removing remote client " << repr(clientSocket) << " from clientToCgi map" << std::endl;
         _clientToCgi.erase(clientSocket); // TODO: @all couple _cgiToClient and _clientToCgi as as to
@@ -118,13 +119,15 @@ void HttpServer::handleCgiRead(int cgiFd) {
                           << " didn't send any data (not even headers), sending 502 Bad "
                              "Gateway to client"
                           << std::endl;
-            sendError(process.clientSocket, 502, process.location);
+            sendError(clientSocket, 502, process.location);
         } else if (!process.response.empty()) {
             log.debug() << "CGI process is done, queueing remaining data" << std::endl;
             log.trace() << "The data is: " << repr(process.response) << std::endl;
-            queueWrite(process.clientSocket, process.response);
+            queueWrite(clientSocket, process.response);
         }
 
+        log.debug() << "Removing remote client " << repr(clientSocket) << " from persistent connections" << std::endl;
+        persistConns.erase(clientSocket);
         closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
         log.debug() << "Removing remote client " << repr(clientSocket) << " from clientToCgi map" << std::endl;
         _clientToCgi.erase(clientSocket);
@@ -147,10 +150,9 @@ void HttpServer::handleCgiRead(int cgiFd) {
         log.debug() << "Sending " << num("SIGKILL") << " using " << func("kill") << punct("()") << " to the CGI process with PID "
                     << repr(process.pid) << std::endl;
         (void)::kill(process.pid, SIGKILL);
-        sendError(process.clientSocket, 413,
+        sendError(clientSocket, 413,
                   process.location); // TODO: @timo: Use macros for status codes instead
                                      // of magic numbers
-        // TODO: @all: not sure if the following line is correct
         closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
         log.debug() << "Removing remote client " << repr(clientSocket) << " from clientToCgi map" << std::endl;
         _clientToCgi.erase(clientSocket);
@@ -180,7 +182,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
             fullResponse << headers << "\r\n\r\n" << body;
 
             process.headersSent = true;
-            queueWrite(process.clientSocket, fullResponse.str());
+            queueWrite(clientSocket, fullResponse.str());
             log.debug() << "Clearing response buffer" << std::endl;
             process.response.clear();
 
@@ -191,7 +193,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
             log.debug() << "Sending " << num("SIGKILL") << " using " << func("kill") << punct("()") << " to the CGI process with PID "
                         << repr(process.pid) << std::endl;
             (void)::kill(process.pid, SIGKILL);
-            sendError(process.clientSocket, 502, process.location);
+            sendError(clientSocket, 502, process.location);
             // TODO: @all: not sure if the following line is correct
             closeAndRemoveMultPlexFd(_monitorFds, cgiFd);
             log.debug() << "Removing remote client " << repr(clientSocket) << " from clientToCgi map" << std::endl;
@@ -207,7 +209,7 @@ void HttpServer::handleCgiRead(int cgiFd) {
     } else {
         log.debug() << "Queueing data for sending from CGI stdout (headers are already sent): "
                     << repr(const_cast<char *>(string(buffer, static_cast<size_t>(bytesRead)).c_str())) << std::endl;
-        queueWrite(process.clientSocket, string(buffer, static_cast<size_t>(bytesRead)));
+        queueWrite(clientSocket, string(buffer, static_cast<size_t>(bytesRead)));
     }
 }
 
@@ -903,7 +905,9 @@ void HttpServer::readFromClient(int clientSocket) {
     char buffer[CONSTANTS_CHUNK_SIZE + 1]; // for NUL termination
     log.debug() << "Calling " << func("recv") << punct("()") << " on FD " << repr(clientSocket)
                 << " without any flags into a buffer of size " << repr(sizeof(buffer) - 1) << std::endl;
-    ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, 0);
+    errno = 0;
+    ssize_t bytesRead = recv(clientSocket, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
+    log.trace() << "errno: " << ::strerror(errno) << std::endl;
 
     log.debug() << "Actually read " << repr(bytesRead) << " bytes" << std::endl;
     if (bytesRead <= 0) {

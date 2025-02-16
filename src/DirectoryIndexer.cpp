@@ -46,7 +46,7 @@ string DirectoryIndexer::indexDirectory(string location, string path) {
     log.debug() << "Indexing directory " << repr(path) << " coming from location " << repr(location) << std::endl;
     DIR *dir = ::opendir(path.c_str());
     if (!dir) {
-        log.warning() << "indexDirectory: Failed to open directory " << path << std::endl; // TODO: @timo: make logging proper
+        log.warning() << "indexDirectory: Failed to open directory " << path << std::endl; // NOTODO: @timo: make logging proper
         return "<h1>Couldn't get directory contents</h1>";                                 // not perfect, should throw
                                                                                            // 404 or smth
     }

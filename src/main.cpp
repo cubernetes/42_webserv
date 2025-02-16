@@ -18,7 +18,7 @@ int main(int ac, char **av) {
         }
         Logger log(std::cerr, options.logLevel);
         HttpServer server(options.configPath, log, options.onlyCheckConfig);
-        server.run(); // TODO: @all: test with siege
+        server.run();
         return EXIT_SUCCESS;
     } catch (const OnlyCheckConfigException &exception) {
         return EXIT_SUCCESS;

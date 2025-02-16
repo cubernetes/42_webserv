@@ -152,7 +152,7 @@ static inline void ensureValidHttpUri(const string &ctx, const string &directive
     if (!DirectiveValidation::isHttpUri(argument))
         throw runtime_error(
             Errors::Config::DirectiveArgumentInvalidHttpUri(ctx, directive,
-                                                            argument)); // TODO: normally, you'd use a regex to validate the domain, but
+                                                            argument)); // NOTODO: normally, you'd use a regex to validate the domain, but
                                                                         // hell nah we are not implementing a NFA from scratch
 }
 

@@ -9,6 +9,10 @@
 #define STRICT_EVAL true
 #endif
 
+#ifndef DEBUG_CHILD
+#define DEBUG_CHILD true
+#endif
+
 #ifndef PP_DEBUG
 #define PP_DEBUG false
 #endif
