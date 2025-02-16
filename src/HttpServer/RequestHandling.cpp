@@ -420,6 +420,7 @@ bool HttpServer::methodAllowed(int clientSocket, const HttpRequest &request, con
             return true;
         }
         log.debug() << "Method " << repr(request.method) << " is not allowed since it is not implemented" << std::endl;
+        sendError(clientSocket, 405, &location);
         return false;
     }
     string limit_except = "limit_except";
