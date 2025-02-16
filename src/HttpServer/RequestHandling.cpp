@@ -296,8 +296,11 @@ void HttpServer::handleDelete(int clientSocket, const HttpRequest &request, cons
     int fileExists = stat(diskPath.c_str(), &fileStat) == 0;
 
     if (!fileExists) {
-        log.debug() << "File " << repr(diskPath) << " does not exist and therefore cannot be deleted, sending 404 Not Found" << std::endl;
-        sendError(clientSocket, 404, &location);
+        log.debug() << "File " << repr(diskPath)
+                    << " does not exist and therefore cannot be deleted, but sending 200 OK anyways since DELETE SHOULD be idempotent"
+                    << std::endl;
+        sendString(clientSocket, "Resource is already deleted or doesn't exist: " + request.path + "\n");
+        // sendError(clientSocket, 404, &location); // DELETE SHOULD be idempotent
     } else if (S_ISDIR(fileStat.st_mode)) {
         log.debug() << "File " << repr(diskPath) << " is a directory and directory deletion is not supported" << std::endl;
         sendString(clientSocket, "Directory deletion is turned off\n", 403);
@@ -342,7 +345,12 @@ void HttpServer::handleUpload(int clientSocket, const HttpRequest &request, cons
     struct stat fileStat;
     int fileExists = stat(diskPath.c_str(), &fileStat) == 0;
 
-    if (fileExists && !overwrite) {
+    if (fileExists && !S_ISREG(fileStat.st_mode)) {
+        log.debug() << "File exists already and is not a regulare file, can't handle, "
+                       "sending 409 Conflict"
+                    << std::endl;
+        sendError(clientSocket, 409, &location); // == conflict
+    } else if (fileExists && !overwrite) {
         log.debug() << "File exists already and overwriting of files is turned off, "
                        "sending 409 Conflict"
                     << std::endl;
