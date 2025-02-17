@@ -289,6 +289,7 @@ void HttpServer::handleDelete(int clientSocket, const HttpRequest &request, cons
                        "forbidden on this location, sending 405 Method Not Allowed"
                     << std::endl;
         sendError(clientSocket, 405, NULL);
+        return;
     }
     string diskPath = determineDiskPath(request, location);
 
@@ -337,6 +338,7 @@ void HttpServer::handleUpload(int clientSocket, const HttpRequest &request, cons
                        "forbidden on this location, sending 405 Method Not Allowed"
                     << std::endl;
         sendError(clientSocket, 405, NULL);
+        return;
     }
     log.debug() << "upload_dir directive exists, getting file name" << std::endl;
     string fileName = getFileName(request.path);
@@ -489,7 +491,7 @@ bool HttpServer::isHeaderComplete(const HttpRequest &request) const {
     return !request.method.empty() && !request.path.empty() && !request.httpVersion.empty();
 }
 
-void HttpServer::processContLenChunkedAndConnectionHeaders(int clientSocket, HttpRequest &request) {
+bool HttpServer::updateSomeThingsBasedOnHeaders(int clientSocket, HttpRequest &request) {
     if (request.headers.find("content-length") != request.headers.end())
         request.contentLength = static_cast<size_t>(std::atoi(request.headers["content-length"].c_str()));
 
@@ -503,6 +505,13 @@ void HttpServer::processContLenChunkedAndConnectionHeaders(int clientSocket, Htt
                     << std::endl;
         persistConns.erase(clientSocket);
     }
+
+    if (request.headers.find("expect") != request.headers.end() && request.headers["expect"] == "100-continue") {
+        log.debug() << "Found expect 100 continue header, sending appropriate response" << std::endl;
+        queueWrite(clientSocket, "HTTP/1.1 100 Continue\r\n\r\n");
+        return false;
+    }
+    return true;
 }
 
 bool HttpServer::validateRequest(const HttpRequest &request, int clientSocket) {
@@ -727,7 +736,8 @@ bool HttpServer::processRequestHeaders(int clientSocket, HttpRequest &request, c
     log.debug() << "Found line consisting only of \\r, finishing header parsing" << std::endl;
 
     // Process Content-Length and chunked transfer headers
-    processContLenChunkedAndConnectionHeaders(clientSocket, request);
+    if (!updateSomeThingsBasedOnHeaders(clientSocket, request)) {
+    }
     log.debug() << "Content length: " << repr(request.contentLength) << " (if it is " << repr(0)
                 << ", it can also mean the header not present, like with GET request)" << std::endl;
     log.debug() << "Chunked transfer: " << repr(request.chunkedTransfer) << std::endl;
