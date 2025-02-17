@@ -186,7 +186,7 @@ bool HttpServer::sendFileContent(int clientSocket, const string &filePath, const
 
 string HttpServer::generateServerMessage(const string &text) {
     log.trace() << "Wrapping text in some html and body tags and setting title: " << repr(text) << std::endl;
-    return "<html><\r\n<head><title>" + text + "</title></head>\r\n<body>\r\n<center><h1>" + text + "</h1></center>\r\n<hr><center>" +
+    return "<html>\r\n<head><title>" + text + "</title></head>\r\n<body>\r\n<center><h1>" + text + "</h1></center>\r\n<hr><center>" +
            "webserv/" + Constants::webservVersion + "</center>\r\n</body>\r\n</html>\r\n";
 }
 
