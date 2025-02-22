@@ -65,7 +65,7 @@ CXXFLAGS += -Weffc++
 CPPFLAGS += -Isrc
 CPPFLAGS += -Isrc/HttpServer
 
-# LDLIBS +=
+LDLIBS += -lstdc++
 
 # additional Catch2 flags
 C2_CFLAGS := -std=c++14 -I$(HOME)/.local/include -ICatch2/src -ICatch2/build/generated-includes -Wno-effc++
