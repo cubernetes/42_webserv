@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <bits/types/struct_timeval.h>
 #include <cctype>
 #include <cmath>
 #include <cstddef>
